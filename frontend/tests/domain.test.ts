@@ -1,0 +1,92 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import {
+  ONBOARDING_DESTINATION_ROUTES,
+  resolveEntryRoute,
+} from '../src/lib/navigation';
+import { TX_RECORDS } from '../src/features/main/data';
+import {
+  applyTransactionReviews,
+  filterTransactionsByMonth,
+  sanitizeTransactionReviews,
+} from '../src/features/main/transactions';
+import { QUIZ_QUESTIONS } from '../src/features/missions/data/quiz';
+import { MISSION_PRACTICE_PRESETS } from '../src/features/practice/missionPresets';
+import {
+  resolveOnboardingResumeStep,
+  sanitizeOnboardingDraft,
+} from '../src/features/onboarding/onboardingDraft';
+
+test('entry and onboarding destination routes remain distinct', () => {
+  assert.equal(resolveEntryRoute(null, false), '/welcome');
+  assert.equal(resolveEntryRoute('danbi', false), '/join');
+  assert.equal(resolveEntryRoute('standard', true), '/(app)/home');
+  assert.equal(ONBOARDING_DESTINATION_ROUTES.accounts, '/(app)/accounts');
+});
+
+test('transaction reviews are sanitized and applied', () => {
+  const reviews = sanitizeTransactionReviews({ 1: 'known', 3: 'unknown', 5: 'pending' });
+  const records = applyTransactionReviews(TX_RECORDS, reviews);
+
+  assert.deepEqual(reviews, { 1: 'known', 3: 'unknown' });
+  assert.equal(records.find((record) => record.id === 1)?.reviewStatus, 'known');
+  assert.equal(records.find((record) => record.id === 3)?.reviewStatus, 'unknown');
+});
+
+test('transaction month selection filters the rendered records', () => {
+  assert.equal(filterTransactionsByMonth(TX_RECORDS, 2026 * 12 + 7).length, 5);
+  assert.equal(filterTransactionsByMonth(TX_RECORDS, 2026 * 12 + 6).length, 0);
+});
+
+test('deposit protection quiz reflects the current 100 million won limit', () => {
+  const question = QUIZ_QUESTIONS.find((item) => item.id === 14);
+  assert.equal(question?.correctIndex, 0);
+  assert.match(question?.question ?? '', /1억 원/);
+  assert.match(question?.explanation ?? '', /2025년 9월 1일/);
+});
+
+test('scored transfer missions enter their required practice path', () => {
+  assert.equal(MISSION_PRACTICE_PRESETS['guided-transfer']?.practiceStyle, 'guided');
+  assert.equal(MISSION_PRACTICE_PRESETS['voice-transfer']?.screen, 'practiceVoice');
+  assert.equal(MISSION_PRACTICE_PRESETS['solo-transfer']?.transferMethod, 'manual');
+  assert.equal(MISSION_PRACTICE_PRESETS['review-transfer']?.screen, 'practiceReview');
+});
+
+test('onboarding draft rejects unknown versions and strips invalid values', () => {
+  assert.equal(sanitizeOnboardingDraft({ version: 2, step: 10 }), null);
+
+  const draft = sanitizeOnboardingDraft({
+    version: 1,
+    step: 999,
+    termsStep: 7,
+    carrier: 'invalid',
+    idType: 'passport',
+    requiredTerms: [true, 'yes'],
+    certificateTerms: [true, true],
+  });
+
+  assert.equal(draft?.step, 16);
+  assert.equal(draft?.termsStep, 0);
+  assert.equal(draft?.carrier, null);
+  assert.equal(draft?.idType, null);
+  assert.deepEqual(draft?.requiredTerms, [true, false]);
+});
+
+test('onboarding resume never skips a sensitive verification boundary', () => {
+  const base = sanitizeOnboardingDraft({
+    version: 1,
+    step: 15,
+    phoneVerified: true,
+    idType: '주민등록증',
+    idScanCompleted: true,
+    idInformationConfirmed: true,
+    faceVerified: true,
+    accountVerified: false,
+  });
+  assert.ok(base);
+  assert.equal(resolveOnboardingResumeStep(base), 13);
+
+  const verified = { ...base, accountVerified: true };
+  assert.equal(resolveOnboardingResumeStep(verified), 15);
+});
