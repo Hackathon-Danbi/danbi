@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+
+# Logs
+*.log

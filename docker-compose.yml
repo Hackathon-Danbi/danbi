@@ -1,0 +1,23 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: danbi-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: danbi
+      MYSQL_USER: danbi
+      MYSQL_PASSWORD: danbi_local_pw
+      MYSQL_ROOT_PASSWORD: danbi_root_pw
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - danbi-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pdanbi_root_pw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  danbi-mysql-data:

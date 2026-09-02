@@ -1,0 +1,14 @@
+---
+description: Spring Boot 백엔드 규칙
+globs: backend/**/*.{java,gradle,properties,yml,yaml}
+alwaysApply: false
+---
+
+# Backend (`backend/`)
+
+- 패키지 루트: `com.danbi`
+- REST 경로는 `/api/` 접두사를 쓴다.
+- 레이어: controller → service → repository. 컨트롤러에 비즈니스 로직을 넣지 않는다.
+- 로컬 DB는 docker-compose MySQL (`danbi` / `danbi_local_pw`, 포트 3306).
+- 테스트는 H2 인메모리 (`src/test/resources/application.properties`).
+- 시크릿·실계좌 정보는 코드와 git에 넣지 않는다.

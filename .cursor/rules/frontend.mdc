@@ -1,0 +1,13 @@
+---
+description: Expo / React Native 프론트엔드 규칙
+globs: frontend/**/*.{ts,tsx,js,jsx,json}
+alwaysApply: false
+---
+
+# Frontend (`frontend/`)
+
+- TypeScript를 사용한다. `any`는 피할 것.
+- 화면은 Expo Router (`frontend/src/app/`)에 둔다.
+- 스타일은 시니어가 읽기 쉽게: 충분한 터치 영역, 높은 대비, 큰 타이포.
+- API 호출은 나중에 `frontend/src/api/`로 모은다. 백엔드 기본 URL은 `http://localhost:8080`.
+- 네이티브 폴더(`ios/`, `android/`)는 prebuild 전까지 커밋하지 않는다.
