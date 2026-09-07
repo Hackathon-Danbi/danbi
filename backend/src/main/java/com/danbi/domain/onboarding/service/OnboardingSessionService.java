@@ -1,8 +1,10 @@
 package com.danbi.domain.onboarding.service;
 
 import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
+import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
+import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
+import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.model.OnboardingSession;
-import com.danbi.domain.onboarding.model.OnboardingStep;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -20,16 +22,26 @@ public class OnboardingSessionService {
 	}
 
 	public CreateOnboardingSessionResponse createSession() {
-		OnboardingSession session = new OnboardingSession(
-			generateSessionId(),
-			OnboardingStep.NAME_INPUT
-		);
+		OnboardingSession session = OnboardingSession.start(generateSessionId());
 		onboardingSessionRepository.save(session);
 
 		return new CreateOnboardingSessionResponse(
 			session.id(),
 			session.step(),
 			ESTIMATED_MINUTES
+		);
+	}
+
+	public SaveOnboardingNameResponse saveName(SaveOnboardingNameRequest request) {
+		OnboardingSession session = onboardingSessionRepository.findById(request.onboardingSessionId())
+			.orElseThrow(() -> new OnboardingSessionNotFoundException(request.onboardingSessionId()));
+		OnboardingSession updatedSession = session.saveName(request.name());
+		onboardingSessionRepository.save(updatedSession);
+
+		return new SaveOnboardingNameResponse(
+			updatedSession.id(),
+			updatedSession.name(),
+			updatedSession.step()
 		);
 	}
 

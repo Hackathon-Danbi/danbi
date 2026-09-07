@@ -1,8 +1,12 @@
 package com.danbi.domain.onboarding.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
+import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
+import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
+import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.model.OnboardingSession;
 import com.danbi.domain.onboarding.model.OnboardingStep;
 import com.danbi.domain.onboarding.repository.InMemoryOnboardingSessionRepository;
@@ -34,5 +38,32 @@ class OnboardingSessionServiceTest {
 		CreateOnboardingSessionResponse second = service.createSession();
 
 		assertThat(first.onboardingSessionId()).isNotEqualTo(second.onboardingSessionId());
+	}
+
+	@Test
+	void savesNormalizedNameAndMovesToPhoneOwnershipStep() {
+		InMemoryOnboardingSessionRepository repository = new InMemoryOnboardingSessionRepository();
+		OnboardingSessionService service = new OnboardingSessionService(repository);
+		CreateOnboardingSessionResponse created = service.createSession();
+
+		SaveOnboardingNameResponse response = service.saveName(
+			new SaveOnboardingNameRequest(created.onboardingSessionId(), "  홍길동  ")
+		);
+
+		assertThat(response.name()).isEqualTo("홍길동");
+		assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.PHONE_OWNERSHIP);
+		OnboardingSession storedSession = repository.findById(created.onboardingSessionId()).orElseThrow();
+		assertThat(storedSession.name()).isEqualTo("홍길동");
+		assertThat(storedSession.step()).isEqualTo(OnboardingStep.PHONE_OWNERSHIP);
+	}
+
+	@Test
+	void rejectsUnknownSessionWhenSavingName() {
+		OnboardingSessionService service = new OnboardingSessionService(
+			new InMemoryOnboardingSessionRepository()
+		);
+
+		assertThatThrownBy(() -> service.saveName(new SaveOnboardingNameRequest("ob_missing", "홍길동")))
+			.isInstanceOf(OnboardingSessionNotFoundException.class);
 	}
 }
