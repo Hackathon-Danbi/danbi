@@ -8,6 +8,7 @@ import com.danbi.domain.onboarding.model.OnboardingSession;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OnboardingSessionService {
@@ -21,6 +22,7 @@ public class OnboardingSessionService {
 		this.onboardingSessionRepository = onboardingSessionRepository;
 	}
 
+	@Transactional
 	public CreateOnboardingSessionResponse createSession() {
 		OnboardingSession session = OnboardingSession.start(generateSessionId());
 		onboardingSessionRepository.save(session);
@@ -32,6 +34,7 @@ public class OnboardingSessionService {
 		);
 	}
 
+	@Transactional
 	public SaveOnboardingNameResponse saveName(SaveOnboardingNameRequest request) {
 		OnboardingSession session = onboardingSessionRepository.findById(request.onboardingSessionId())
 			.orElseThrow(() -> new OnboardingSessionNotFoundException(request.onboardingSessionId()));

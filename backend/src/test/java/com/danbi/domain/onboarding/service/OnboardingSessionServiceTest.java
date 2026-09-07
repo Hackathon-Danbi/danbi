@@ -9,16 +9,24 @@ import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.model.OnboardingSession;
 import com.danbi.domain.onboarding.model.OnboardingStep;
-import com.danbi.domain.onboarding.repository.InMemoryOnboardingSessionRepository;
+import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
+@SpringBootTest
+@Transactional
 class OnboardingSessionServiceTest {
+
+	@Autowired
+	private OnboardingSessionService service;
+
+	@Autowired
+	private OnboardingSessionRepository repository;
 
 	@Test
 	void createsAndStoresOnboardingSession() {
-		InMemoryOnboardingSessionRepository repository = new InMemoryOnboardingSessionRepository();
-		OnboardingSessionService service = new OnboardingSessionService(repository);
-
 		CreateOnboardingSessionResponse response = service.createSession();
 
 		assertThat(response.onboardingSessionId()).startsWith("ob_");
@@ -31,9 +39,6 @@ class OnboardingSessionServiceTest {
 
 	@Test
 	void createsUniqueSessionIds() {
-		InMemoryOnboardingSessionRepository repository = new InMemoryOnboardingSessionRepository();
-		OnboardingSessionService service = new OnboardingSessionService(repository);
-
 		CreateOnboardingSessionResponse first = service.createSession();
 		CreateOnboardingSessionResponse second = service.createSession();
 
@@ -42,8 +47,6 @@ class OnboardingSessionServiceTest {
 
 	@Test
 	void savesNormalizedNameAndMovesToPhoneOwnershipStep() {
-		InMemoryOnboardingSessionRepository repository = new InMemoryOnboardingSessionRepository();
-		OnboardingSessionService service = new OnboardingSessionService(repository);
 		CreateOnboardingSessionResponse created = service.createSession();
 
 		SaveOnboardingNameResponse response = service.saveName(
@@ -59,10 +62,6 @@ class OnboardingSessionServiceTest {
 
 	@Test
 	void rejectsUnknownSessionWhenSavingName() {
-		OnboardingSessionService service = new OnboardingSessionService(
-			new InMemoryOnboardingSessionRepository()
-		);
-
 		assertThatThrownBy(() -> service.saveName(new SaveOnboardingNameRequest("ob_missing", "홍길동")))
 			.isInstanceOf(OnboardingSessionNotFoundException.class);
 	}

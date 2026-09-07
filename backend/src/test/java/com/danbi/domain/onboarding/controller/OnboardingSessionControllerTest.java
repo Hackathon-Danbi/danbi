@@ -1,11 +1,14 @@
 package com.danbi.domain.onboarding.controller;
 
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.danbi.domain.onboarding.repository.InMemoryOnboardingSessionRepository;
+import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
+import com.danbi.domain.onboarding.model.OnboardingStep;
 import com.danbi.domain.onboarding.service.OnboardingSessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +21,14 @@ class OnboardingSessionControllerTest {
 
 	@BeforeEach
 	void setUp() {
-		InMemoryOnboardingSessionRepository repository = new InMemoryOnboardingSessionRepository();
-		OnboardingSessionService service = new OnboardingSessionService(repository);
+		OnboardingSessionService service = mock(OnboardingSessionService.class);
+		when(service.createSession()).thenReturn(
+			new CreateOnboardingSessionResponse(
+				"ob_0123456789abcdef0123456789abcdef",
+				OnboardingStep.NAME_INPUT,
+				15
+			)
+		);
 		OnboardingSessionController controller = new OnboardingSessionController(service);
 		mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 	}

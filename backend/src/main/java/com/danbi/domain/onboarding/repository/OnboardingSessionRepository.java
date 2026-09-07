@@ -1,11 +1,7 @@
 package com.danbi.domain.onboarding.repository;
 
 import com.danbi.domain.onboarding.model.OnboardingSession;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface OnboardingSessionRepository {
-
-	OnboardingSession save(OnboardingSession session);
-
-	Optional<OnboardingSession> findById(String id);
+public interface OnboardingSessionRepository extends JpaRepository<OnboardingSession, String> {
 }
