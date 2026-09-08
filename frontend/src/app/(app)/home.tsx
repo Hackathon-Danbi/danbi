@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { Screen } from '@/components/ui/Screen';
@@ -8,7 +8,12 @@ import { HomeScreen } from '@/features/main/screens/HomeScreen';
 import { ListeningScreen } from '@/features/main/transfer/screens/ListeningScreen';
 import { ResultScreen } from '@/features/main/transfer/screens/ResultScreen';
 import { UnconfirmedScreen } from '@/features/main/history/screens/UnconfirmedScreen';
+import {
+  groupUnconfirmedByAccount,
+  totalUnconfirmed,
+} from '@/features/main/history/unconfirmed';
 import { useTransactions } from '@/features/main/TransactionContext';
+import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 import { useSpeechRecognition } from '@/lib/speech/useSpeechRecognition';
 import type { ListeningPhase } from '@/features/main/types';
 
@@ -20,10 +25,16 @@ type View = 'unconfirmed' | 'home' | 'listening' | 'result';
  */
 export default function HomeRoute() {
   const router = useRouter();
-  const { pendingTransactions, unknownTransactions } = useTransactions();
-  const [view, setView] = useState<View>(pendingTransactions.length > 0 ? 'unconfirmed' : 'home');
+  const { transactions, pendingTransactions, unknownTransactions } = useTransactions();
+  const { accounts } = useSelectedAccount();
+  // 미확인 게이트는 홈(생활비 통장)뿐 아니라 모든 통장의 미확인 건수를 합쳐서 안내한다.
+  const unconfirmedTotal = useMemo(
+    () => totalUnconfirmed(groupUnconfirmedByAccount(accounts, transactions)),
+    [accounts, transactions],
+  );
+  const [view, setView] = useState<View>(unconfirmedTotal > 0 ? 'unconfirmed' : 'home');
   const recognition = useSpeechRecognition();
-  const activeView: View = view === 'unconfirmed' && pendingTransactions.length === 0 ? 'home' : view;
+  const activeView: View = view === 'unconfirmed' && unconfirmedTotal === 0 ? 'home' : view;
   const phase: ListeningPhase = recognition.status === 'recognized'
     ? 'confirmed'
     : recognition.status === 'listening' && recognition.transcript
@@ -53,9 +64,12 @@ export default function HomeRoute() {
       <ScreenIn key={activeView}>
         {activeView === 'unconfirmed' && (
           <UnconfirmedScreen
-            count={pendingTransactions.length}
+            count={unconfirmedTotal}
+            onReadSummary={() =>
+              router.push({ pathname: '/(app)/unconfirmed', params: { view: 'summary' } })
+            }
             onDetail={() =>
-              router.push({ pathname: '/(app)/history', params: { view: 'review' } })
+              router.push({ pathname: '/(app)/unconfirmed', params: { view: 'breakdown' } })
             }
             onHome={goHome}
           />
