@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
+import com.danbi.domain.onboarding.exception.OnboardingExceptionHandler;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.service.OnboardingSessionService;
@@ -26,7 +27,9 @@ class OnboardingNameControllerTest {
 	void setUp() {
 		onboardingSessionService = mock(OnboardingSessionService.class);
 		OnboardingNameController controller = new OnboardingNameController(onboardingSessionService);
-		mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+		mockMvc = MockMvcBuilders.standaloneSetup(controller)
+			.setControllerAdvice(new OnboardingExceptionHandler())
+			.build();
 	}
 
 	@Test
@@ -82,6 +85,8 @@ class OnboardingNameControllerTest {
 					  "name": "홍길동"
 					}
 					"""))
-			.andExpect(status().isNotFound());
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("ONBOARDING_SESSION_NOT_FOUND"))
+			.andExpect(jsonPath("$.message").value("가입 세션을 찾을 수 없습니다: ob_missing"));
 	}
 }

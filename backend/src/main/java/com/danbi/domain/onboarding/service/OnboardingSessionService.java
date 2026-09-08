@@ -8,10 +8,13 @@ import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.entity.OnboardingSession;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class OnboardingSessionService {
 
 	private static final String SESSION_ID_PREFIX = "ob_";
@@ -19,17 +22,13 @@ public class OnboardingSessionService {
 
 	private final OnboardingSessionRepository onboardingSessionRepository;
 
-	public OnboardingSessionService(OnboardingSessionRepository onboardingSessionRepository) {
-		this.onboardingSessionRepository = onboardingSessionRepository;
-	}
-
 	@Transactional
 	public CreateOnboardingSessionResponse createSession() {
 		OnboardingSession session = OnboardingSession.start(generateSessionId());
 		onboardingSessionRepository.save(session);
 
 		return new CreateOnboardingSessionResponse(
-			session.id(),
+			session.getOnboardingSessionId(),
 			OnboardingStep.NAME_INPUT,
 			ESTIMATED_MINUTES
 		);
@@ -43,8 +42,8 @@ public class OnboardingSessionService {
 		onboardingSessionRepository.save(updatedSession);
 
 		return new SaveOnboardingNameResponse(
-			updatedSession.id(),
-			updatedSession.name(),
+			updatedSession.getOnboardingSessionId(),
+			updatedSession.getName(),
 			OnboardingStep.PHONE_OWNERSHIP
 		);
 	}

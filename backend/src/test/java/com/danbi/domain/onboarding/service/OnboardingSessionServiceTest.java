@@ -34,7 +34,7 @@ class OnboardingSessionServiceTest {
 		assertThat(response.estimatedMinutes()).isEqualTo(15);
 
 		OnboardingSession storedSession = repository.findById(response.onboardingSessionId()).orElseThrow();
-		assertThat(storedSession.name()).isNull();
+		assertThat(storedSession.getName()).isNull();
 	}
 
 	@Test
@@ -56,7 +56,7 @@ class OnboardingSessionServiceTest {
 		assertThat(response.name()).isEqualTo("홍길동");
 		assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.PHONE_OWNERSHIP);
 		OnboardingSession storedSession = repository.findById(created.onboardingSessionId()).orElseThrow();
-		assertThat(storedSession.name()).isEqualTo("홍길동");
+		assertThat(storedSession.getName()).isEqualTo("홍길동");
 	}
 
 	@Test
