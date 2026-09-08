@@ -15,6 +15,7 @@ import com.danbi.domain.agent.rag.KnowledgeStore;
 import com.danbi.domain.agent.service.*;
 import com.danbi.domain.agent.tools.DemoBankTools;
 import java.time.Clock;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -32,8 +33,8 @@ class AgentControllerTest {
         var sessions = new AgentSessions(clock, AgentTestSupport.properties());
         var knowledge = mock(KnowledgeStore.class);
         var easy = new EasyLanguageAgent(ai, new Prompts());
-        var app = new Orchestrator(ai, new Prompts(), new FinanceAgent(new DemoBankTools(clock), knowledge, easy, clock),
-                new SignupAgent(knowledge, easy), new PracticeCoachAgent(easy), clock);
+        var app = new Orchestrator(ai, new Prompts(), List.of(new FinanceAgent(new DemoBankTools(clock), knowledge, easy, clock),
+                new SignupAgent(knowledge, easy), new PracticeCoachAgent(easy)), clock);
         mvc = MockMvcBuilders.standaloneSetup(new AgentController(sessions, app, new VoiceAgent(ai, app)))
                 .setControllerAdvice(new AgentExceptionHandler()).build();
     }

@@ -13,12 +13,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class VoiceAgent {
+    private static final long MAX_AUDIO_BYTES = 2L * 1024 * 1024;
     private final AiGateway ai;
     private final Orchestrator orchestrator;
     public VoiceAgent(AiGateway ai, Orchestrator orchestrator) { this.ai = ai; this.orchestrator = orchestrator; }
     public VoiceReply chat(Session session, MultipartFile file) {
-        if (file.isEmpty() || file.getSize() > 10 * 1024 * 1024) {
-            throw new AgentException(HttpStatus.PAYLOAD_TOO_LARGE, "10MB 이하의 음성 파일을 보내 주세요.");
+        if (file.isEmpty()) {
+            throw new AgentException(HttpStatus.BAD_REQUEST, "녹음된 음성 파일을 보내 주세요.");
+        }
+        if (file.getSize() > MAX_AUDIO_BYTES) {
+            throw new AgentException(HttpStatus.PAYLOAD_TOO_LARGE, "2MB 이하의 음성 파일을 보내 주세요.");
         }
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
         String extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);

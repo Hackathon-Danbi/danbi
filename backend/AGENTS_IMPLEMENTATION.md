@@ -62,11 +62,12 @@ backend/
 ├── src/main/java/com/danbi/domain/agent/
 │   ├── config/       # AgentConfig, AgentProperties: 환경변수 바인딩
 │   ├── controller/   # AgentController, AgentExceptionHandler: HTTP 입출력
-│   ├── model/        # AgentModels, AgentOutcome, AgentException: 데이터 계약
+│   ├── model/        # AgentModels, AgentContext, AgentType, AgentOutcome, Screen: 데이터 계약
 │   ├── llm/          # AiGateway, OpenAiGateway, Prompts, Schemas
 │   ├── rag/          # KnowledgeStore: 분할·임베딩·검색
-│   ├── tools/        # DemoBankTools: 고정 모의 계좌·수취인·거래
+│   ├── tools/        # BankingTools, BankingData, DemoBankTools: 금융 도구 계약과 모의 구현
 │   └── service/
+│       ├── DanbiAgent.java          # 업무 Agent 공통 인터페이스
 │       ├── AgentSessions.java       # 세션 토큰, 만료, 대화 상태
 │       ├── Orchestrator.java        # 요청 분류, Agent 선택, 처리 순서
 │       ├── VoiceAgent.java          # STT/TTS, 파일 검증
@@ -165,7 +166,15 @@ curl http://localhost:8080/api/agents/voice/chat \
 
 `transcript`에는 STT 원문, `reply`에는 텍스트 대화와 동일한 결과가 들어 있다.
 원문을 임의로 문장 교정해 덮어쓰지 않고 라우터가 이름·금액·의도를 별도로 추출한다.
-빈 음성, 10MB 초과, 지원되지 않는 확장자는 거절한다. 파일 내용의 최종 디코딩 검증은 STT 제공자가 수행한다.
+빈 음성, 2MB 초과, 지원되지 않는 확장자는 거절한다. 파일 내용의 최종 디코딩 검증은 STT 제공자가 수행한다.
+파일 제한은 2,097,152바이트(2 × 1024 × 1024)이며 정확히 이 크기까지 허용한다.
+Spring의 파일 제한도 2MB, multipart 부가 정보를 포함한 요청 전체 제한은 3MB다.
+`spring.servlet.multipart.resolve-lazily=true`로 파일 접근 시 파싱하여 용량 초과 오류도
+Agent 예외 처리기에서 JSON 안내 문구로 반환한다.
+`server.tomcat.max-swallow-size=4MB`는 거절된 요청의 남은 데이터를 읽어 오류 응답이
+클라이언트에 전달되도록 하는 한도이며, 허용 파일 크기를 늘리는 설정은 아니다.
+이 한도를 넘는 큰 요청은 연결이 종료될 수 있다.
+빈 파일은 400, 용량 초과는 413으로 안내한다. 이는 파일 크기 제한이며 녹음 시간 제한은 아니다.
 마이크 녹음/권한 요청/재생은 React Native 프런트엔드에서 별도로 연결한다.
 
 최신 `reply.version` 또는 텍스트 응답의 `version`으로 음성을 요청한다.
@@ -278,3 +287,93 @@ MCP가 필요하면 동일한 조회/초안 도구 인터페이스를 MCP 서버
 라이브 검증은 로컬에 키를 설정한 뒤 잔액/수정/취소/근거 질문과 음성 파일로 수행한다.
 정확도 평가는 소음·동명이인·금액 수정·부정 표현·근거 없는 질문을 포함하고,
 모델이나 프롬프트 변경 후 같은 평가 세트로 비교한다.
+
+## 10. 공통 Agent·금융 도구 인터페이스
+
+가입·금융·연습 Agent는 `DanbiAgent`를 구현한다.
+
+```java
+public interface DanbiAgent {
+    AgentType supports();
+    AgentOutcome handle(AgentContext context);
+}
+```
+
+`AgentContext`는 해석된 `Decision`, 사용자 발화 `text`, 서버의 `Session`을 묶는다.
+`Orchestrator`는 Spring이 주입한 `List<DanbiAgent>`를 `AgentType`별로 등록하고
+공통 `handle` 메서드로 호출한다. 같은 타입 중복 등록이나 필요한 타입 누락은 시작 시 실패한다.
+음성 입출력과 쉬운 말 안내는 업무 Agent가 함께 사용하는 서비스로 유지한다.
+
+| intent | AgentType | 구현체 |
+|---|---|---|
+| BALANCE, TRANSACTIONS, TRANSFER, PRODUCT | FINANCE | FinanceAgent |
+| SIGNUP | SIGNUP | SignupAgent |
+| PRACTICE, COACH | PRACTICE | PracticeCoachAgent |
+| CANCEL, OTHER, 모호한 요청 | 오케스트레이터 직접 처리 | 입력 취소 또는 안내 |
+
+`FinanceAgent`는 `DemoBankTools` 대신 `BankingTools` 인터페이스에 의존한다.
+
+```java
+public interface BankingTools {
+    long getBalance();
+    List<TransactionData> getTransactions(DateRange range);
+    List<RecipientData> findRecipients(String name);
+    TransferPreview createTransferPreview(TransferPreviewRequest request);
+}
+```
+
+각 DTO는 `BankingData`에 정의되어 있다. `TransferPreviewRequest`에는 수취인 id와 금액을 넣는다.
+도구는 자체 수취인 데이터와 금액 범위를 다시 검증하고, 검증된 이름·마스킹 계좌·금액으로
+`TransferPreview`를 반환한다. 사용자 입력 오류는 `BankingValidationException`으로 전달한다.
+금융 Agent는 반환된 미리보기의 값으로 화면과 문장을 함께 만든다.
+
+현재 구현체는 `DemoBankTools` 하나다. 추후 실제 금융·연습 구현체를 추가할 때 같은 계약을 사용하되,
+실제 사용자·계좌는 서버에서 검증한 컨텍스트로 바인딩해야 한다. 여러 구현체를 등록한다면
+프로필·Qualifier 또는 서버의 모드별 선택 정책으로 사용할 도구를 명시한다.
+이 변경은 실제 금융 연결이나 DEMO/PRACTICE 모드 정책을 추가하지 않는다.
+
+## 11. 프런트 화면 응답 계약
+
+`Reply.screen`과 `AgentOutcome.screen`은 `Map` 대신 sealed interface `Screen`을 사용한다.
+각 record가 고정된 `type`을 반환하므로 타입 이름을 임의로 주입할 수 없다.
+아래 필드는 모두 필수이며 기존 JSON 이름을 유지한다.
+
+| screen.type | 추가 필수 필드 | Screen DTO |
+|---|---|---|
+| message | 없음 | Message |
+| balance | balance: 정수, currency: 문자열 | Balance |
+| transactions | from/to: YYYY-MM-DD 문자열, items: 거래 배열 | Transactions |
+| transfer_confirmation | recipientId/recipientName/accountMasked: 문자열, amount: 정수, currency: 문자열, practice: 불리언 | TransferConfirmation |
+| product_explanation | 없음 | ProductExplanation |
+| signup_guide | step: 문자열 | SignupGuide |
+| practice_feedback | nextScenario: 문자열, inputErrors/amountCorrections: 정수 | PracticeFeedback |
+
+거래 배열의 각 항목은 `date: YYYY-MM-DD`, `description: 문자열`, `amount: 정수`이며
+금액은 원 단위다. 거래내역에서 음수는 출금, 양수는 입금이다. 현재 currency는 `KRW`다.
+`items`와 `sources`는 결과가 없으면 빈 배열이다.
+공통 응답의 `version`, `agent`, `text`, `screen`, `sources`, `demo`는 그대로 유지한다.
+`message`, `product_explanation`의 표시 문장은 최상위 `text`를 사용하고, 근거는 `sources`에서 읽는다.
+
+```json
+{
+  "version": 2,
+  "agent": "finance",
+  "text": "김민수 님의 계좌 ***1234로 30,000원을 보내는 모의 확인 화면이에요. 실제 돈은 보내지 않았어요.",
+  "screen": {
+    "type": "transfer_confirmation",
+    "recipientId": "r1",
+    "recipientName": "김민수",
+    "accountMasked": "***1234",
+    "amount": 30000,
+    "currency": "KRW",
+    "practice": false
+  },
+  "sources": [],
+  "demo": true
+}
+```
+
+`ScreenContractTest`가 7종을 실제 JSON으로 직렬화해 이름·필드·값을 검증한다.
+`VoiceUploadTest`는 2MB 경계와 빈 파일 처리를 검증하고,
+`VoiceMultipartIntegrationTest`는 실제 내장 서버에서 파일 2MB/요청 전체 3MB 제한을 검증한다.
+용량 초과 시 상태 코드뿐 아니라 Content-Type과 `message` 필드의 안내 문구도 검증한다.

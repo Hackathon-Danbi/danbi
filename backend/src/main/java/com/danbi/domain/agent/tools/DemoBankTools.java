@@ -1,33 +1,40 @@
 package com.danbi.domain.agent.tools;
 
+import com.danbi.domain.agent.tools.BankingData.*;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /** Deliberately has no reference to TransferService or customer repositories. */
 @Component
-public class DemoBankTools {
+public class DemoBankTools implements BankingTools {
+    private record SavedRecipient(RecipientData data, String alias) {}
+    private static final List<SavedRecipient> RECIPIENTS = List.of(
+            new SavedRecipient(new RecipientData("r1", "김민수", "***1234"), "민수"),
+            new SavedRecipient(new RecipientData("r2", "이지영", "***5678"), "지영"),
+            new SavedRecipient(new RecipientData("r3", "박영희", "***1111"), "영희"),
+            new SavedRecipient(new RecipientData("r4", "김영희", "***2222"), "영희"));
     private final Clock clock;
     public DemoBankTools(Clock clock) { this.clock = clock; }
-    public long balance() { return 150_000; }
-    public List<Map<String, String>> recipients(String name) {
-        return List.of(
-                Map.of("id", "r1", "name", "김민수", "alias", "민수", "account", "***1234"),
-                Map.of("id", "r2", "name", "이지영", "alias", "지영", "account", "***5678"),
-                Map.of("id", "r3", "name", "박영희", "alias", "영희", "account", "***1111"),
-                Map.of("id", "r4", "name", "김영희", "alias", "영희", "account", "***2222"))
-                .stream().filter(r -> r.get("name").equals(name) || r.get("alias").equals(name)).toList();
+    @Override public long getBalance() { return 150_000; }
+    @Override public List<RecipientData> findRecipients(String name) {
+        return RECIPIENTS.stream().filter(r -> r.data().name().equals(name) || r.alias().equals(name))
+                .map(SavedRecipient::data).toList();
     }
-    public List<Map<String, Object>> transactions(LocalDate from, LocalDate to) {
+    @Override public List<TransactionData> getTransactions(DateRange range) {
         LocalDate today = LocalDate.now(clock);
-        List<Map<String, Object>> rows = List.of(
-                Map.of("date", today.minusDays(1).toString(), "description", "연습 마트", "amount", -12000),
-                Map.of("date", today.minusDays(3).toString(), "description", "연습 입금", "amount", 50000));
-        return rows.stream().filter(row -> {
-            LocalDate date = LocalDate.parse((String) row.get("date"));
-            return !date.isBefore(from) && !date.isAfter(to);
-        }).toList();
+        return List.of(new TransactionData(today.minusDays(1), "연습 마트", -12000),
+                new TransactionData(today.minusDays(3), "연습 입금", 50000))
+                .stream().filter(row -> !row.date().isBefore(range.from()) && !row.date().isAfter(range.to())).toList();
+    }
+    @Override public TransferPreview createTransferPreview(TransferPreviewRequest request) {
+        RecipientData recipient = RECIPIENTS.stream().map(SavedRecipient::data)
+                .filter(r -> r.id().equals(request.recipientId())).findFirst()
+                .orElseThrow(() -> new BankingValidationException("받는 분을 다시 확인해 주세요."));
+        if (request.amount() <= 0 || request.amount() > getBalance()) {
+            throw new BankingValidationException("1원부터 모의 잔액 150,000원 이내로 입력해 주세요.");
+        }
+        return new TransferPreview(recipient.id(), recipient.name(), recipient.accountMasked(), request.amount(), "KRW");
     }
 }
