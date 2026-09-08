@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, Vibration } from 'react-native';
+import { Pressable, StyleSheet, View, Vibration } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
+import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
 import { colors, radius } from '@/theme/tokens';
 import { OnboardingIcon } from '../../components/OnboardingComponents';
 import { CAPTURE_GUIDANCE } from '../constants';
@@ -118,7 +119,7 @@ function PulseArrow({ char }: { char: string }) {
   }));
   return (
     <Animated.View style={style} pointerEvents="none">
-      <AppText size={78} weight={900} color="#ffd321">
+      <AppText size={78} weight={900} color={YELLOW}>
         {char}
       </AppText>
     </Animated.View>
@@ -278,74 +279,77 @@ export function IdCaptureExperience({
 
   if (phase === 'prepare') {
     return (
-      <ScrollView contentContainerStyle={s.prepare}>
-        <View style={s.prepareIcon}>
-          <OnboardingIcon name="id" size={48} color="#2f290d" />
-        </View>
-        <AppText size={34} weight={900} lineHeight={41} align="center" letterSpacing={-1.5}>
-          신분증을 준비해주세요
-        </AppText>
-        <AppText size={21} lineHeight={31} align="center" color="#565149" style={s.mt14}>
-          주민등록증이나 운전면허증을 준비해주세요.
-        </AppText>
-        <View style={s.prepareList}>
-          {[
-            '신분증을 평평한 곳에 놓아주세요.',
-            '밝은 곳에서 촬영해주세요.',
-            '신분증을 가리는 것이 없는지 확인해주세요.',
-          ].map((text, i) => (
-            <View key={text} style={s.prepareRow}>
-              <View style={s.prepareNum}>
-                <AppText size={18} weight={900} color={colors.accentText}>
-                  {i + 1}
+      <View style={s.sheet}>
+        <View style={s.sheetBody}>
+          <AppText size={24} weight={900} color={INK} lineHeight={33}>
+            {'신분증을\n준비해주세요'}
+          </AppText>
+          <AppText size={15} color="#888" lineHeight={22} style={s.mt8}>
+            주민등록증이나 운전면허증을 준비해주세요.
+          </AppText>
+          <View style={s.prepareList}>
+            {[
+              '신분증을 평평한 곳에 놓아주세요.',
+              '밝은 곳에서 촬영해주세요.',
+              '신분증을 가리는 것이 없는지 확인해주세요.',
+            ].map((text, i) => (
+              <View key={text} style={s.prepareRow}>
+                <View style={s.prepareNum}>
+                  <AppText size={13} weight={900} color={INK}>
+                    {i + 1}
+                  </AppText>
+                </View>
+                <AppText size={15} weight={700} lineHeight={21} color={INK} style={s.flex1}>
+                  {text}
                 </AppText>
               </View>
-              <AppText size={19} weight={700} lineHeight={27} color="#35322c" style={s.flex1}>
-                {text}
-              </AppText>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
-        <Pressable accessibilityRole="button" onPress={startCamera} style={s.prepareStart}>
-          <AppText size={23} weight={850} color="#241d08" align="center">
-            신분증 촬영하기
-          </AppText>
-        </Pressable>
-      </ScrollView>
+        <View style={s.sheetActions}>
+          <Pressable accessibilityRole="button" onPress={startCamera} style={s.primaryBtn}>
+            <AppText size={17} weight={900} color={INK}>
+              신분증 촬영하기
+            </AppText>
+          </Pressable>
+        </View>
+      </View>
     );
   }
 
   if (phase === 'review') {
     return (
-      <ScrollView contentContainerStyle={s.review}>
-        <View style={s.capturedBadge}>
-          <OnboardingIcon name="check" size={23} color="#236344" />
-          <AppText size={18} weight={900} color="#236344">
-            잘 찍혔어요!
+      <View style={s.sheet}>
+        <View style={s.sheetBody}>
+          <View style={s.capturedBadge}>
+            <OnboardingIcon name="check" size={15} color={INK} />
+            <AppText size={12} weight={700} color={INK}>
+              잘 찍혔어요!
+            </AppText>
+          </View>
+          <AppText size={24} weight={900} color={INK} lineHeight={33} style={s.mt12}>
+            {'신분증이\n잘 보이나요?'}
           </AppText>
+          <AppText size={15} color="#888" lineHeight={22} style={s.mt8}>
+            글자와 사진이 선명하게 보이면 계속 진행해주세요.
+          </AppText>
+          <View style={s.reviewPhoto}>
+            <MockIdCard />
+          </View>
         </View>
-        <AppText size={34} weight={900} lineHeight={41} align="center" letterSpacing={-1.5}>
-          신분증이 잘 보이나요?
-        </AppText>
-        <AppText size={21} lineHeight={31} align="center" color="#565149" style={s.mt14}>
-          글자와 사진이 선명하게 보이면 계속 진행해주세요.
-        </AppText>
-        <View style={s.reviewPhoto}>
-          <MockIdCard />
-        </View>
-        <View style={s.reviewActions}>
-          <Pressable accessibilityRole="button" onPress={onAccepted} style={s.reviewPrimary}>
-            <AppText size={21} weight={850} color="#241d08" align="center">
+        <View style={s.sheetActions}>
+          <Pressable accessibilityRole="button" onPress={onAccepted} style={s.primaryBtn}>
+            <AppText size={17} weight={900} color={INK}>
               네, 잘 보여요
             </AppText>
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={retake} style={s.reviewSecondary}>
-            <AppText size={21} weight={850} color="#292721" align="center">
+          <Pressable accessibilityRole="button" onPress={retake} style={s.secondaryBtn}>
+            <AppText size={17} weight={900} color={INK}>
               다시 찍을게요
             </AppText>
           </Pressable>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -450,11 +454,11 @@ export function IdCaptureExperience({
 
       {coach ? (
         <View style={s.coachCard} accessibilityLiveRegion="polite">
-          <AppText size={15} weight={850} color="#ffe676" align="center">
+          <AppText size={15} weight={850} color={YELLOW} align="center">
             단비의 안내 · {coach.step + 1}/{COACH_STEPS[coach.kind].length}
           </AppText>
           {coachArrow(coach) ? (
-            <AppText size={40} weight={900} color="#ffd321" align="center">
+            <AppText size={40} weight={900} color={YELLOW} align="center">
               {coachArrow(coach)}
             </AppText>
           ) : null}
@@ -553,103 +557,79 @@ export function IdCaptureExperience({
 const s = StyleSheet.create({
   flex1: { flex: 1 },
   mt5: { marginTop: 5 },
+  mt8: { marginTop: 8 },
   mt9: { marginTop: 9 },
-  mt14: { marginTop: 14 },
+  mt12: { marginTop: 12 },
   underline: { textDecorationLine: 'underline' },
   srOnly: { position: 'absolute', width: 1, height: 1, opacity: 0 },
 
-  // prepare
-  prepare: {
-    flexGrow: 1,
-    padding: 24,
-    paddingTop: 32,
-    backgroundColor: colors.paper,
-  },
-  prepareIcon: {
-    width: 88,
-    height: 88,
-    alignSelf: 'center',
+  // prepare / review 공통 레이아웃 — 다른 가입 화면과 같은 규격
+  sheet: { flex: 1, backgroundColor: '#fff' },
+  sheetBody: { flex: 1, paddingHorizontal: 18, paddingTop: 14 },
+  sheetActions: { gap: 8, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14 },
+  primaryBtn: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-    borderRadius: 28,
-    backgroundColor: colors.yellow,
+    paddingVertical: 18,
+    borderRadius: 16,
+    backgroundColor: YELLOW,
   },
-  prepareList: { gap: 13, marginTop: 30, marginBottom: 24 },
+  secondaryBtn: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
+  },
+
+  prepareList: { gap: 8, marginTop: 16 },
   prepareRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    minHeight: 72,
+    gap: 12,
     paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: '#dfdcd2',
-    borderRadius: radius.md + 2,
-    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    borderWidth: 1.8,
+    borderColor: BORDER,
+    borderRadius: 16,
+    backgroundColor: CREAM,
   },
   prepareNum: {
-    width: 40,
-    height: 40,
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 13,
-    backgroundColor: colors.yellowSoft,
-  },
-  prepareStart: {
-    width: '100%',
-    minHeight: 68,
-    marginTop: 'auto',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    backgroundColor: colors.yellow,
+    backgroundColor: YELLOW,
   },
 
-  // review
-  review: { flexGrow: 1, padding: 22, paddingTop: 24, backgroundColor: colors.paper },
   capturedBadge: {
     flexDirection: 'row',
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     alignItems: 'center',
-    gap: 8,
-    minHeight: 44,
-    marginBottom: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    backgroundColor: '#e8f7ee',
+    gap: 5,
+    paddingVertical: 5,
+    paddingLeft: 8,
+    paddingRight: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    backgroundColor: CREAM,
   },
   reviewPhoto: {
     width: '100%',
     aspectRatio: 1.48,
-    marginTop: 25,
-    marginBottom: 18,
+    marginTop: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#2e8560',
-    borderRadius: radius.lg + 1,
-    backgroundColor: '#e5e1d8',
-  },
-  reviewActions: { gap: 10, marginTop: 'auto' },
-  reviewPrimary: {
-    width: '100%',
-    minHeight: 62,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    backgroundColor: colors.yellow,
-  },
-  reviewSecondary: {
-    width: '100%',
-    minHeight: 62,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: '#c8c2b4',
-    backgroundColor: colors.white,
+    borderWidth: 1.8,
+    borderColor: BORDER,
+    borderRadius: 16,
+    backgroundColor: '#F7F5EF',
   },
 
   // mock id card
@@ -703,7 +683,7 @@ const s = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#ffd321',
+    backgroundColor: YELLOW,
   },
   liveDotGood: { backgroundColor: '#55d78b' },
 
@@ -725,7 +705,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     width: 40,
     height: 40,
-    borderColor: '#ffd321',
+    borderColor: YELLOW,
   },
   cornerGood: { borderColor: '#68e39b' },
   cornerTL: { top: -4, left: -4, borderTopWidth: 5, borderLeftWidth: 5, borderTopLeftRadius: 17 },
@@ -738,7 +718,7 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#ffd321',
+    backgroundColor: YELLOW,
   },
   directionArrow: {
     ...ABS_FILL,
@@ -827,7 +807,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mockBtnActive: { borderColor: '#ffd321', backgroundColor: '#665817' },
+  mockBtnActive: { borderColor: YELLOW, backgroundColor: '#665817' },
 
   coachCard: {
     position: 'absolute',
@@ -837,7 +817,7 @@ const s = StyleSheet.create({
     bottom: 72,
     padding: 18,
     borderWidth: 2,
-    borderColor: '#ffd321',
+    borderColor: YELLOW,
     borderRadius: radius.lg + 2,
     backgroundColor: 'rgba(24,26,24,0.94)',
   },

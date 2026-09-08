@@ -14,6 +14,8 @@ export const StorageKeys = {
   /** legacy — 읽기 전용. 존재하면 onboardingCompleted 로 승격. */
   legacySignupComplete: 'danbi.signup-complete',
   onboardingDraft: 'danbi.onboarding.draft',
+  /** 가입 때 정한 간편 비밀번호. 로그인/재인증에서 확인한다. */
+  authPin: 'danbi.auth.pin',
   missionsCompleted: 'danbi.missions.completed',
   dailyPractice: 'danbi.daily.practice',
   quizRecord: 'danbi.quiz.record',

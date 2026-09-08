@@ -6,15 +6,23 @@ import {
   View,
   type KeyboardTypeOptions,
 } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Polyline, Rect } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
-import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Sheet } from '@/components/ui/Sheet';
-import { colors, radius } from '@/theme/tokens';
+import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
+
+/**
+ * 가입·인증 화면의 공통 부품. 크기/색/간격은 메인(홈) 화면 규격을 그대로 따른다:
+ * 흰 배경 + 크림(#FFFDF8) 카드 + 금색 테두리 1.8 + radius 16, 본문 좌우 여백 18,
+ * 제목 24/900, 소제목 17/900, 본문 15, 보조문구 13.
+ *
+ * 화면마다 배율을 다르게 축소하면 화면 간 글자 크기가 튀므로, 여기서는 고정 크기만
+ * 쓰고 대신 한 화면에 담는 내용을 줄인다.
+ */
 
 // ──────────────────────────────────────────────────────────
-// OnboardingIcon — danbi_jj 인라인 SVG 아이콘 세트를 react-native-svg 로 이식
+// 아이콘
 // ──────────────────────────────────────────────────────────
 type IconName =
   | 'volume'
@@ -32,17 +40,16 @@ type IconName =
 export function OnboardingIcon({
   name,
   size = 22,
-  color = '#4d473d',
+  color = INK,
 }: {
   name: string;
   size?: number;
   color?: string;
 }) {
-  const stroke = color;
   const common = {
     fill: 'none' as const,
-    stroke,
-    strokeWidth: 1.8,
+    stroke: color,
+    strokeWidth: 1.9,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
   };
@@ -108,55 +115,62 @@ export function OnboardingIcon({
 }
 
 // ──────────────────────────────────────────────────────────
-// Header + progress
+// 헤더 (메인 NavBar 규격 + 진행 표시)
 // ──────────────────────────────────────────────────────────
 export function OnboardingHeader({
-  eyebrow,
   title,
   progress,
   onBack,
   onExit,
   showBack = true,
 }: {
-  eyebrow: string;
   title: string;
   progress: number;
   onBack: () => void;
   onExit: () => void;
   showBack?: boolean;
 }) {
+  const pct = Math.max(0, Math.min(100, progress));
   return (
     <View>
       <View style={s.header}>
         {showBack ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="이전 화면" onPress={onBack} style={s.headerBtn}>
-            <AppText size={34} weight={400} color="#201e19" lineHeight={34}>
-              ‹
-            </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="이전"
+            onPress={onBack}
+            style={s.headerBack}
+            hitSlop={10}
+          >
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+              <Polyline
+                points="15 18 9 12 15 6"
+                stroke={INK}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
           </Pressable>
-        ) : (
-          <View style={s.headerBtn} />
-        )}
-        <View style={s.headerCenter}>
-          <AppText size={16} weight={700} color="#6d685e" align="center" style={s.headerEyebrow}>
-            {eyebrow}
-          </AppText>
-          <AppText size={22} weight={900} align="center" numberOfLines={1}>
-            {title}
-          </AppText>
-        </View>
+        ) : null}
+        <AppText size={17} weight={900} color={INK}>
+          {title}
+        </AppText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="가입 그만하기"
           onPress={onExit}
-          style={[s.headerBtn, s.headerExit]}
+          style={s.headerExit}
+          hitSlop={10}
         >
-          <AppText size={22} weight={700} color="#4e4a43">
+          <AppText size={19} weight={700} color="#999">
             ✕
           </AppText>
         </Pressable>
       </View>
-      <ProgressBar value={progress} height={8} trackColor="#e9e6de" />
+      <View style={s.progressTrack}>
+        <View style={[s.progressFill, { width: `${pct}%` }]} />
+      </View>
     </View>
   );
 }
@@ -167,21 +181,24 @@ export function VoiceGuideButton({ onClick, isReading }: { onClick: () => void; 
       accessibilityRole="button"
       accessibilityState={{ selected: isReading }}
       onPress={onClick}
-      style={[s.voiceGuide, isReading && s.voiceGuideReading]}
+      style={[s.voiceGuide, isReading && s.voiceGuideOn]}
     >
-      <OnboardingIcon name="volume" size={28} color={isReading ? '#2e2500' : '#433600'} />
-      <AppText size={22} weight={900} color={isReading ? '#2e2500' : '#433600'}>
+      <OnboardingIcon name="volume" size={19} color={INK} />
+      <AppText size={14} weight={800} color={INK}>
         {isReading ? '읽어주는 중 · 멈추기' : '이 화면 읽어주기'}
       </AppText>
     </Pressable>
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// 본문 타이포 (홈 화면 스케일)
+// ──────────────────────────────────────────────────────────
 export function StepBadge({ icon, children }: { icon: string; children: string }) {
   return (
     <View style={s.stepBadge}>
-      <OnboardingIcon name={icon} size={18} color={colors.accentText} />
-      <AppText size={17} weight={850} color={colors.accentText}>
+      <OnboardingIcon name={icon} size={14} color={INK} />
+      <AppText size={12} weight={700} color={INK}>
         {children}
       </AppText>
     </View>
@@ -190,7 +207,7 @@ export function StepBadge({ icon, children }: { icon: string; children: string }
 
 export function PageTitle({ children }: { children: string }) {
   return (
-    <AppText size={34} weight={900} lineHeight={40} letterSpacing={-1.5} style={s.title}>
+    <AppText size={24} weight={900} color={INK} lineHeight={33} style={s.title}>
       {children}
     </AppText>
   );
@@ -198,12 +215,15 @@ export function PageTitle({ children }: { children: string }) {
 
 export function GuideText({ children }: { children: string }) {
   return (
-    <AppText size={21} weight={400} lineHeight={31} color="#555149" style={s.guide}>
+    <AppText size={15} weight={400} color="#888" lineHeight={22} style={s.guide}>
       {children}
     </AppText>
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// 카드 / 목록
+// ──────────────────────────────────────────────────────────
 export function OnboardingInfoCard({
   icon,
   title,
@@ -216,35 +236,16 @@ export function OnboardingInfoCard({
   return (
     <View style={s.infoCard}>
       <View style={s.infoIcon}>
-        <OnboardingIcon name={icon} size={32} color="#4d473d" />
+        <OnboardingIcon name={icon} size={24} color={INK} />
       </View>
       <View style={s.flex1}>
-        <AppText size={22} weight={700} lineHeight={30}>
+        <AppText size={17} weight={900} color={INK}>
           {title}
         </AppText>
-        <AppText size={18} lineHeight={27} color="#625e55" style={s.mt6}>
+        <AppText size={13} color="#888" lineHeight={19} style={s.mt3}>
           {description}
         </AppText>
       </View>
-    </View>
-  );
-}
-
-export function OnboardingTipList({ items }: { items: string[] }) {
-  return (
-    <View style={s.tipList}>
-      {items.slice(0, 3).map((item) => (
-        <View key={item} style={s.tipRow}>
-          <View style={s.tipBullet}>
-            <AppText size={17} weight={900} color="#5b4a0a">
-              ✓
-            </AppText>
-          </View>
-          <AppText size={18} weight={700} lineHeight={26} color="#48443d" style={s.flex1}>
-            {item}
-          </AppText>
-        </View>
-      ))}
     </View>
   );
 }
@@ -267,34 +268,33 @@ export function LargeSelectionCard({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onClick}
-      style={[s.selectionCard, selected && s.selectionCardOn]}
+      style={[s.selectCard, selected && s.selectCardOn]}
     >
       {icon ? (
-        <View style={[s.selectionIcon, selected && s.selectionIconOn]}>
-          <OnboardingIcon name={icon} size={28} color={selected ? '#342a00' : '#4d473d'} />
+        <View style={[s.selectIcon, selected && s.selectIconOn]}>
+          <OnboardingIcon name={icon} size={20} color={INK} />
         </View>
       ) : null}
       <View style={s.flex1}>
-        <AppText size={23} weight={700} lineHeight={30}>
+        <AppText size={17} weight={900} color={INK}>
           {title}
         </AppText>
         {description ? (
-          <AppText size={18} lineHeight={25} color="#69645b" style={s.mt5}>
+          <AppText size={13} color="#888" lineHeight={19} style={s.mt3}>
             {description}
           </AppText>
         ) : null}
       </View>
-      <View style={[s.selectionStatus, selected && s.selectionStatusOn]}>
-        {selected ? (
-          <AppText size={18} weight={900} color="#332900">
-            ✓
-          </AppText>
-        ) : null}
+      <View style={[s.radio, selected && s.radioOn]}>
+        {selected ? <OnboardingIcon name="check" size={14} color={INK} /> : null}
       </View>
     </Pressable>
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// 입력
+// ──────────────────────────────────────────────────────────
 const KEYBOARD: Record<string, KeyboardTypeOptions> = {
   numeric: 'number-pad',
   tel: 'phone-pad',
@@ -310,6 +310,7 @@ export function SeniorTextInput({
   inputMode,
   maxLength,
   autoFocus,
+  secure,
 }: {
   label: string;
   support?: string;
@@ -320,28 +321,29 @@ export function SeniorTextInput({
   inputMode?: 'numeric' | 'tel' | 'text';
   maxLength?: number;
   autoFocus?: boolean;
+  secure?: boolean;
 }) {
-  const showCheck = !!value && !error;
   return (
-    <View style={s.textInput}>
-      <AppText size={20} weight={900}>
+    <View style={s.field}>
+      <AppText size={13} weight={700} color="#888">
         {label}
       </AppText>
-      <View style={[s.textInputBox, error ? s.textInputBoxError : null]}>
+      <View style={[s.fieldBox, error ? s.fieldBoxError : null]}>
         <TextInput
-          style={s.textInputField}
+          style={s.fieldInput}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#aaa59b"
+          placeholderTextColor="#BBB"
           keyboardType={inputMode ? (KEYBOARD[inputMode] ?? 'default') : 'default'}
           maxLength={maxLength}
           autoFocus={autoFocus}
+          secureTextEntry={secure}
         />
-        {showCheck ? <OnboardingIcon name="check" size={19} color="#2f8b5d" /> : null}
+        {value && !error ? <OnboardingIcon name="check" size={17} color="#2F8B5D" /> : null}
       </View>
       {error || support ? (
-        <AppText size={17} weight={error ? 800 : 400} lineHeight={25} color={error ? '#a7372b' : '#615d55'}>
+        <AppText size={13} weight={error ? 700 : 400} lineHeight={19} color={error ? '#E05050' : '#AAA'}>
           {error || support}
         </AppText>
       ) : null}
@@ -349,6 +351,9 @@ export function SeniorTextInput({
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// 약관
+// ──────────────────────────────────────────────────────────
 export function AgreementAllToggle({
   label,
   checked,
@@ -363,12 +368,12 @@ export function AgreementAllToggle({
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       onPress={onToggle}
-      style={[s.agreeAll, checked && s.agreeCardOn]}
+      style={[s.agreeAll, checked && s.agreeAllOn]}
     >
-      <View style={[s.agreeAllCheck, checked && s.agreeCheckOn]}>
-        {checked ? <OnboardingIcon name="check" size={22} color="#302600" /> : null}
+      <View style={[s.check, s.checkLarge, checked && s.checkOn]}>
+        {checked ? <OnboardingIcon name="check" size={17} color={INK} /> : null}
       </View>
-      <AppText size={21} weight={900} lineHeight={27} style={s.flex1}>
+      <AppText size={17} weight={900} color={INK} style={s.flex1}>
         {label}
       </AppText>
     </Pressable>
@@ -389,65 +394,64 @@ export function AgreementCard({
   onDetail: () => void;
 }) {
   return (
-    <View style={[s.agreeCard, checked && s.agreeCardOn]}>
+    <View style={s.agreeRow}>
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
         onPress={onToggle}
         style={s.agreeToggle}
       >
-        <View style={[s.agreeCheck, checked && s.agreeCheckOn]}>
-          {checked ? <OnboardingIcon name="check" size={19} color="#302600" /> : null}
+        <View style={[s.check, checked && s.checkOn]}>
+          {checked ? <OnboardingIcon name="check" size={15} color={INK} /> : null}
         </View>
         <View style={s.flex1}>
-          <AppText size={19} weight={700} lineHeight={26}>
+          <AppText size={15} weight={800} color={INK}>
             {title}
           </AppText>
-          <AppText size={17} lineHeight={24} color="#615d55" style={s.mt5}>
+          <AppText size={12} color="#AAA" lineHeight={17} style={s.mt2}>
             {description}
           </AppText>
         </View>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={onDetail} style={s.agreeDetailBtn}>
-        <AppText size={17} weight={850} color="#575147" align="center">
-          내용 보기
+      <Pressable accessibilityRole="button" onPress={onDetail} style={s.agreeDetail} hitSlop={6}>
+        <AppText size={13} weight={700} color="#888">
+          보기 ›
         </AppText>
       </Pressable>
     </View>
   );
 }
 
+/** 메인 WarningBar 규격의 안내 상자. */
 export function GuideBox({
-  icon = 'shield',
   title,
   description,
   tone = 'neutral',
 }: {
-  icon?: string;
   title: string;
   description?: string;
   tone?: 'neutral' | 'success' | 'error';
 }) {
-  const toneStyle =
-    tone === 'success' ? s.guideBoxSuccess : tone === 'error' ? s.guideBoxError : null;
-  const fg = tone === 'success' ? '#215a3e' : tone === 'error' ? '#8f3025' : '#514a3a';
+  const box =
+    tone === 'success' ? s.noticeSuccess : tone === 'error' ? s.noticeError : s.noticeNeutral;
+  const fg = tone === 'success' ? '#20674A' : tone === 'error' ? '#A33B2E' : '#7A6000';
   return (
-    <View style={[s.guideBox, toneStyle]}>
-      <OnboardingIcon name={icon} size={20} color={fg} />
-      <View style={s.flex1}>
-        <AppText size={18} weight={700} lineHeight={25} color={fg}>
-          {title}
+    <View style={[s.notice, box]}>
+      <AppText size={14} weight={600} color={fg} lineHeight={21}>
+        {title}
+      </AppText>
+      {description ? (
+        <AppText size={13} weight={400} color={fg} lineHeight={19} style={s.mt3}>
+          {description}
         </AppText>
-        {description ? (
-          <AppText size={17} lineHeight={26} color={fg} style={s.mt5}>
-            {description}
-          </AppText>
-        ) : null}
-      </View>
+      ) : null}
     </View>
   );
 }
 
+// ──────────────────────────────────────────────────────────
+// 하단 버튼 (메인 앱 기본 버튼 규격)
+// ──────────────────────────────────────────────────────────
 export function BottomActionArea({
   primary,
   onPrimary,
@@ -472,12 +476,12 @@ export function BottomActionArea({
         disabled={primaryDisabled}
         onPress={onPrimary}
         style={({ pressed }) => [
-          s.actionPrimary,
-          primaryDisabled && s.actionPrimaryDisabled,
-          pressed && !primaryDisabled && s.actionPressed,
+          s.primaryBtn,
+          primaryDisabled && s.primaryBtnOff,
+          pressed && !primaryDisabled && s.pressed,
         ]}
       >
-        <AppText size={22} weight={850} color={primaryDisabled ? '#8a857a' : '#241d08'} align="center">
+        <AppText size={17} weight={900} color={primaryDisabled ? '#AAA' : INK}>
           {primary}
         </AppText>
       </Pressable>
@@ -485,16 +489,16 @@ export function BottomActionArea({
         <Pressable
           accessibilityRole="button"
           onPress={onSecondary}
-          style={({ pressed }) => [s.actionSecondary, pressed && s.actionPressed]}
+          style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}
         >
-          <AppText size={22} weight={850} color="#292721" align="center">
+          <AppText size={17} weight={900} color={INK}>
             {secondary}
           </AppText>
         </Pressable>
       ) : null}
       {quiet && onQuiet ? (
-        <Pressable accessibilityRole="button" onPress={onQuiet} style={s.actionQuiet}>
-          <AppText size={18} weight={700} color="#4e4a43" style={s.underline}>
+        <Pressable accessibilityRole="button" onPress={onQuiet} style={s.quietBtn}>
+          <AppText size={14} weight={700} color="#888" style={s.underline}>
             {quiet}
           </AppText>
         </Pressable>
@@ -514,22 +518,17 @@ export function AgreementDetail({
 }) {
   return (
     <Sheet visible={visible} onClose={onClose} title={title} a11yLabel={`${title} 상세 내용`}>
-      <AppText size={17} lineHeight={26} color="#5d584f" style={s.detailBody}>
+      <AppText size={14} lineHeight={21} color="#888" style={s.detailBody}>
         서비스 가입과 안전한 본인 확인을 위해 필요한 내용을 안내해요. 입력한 정보는 정해진 목적에만
         사용하고 안전하게 보호합니다.
       </AppText>
-      <View style={s.helpBox}>
-        <View style={s.helpBoxBadge}>
-          <AppText size={12} weight={900} color="#3b3000">
-            안심
-          </AppText>
-        </View>
-        <AppText size={16} lineHeight={24} color="#514a3a" style={s.flex1}>
+      <View style={[s.notice, s.noticeNeutral, s.mb16]}>
+        <AppText size={13} lineHeight={19} color="#7A6000">
           동의하기 전에 내용을 천천히 읽어보세요. 궁금한 점은 직원에게 물어볼 수 있어요.
         </AppText>
       </View>
-      <Pressable accessibilityRole="button" onPress={onClose} style={s.detailBtn}>
-        <AppText size={20} weight={850} color="#241d08" align="center">
+      <Pressable accessibilityRole="button" onPress={onClose} style={s.primaryBtn}>
+        <AppText size={17} weight={900} color={INK}>
           확인했어요
         </AppText>
       </Pressable>
@@ -539,299 +538,219 @@ export function AgreementDetail({
 
 const s = StyleSheet.create({
   flex1: { flex: 1 },
-  mt5: { marginTop: 5 },
-  mt6: { marginTop: 6 },
+  mt2: { marginTop: 2 },
+  mt3: { marginTop: 3 },
+  mb16: { marginBottom: 16 },
   underline: { textDecorationLine: 'underline' as const },
 
+  // 헤더
   header: {
-    height: 80,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 13,
-    paddingTop: 5,
-    paddingBottom: 3,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-    backgroundColor: 'rgba(255,254,249,0.98)',
-  },
-  headerBtn: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#fff',
   },
-  headerExit: { alignItems: 'flex-end' },
-  headerCenter: { flex: 1, minWidth: 0 },
-  headerEyebrow: { marginBottom: 3 },
+  headerBack: { position: 'absolute', left: 16, padding: 6 },
+  headerExit: { position: 'absolute', right: 16, padding: 6 },
+  progressTrack: { height: 4, backgroundColor: '#F1F1F1' },
+  progressFill: { height: '100%', backgroundColor: YELLOW },
 
   voiceGuide: {
     flexDirection: 'row',
-    width: '100%',
-    minHeight: 68,
+    alignSelf: 'flex-start',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 30,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: '#d8b523',
-    borderRadius: radius.lg,
-    backgroundColor: colors.yellowSoft,
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    backgroundColor: CREAM,
   },
-  voiceGuideReading: {
-    borderColor: '#b58e00',
-    backgroundColor: colors.yellow,
-  },
+  voiceGuideOn: { backgroundColor: YELLOW },
 
+  // 타이포
   stepBadge: {
     flexDirection: 'row',
     alignSelf: 'flex-start',
-    minHeight: 42,
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#dfc760',
-    borderRadius: radius.pill,
-    backgroundColor: colors.yellowSoft,
+    gap: 5,
+    paddingVertical: 5,
+    paddingLeft: 8,
+    paddingRight: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    backgroundColor: CREAM,
   },
-  title: { marginTop: 18 },
-  guide: { marginTop: 13 },
+  title: { marginTop: 12 },
+  guide: { marginTop: 8 },
 
+  // 카드
   infoCard: {
     flexDirection: 'row',
-    minHeight: 108,
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 26,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-  },
-  infoIcon: {
-    width: 72,
-    height: 72,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    backgroundColor: '#f1eee6',
-  },
-
-  tipList: {
-    gap: 12,
-    marginTop: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-  },
-  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 42 },
-  tipBullet: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: '#f0ede5',
-  },
-
-  selectionCard: {
-    flexDirection: 'row',
-    width: '100%',
-    minHeight: 92,
-    alignItems: 'center',
-    gap: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#dedbd2',
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-  },
-  selectionCardOn: {
-    borderColor: colors.accentBorder,
-    backgroundColor: colors.accentSurface,
-  },
-  selectionIcon: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: '#f0ede5',
-  },
-  selectionIconOn: { backgroundColor: colors.yellow },
-  selectionStatus: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#c7c2b7',
-    borderRadius: 17,
-  },
-  selectionStatusOn: { borderColor: colors.yellow, backgroundColor: colors.yellow },
-
-  textInput: { gap: 9, marginTop: 28 },
-  textInputBox: {
-    flexDirection: 'row',
-    minHeight: 68,
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: '#b8b2a7',
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-  },
-  textInputBoxError: { borderColor: '#b94a3b' },
-  textInputField: {
-    flex: 1,
-    minWidth: 0,
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '800',
-    paddingVertical: 12,
-  },
-
-  agreeAll: {
-    flexDirection: 'row',
-    width: '100%',
-    minHeight: 72,
     alignItems: 'center',
     gap: 14,
-    marginTop: 26,
+    marginTop: 16,
     paddingVertical: 15,
     paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: '#d7d3c9',
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1.8,
+    borderColor: BORDER,
+    backgroundColor: CREAM,
   },
-  agreeAllCheck: {
-    width: 40,
-    height: 40,
+  infoIcon: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: YELLOW,
+  },
+
+  selectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    minHeight: 62,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1.8,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
+  },
+  selectCardOn: { borderColor: BORDER, backgroundColor: CREAM },
+  selectIcon: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: '#F5F5F5',
+  },
+  selectIconOn: { backgroundColor: YELLOW },
+  radio: {
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#aaa59b',
-    borderRadius: 12,
-    backgroundColor: colors.white,
+    borderColor: '#DDD',
+    borderRadius: 13,
   },
-  agreeCard: {
+  radioOn: { borderColor: YELLOW, backgroundColor: YELLOW },
+
+  // 입력
+  field: { gap: 7, marginTop: 18 },
+  fieldBox: {
     flexDirection: 'row',
-    minHeight: 96,
-    alignItems: 'stretch',
-    borderWidth: 2,
-    borderColor: '#dedbd2',
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-    overflow: 'hidden',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 56,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
   },
-  agreeCardOn: { borderColor: colors.accentBorder, backgroundColor: colors.accentSurface },
+  fieldBoxError: { borderColor: '#E05050' },
+  fieldInput: {
+    flex: 1,
+    minWidth: 0,
+    color: INK,
+    fontSize: 20,
+    fontWeight: '800',
+    paddingVertical: 10,
+  },
+
+  // 약관
+  agreeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1.8,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
+  },
+  agreeAllOn: { borderColor: BORDER, backgroundColor: CREAM },
+  agreeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 12,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+  },
   agreeToggle: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 14,
-    paddingLeft: 14,
-    paddingRight: 10,
+    paddingVertical: 11,
+    paddingLeft: 4,
   },
-  agreeCheck: {
-    width: 30,
-    height: 30,
+  agreeDetail: { paddingVertical: 8, paddingLeft: 8 },
+  check: {
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#aaa59b',
-    borderRadius: 9,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
-  agreeCheckOn: { borderColor: colors.yellow, backgroundColor: colors.yellow },
-  agreeDetailBtn: {
-    minWidth: 88,
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderLeftWidth: 1,
-    borderLeftColor: colors.line,
-    backgroundColor: '#faf9f5',
-  },
+  checkLarge: { width: 28, height: 28, borderRadius: 9 },
+  checkOn: { borderColor: YELLOW, backgroundColor: YELLOW },
 
-  guideBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 13,
-    marginTop: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 17,
-    borderRadius: radius.md + 2,
-    backgroundColor: '#f7f2e5',
+  // 안내 상자
+  notice: {
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
   },
-  guideBoxSuccess: { backgroundColor: '#eaf7ef' },
-  guideBoxError: { backgroundColor: '#fff0ed' },
+  noticeNeutral: { borderColor: YELLOW, backgroundColor: '#FFF8D0' },
+  noticeSuccess: { borderColor: '#A8DCC0', backgroundColor: '#EFF9F3' },
+  noticeError: { borderColor: '#F0B4AC', backgroundColor: '#FDF0EE' },
 
+  // 하단 버튼
   actions: {
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 15,
-    backgroundColor: 'rgba(255,254,249,0.98)',
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 14,
+    backgroundColor: '#fff',
   },
-  actionPrimary: {
+  primaryBtn: {
     width: '100%',
-    minHeight: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.lg,
-    backgroundColor: colors.yellow,
+    paddingVertical: 18,
+    borderRadius: 16,
+    backgroundColor: YELLOW,
   },
-  actionPrimaryDisabled: { backgroundColor: '#ddd9cf' },
-  actionSecondary: {
+  primaryBtnOff: { backgroundColor: '#F0F0F0' },
+  secondaryBtn: {
     width: '100%',
-    minHeight: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: '#c8c2b4',
-    backgroundColor: colors.white,
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
   },
-  actionQuiet: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionPressed: { opacity: 0.85, transform: [{ translateY: 1 }] },
+  quietBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
+  pressed: { opacity: 0.85 },
 
-  detailBody: { marginTop: 12, marginBottom: 16 },
-  helpBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 11,
-    padding: 14,
-    borderRadius: radius.md,
-    backgroundColor: '#f7f2e5',
-    marginBottom: 16,
-  },
-  helpBoxBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 7,
-    backgroundColor: colors.yellow,
-  },
-  detailBtn: {
-    width: '100%',
-    minHeight: 58,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md + 1,
-    backgroundColor: colors.yellow,
-  },
+  detailBody: { marginTop: 10, marginBottom: 4 },
 });

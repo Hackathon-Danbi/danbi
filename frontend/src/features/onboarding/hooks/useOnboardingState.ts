@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { savePin } from '@/features/auth/pinStore';
 import { currentUser } from '@/features/shared/data';
 import type { OnboardingDraft } from '../onboardingDraft';
 
@@ -9,13 +10,8 @@ export const MOCK_ID_NAME = currentUser.name;
 export const MOCK_ID_NUMBER = '900101-1******';
 export const MOCK_ID_ISSUED_DATE = '2020년 3월 12일';
 const MOCK_FACE_FAILURE = false;
-
-export const MOCK_ACCOUNT = {
-  id: 'kb-1234',
-  bank: 'KB국민',
-  number: '1234',
-  productName: '입출금 통장',
-} as const;
+/** KB국민은행 계좌는 1원 인증 대신 계좌 비밀번호로 확인한다. */
+const KB_BANK_NAME = 'KB국민은행';
 
 export type IdType = '주민등록증' | '운전면허증' | null;
 export type Carrier = 'SKT' | 'KT' | 'LG U+' | '알뜰폰' | null;
@@ -49,11 +45,14 @@ export function useOnboardingState() {
   const [certificateTerms, setCertificateTerms] = useState<boolean[]>([false, false]);
   const [faceStatus, setFaceStatus] = useState<FaceStatus>('idle');
   const [faceVerified, setFaceVerified] = useState(false);
-  const [selectedAccount] = useState(MOCK_ACCOUNT);
+  const [bank, setBankState] = useState<string | null>(null);
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
   const [accountVerificationSent, setAccountVerificationSent] = useState(false);
   const [accountCode, setAccountCode] = useState('');
   const [accountError, setAccountError] = useState('');
   const [accountVerified, setAccountVerified] = useState(false);
+  const isKbAccount = bank === KB_BANK_NAME;
   const [pinPhase, setPinPhase] = useState<PinPhase>('create');
   const [firstPin, setFirstPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -149,6 +148,21 @@ export function useOnboardingState() {
     }, 1500);
   };
 
+  const resetAccountVerification = () => {
+    setAccountNumber('');
+    setAccountPassword('');
+    setAccountVerificationSent(false);
+    setAccountCode('');
+    setAccountError('');
+    setAccountVerified(false);
+  };
+
+  const setBank = (nextBank: string | null) => {
+    if (nextBank === bank) return;
+    setBankState(nextBank);
+    resetAccountVerification();
+  };
+
   const sendAccountVerification = () => {
     setAccountVerificationSent(true);
     setAccountCode('');
@@ -167,6 +181,12 @@ export function useOnboardingState() {
       return false;
     }
     setAccountError('');
+    setAccountVerified(true);
+    return true;
+  };
+
+  // 프로토타입: KB국민은행 계좌는 4자리 비밀번호를 입력하면(값 상관없이) 확인이 끝난다.
+  const verifyAccountPassword = () => {
     setAccountVerified(true);
     return true;
   };
@@ -193,6 +213,9 @@ export function useOnboardingState() {
     setUserName('');
     setFaceStatus('idle');
     setFaceVerified(false);
+    setBankState(null);
+    setAccountNumber('');
+    setAccountPassword('');
     setAccountVerificationSent(false);
     setAccountCode('');
     setAccountError('');
@@ -247,7 +270,11 @@ export function useOnboardingState() {
     setPinPhase('success');
   };
 
-  const completeOnboarding = () => setOnboardingCompleted(true);
+  // 가입 완료 시 정한 간편 비밀번호를 저장해 로그인/재인증에서 쓴다.
+  const completeOnboarding = () => {
+    setOnboardingCompleted(true);
+    if (pinCreated) void savePin(firstPin);
+  };
 
   const restoreDraft = (draft: OnboardingDraft) => {
     setPhoneOwnership(draft.phoneOwnership);
@@ -265,12 +292,15 @@ export function useOnboardingState() {
     setUserName(draft.idInformationConfirmed ? MOCK_ID_NAME : '');
     setFaceStatus(draft.faceVerified ? 'success' : 'idle');
     setFaceVerified(draft.faceVerified);
+    setBankState(draft.bank);
+    setAccountNumber('');
+    setAccountPassword('');
     setAccountVerificationSent(false);
     setAccountCode('');
     setAccountError('');
     setAccountVerified(draft.accountVerified);
     resetPin();
-    setOnboardingCompleted(draft.step === 16);
+    setOnboardingCompleted(draft.step === 18);
   };
 
   return {
@@ -308,7 +338,14 @@ export function useOnboardingState() {
     faceStatus,
     faceVerified,
     startFaceCheck,
-    selectedAccount,
+    bank,
+    setBank,
+    isKbAccount,
+    accountNumber,
+    setAccountNumber,
+    accountPassword,
+    setAccountPassword,
+    verifyAccountPassword,
     accountVerificationSent,
     sendAccountVerification,
     accountCode,

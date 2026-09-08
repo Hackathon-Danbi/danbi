@@ -25,6 +25,20 @@ test('entry and onboarding destination routes remain distinct', () => {
   assert.equal(ONBOARDING_DESTINATION_ROUTES.accounts, '/(app)/accounts');
 });
 
+test('app lock keeps the main app behind the login screen', () => {
+  const locked = { pinRegistered: true, unlocked: false };
+  const unlocked = { pinRegistered: true, unlocked: true };
+  const noPin = { pinRegistered: false, unlocked: false };
+
+  assert.equal(resolveEntryRoute('danbi', true, locked), '/login');
+  assert.equal(resolveEntryRoute('danbi', true, unlocked), '/(app)/home');
+  // 비밀번호를 저장하지 않은 기존 사용자는 잠금 화면에 갇히지 않는다.
+  assert.equal(resolveEntryRoute('danbi', true, noPin), '/(app)/home');
+  // 가입/모드 선택이 끝나지 않았으면 잠금보다 앞선 단계를 먼저 처리한다.
+  assert.equal(resolveEntryRoute('danbi', false, locked), '/join');
+  assert.equal(resolveEntryRoute(null, true, locked), '/welcome');
+});
+
 test('transaction reviews are sanitized and applied', () => {
   const reviews = sanitizeTransactionReviews({ 1: 'known', 3: 'unknown', 5: 'pending' });
   const records = applyTransactionReviews(TX_RECORDS, reviews);
@@ -66,7 +80,7 @@ test('onboarding draft rejects unknown versions and strips invalid values', () =
     certificateTerms: [true, true],
   });
 
-  assert.equal(draft?.step, 16);
+  assert.equal(draft?.step, 18);
   assert.equal(draft?.termsStep, 0);
   assert.equal(draft?.carrier, null);
   assert.equal(draft?.idType, null);
@@ -76,7 +90,7 @@ test('onboarding draft rejects unknown versions and strips invalid values', () =
 test('onboarding resume never skips a sensitive verification boundary', () => {
   const base = sanitizeOnboardingDraft({
     version: 1,
-    step: 15,
+    step: 17, // PIN
     phoneVerified: true,
     idType: '주민등록증',
     idScanCompleted: true,
@@ -85,8 +99,9 @@ test('onboarding resume never skips a sensitive verification boundary', () => {
     accountVerified: false,
   });
   assert.ok(base);
+  // 계좌 인증이 끝나지 않았다면 은행 선택(13)부터 다시 시작한다.
   assert.equal(resolveOnboardingResumeStep(base), 13);
 
   const verified = { ...base, accountVerified: true };
-  assert.equal(resolveOnboardingResumeStep(verified), 15);
+  assert.equal(resolveOnboardingResumeStep(verified), 17);
 });
