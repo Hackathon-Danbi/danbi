@@ -45,6 +45,14 @@
             "com.samsung.android.bixby.agent"
           ]
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "저장된 사진에서 계좌번호를 찾으려면 사진 접근이 필요합니다.",
+          "cameraPermission": "계좌번호가 보이는 사진을 촬영하려면 카메라 접근이 필요합니다.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

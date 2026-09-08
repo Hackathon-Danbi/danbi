@@ -15,6 +15,7 @@ import {
   saveRecipient,
   updateRecipientNickname,
 } from '../src/features/main/savedRecipients';
+import { extractAccountNumberCandidates } from '../src/features/main/transfer/ocrAccountNumber';
 import {
   applyTransactionReviews,
   filterTransactionsByMonth,
@@ -100,6 +101,34 @@ test('saving a frequent recent account removes it from recommendations', () => {
       (recipient) => recipient.recipientName,
     ),
     ['최영호'],
+  );
+});
+
+test('OCR account candidates accept compact, spaced, and hyphenated numbers', () => {
+  const candidates = extractAccountNumberCandidates([
+    'KB국민은행 123-456-789012',
+    '계좌 123456789012',
+    '입금 계좌 110 234 567890',
+  ]);
+
+  assert.deepEqual(candidates, [
+    { digits: '123456789012', display: '123-456-789012' },
+    { digits: '110234567890', display: '110-234-567890' },
+  ]);
+});
+
+test('OCR account candidates stay unconfirmed and reject weak numeric matches', () => {
+  const candidates = extractAccountNumberCandidates([
+    '문의 010-1234-5678',
+    '날짜 20260908',
+    '잡음 000000000000',
+    '한 줄의 여러 계좌 123-456-789012 333-222-111000',
+    '공백 계좌 555 444 333000',
+  ]);
+
+  assert.deepEqual(
+    candidates.map((candidate) => candidate.digits),
+    ['123456789012', '333222111000', '555444333000'],
   );
 });
 test('deposit protection quiz reflects the current 100 million won limit', () => {

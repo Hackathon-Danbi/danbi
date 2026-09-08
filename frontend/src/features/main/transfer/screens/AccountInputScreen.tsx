@@ -6,6 +6,7 @@ import { bankOf } from '../../data';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import { NavBar } from '../../components/NavBar';
 import { NumPad } from '../../components/NumPad';
+import { IconPhotoSearch } from '../components/AccountPhotoIcons';
 
 /** danbi_jj main/screens/transfer.tsx <AccountInputScreen> 이식. 계좌번호 8자리 이상이어야 다음 진행. */
 export function AccountInputScreen({
@@ -14,6 +15,7 @@ export function AccountInputScreen({
   onChange,
   onBack,
   onReselect,
+  onFindFromPhoto,
   onNext,
   helpTarget,
   onActivity,
@@ -24,6 +26,7 @@ export function AccountInputScreen({
   onChange: (v: string) => void;
   onBack: () => void;
   onReselect: () => void;
+  onFindFromPhoto: () => void;
   onNext: () => void;
   helpTarget: string;
   onActivity: () => void;
@@ -62,6 +65,9 @@ export function AccountInputScreen({
         <AppText size={24} weight={900} color={INK} lineHeight={31} style={styles.mb16}>
           {'계좌번호를\n입력해주세요'}
         </AppText>
+        <AppText size={14} color="#777" lineHeight={21} style={styles.guide}>
+          직접 입력하거나 사진에서 계좌번호를 찾을 수 있어요.
+        </AppText>
 
         <PulseHighlight active={helpTarget === 'accountField'} borderRadius={14}>
           <View style={styles.field}>
@@ -76,6 +82,18 @@ export function AccountInputScreen({
             )}
           </View>
         </PulseHighlight>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="사진에서 계좌번호 찾기"
+          onPress={onFindFromPhoto}
+          style={styles.photoButton}
+        >
+          <IconPhotoSearch />
+          <AppText size={17} weight={900} color={INK}>
+            사진에서 계좌번호 찾기
+          </AppText>
+        </Pressable>
 
         <AppText size={12} color="#AAA" lineHeight={18} style={styles.hint}>
           숫자를 잘못 눌렀다면 오른쪽 아래 지우기를 눌러주세요.
@@ -123,6 +141,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  guide: { marginTop: -10, marginBottom: 14 },
   reselect: {
     backgroundColor: '#fff',
     borderWidth: 1.5,
@@ -140,6 +159,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     minHeight: 56,
     justifyContent: 'center',
+  },
+  photoButton: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 14,
+    borderWidth: 1.8,
+    borderColor: BORDER,
+    backgroundColor: CREAM,
   },
   hint: { marginBottom: 14 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 },
