@@ -1,6 +1,7 @@
 package com.danbi.domain.onboarding.exception;
 
 import com.danbi.domain.onboarding.controller.CertificateIssuanceController;
+import com.danbi.domain.onboarding.controller.FaceVerificationController;
 import com.danbi.domain.onboarding.controller.IdCardScanController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
 	CertificateIssuanceController.class,
+	FaceVerificationController.class,
 	IdCardScanController.class,
 	OnboardingSessionController.class,
 	OnboardingNameController.class,
@@ -146,6 +148,30 @@ public class OnboardingExceptionHandler {
 		IdCardConfirmationConflictException e
 	) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(InvalidFaceImageException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleInvalidFaceImage(
+		InvalidFaceImageException e
+	) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(FaceVerificationConflictException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleFaceVerificationConflict(
+		FaceVerificationConflictException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(FaceQualityCheckFailedException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleFaceQualityCheckFailed(
+		FaceQualityCheckFailedException e
+	) {
+		return ResponseEntity.unprocessableContent()
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
 }
