@@ -2,6 +2,8 @@ package com.danbi.domain.onboarding.controller;
 
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationRequest;
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationResponse;
+import com.danbi.domain.onboarding.dto.ResendPhoneVerificationRequest;
+import com.danbi.domain.onboarding.dto.ResendPhoneVerificationResponse;
 import com.danbi.domain.onboarding.service.PhoneVerificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,5 +27,12 @@ public class PhoneVerificationController {
 		@Valid @RequestBody RequestPhoneVerificationRequest request
 	) {
 		return phoneVerificationService.requestVerification(request);
+	}
+
+	@PostMapping("/resend")
+	public ResendPhoneVerificationResponse resendVerification(
+		@Valid @RequestBody ResendPhoneVerificationRequest request
+	) {
+		return phoneVerificationService.resendVerification(request);
 	}
 }

@@ -10,8 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationResponse;
+import com.danbi.domain.onboarding.dto.ResendPhoneVerificationResponse;
 import com.danbi.domain.onboarding.exception.OnboardingExceptionHandler;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationRequestLimitExceededException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationSessionMismatchException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationSessionNotFoundException;
 import com.danbi.domain.onboarding.service.PhoneVerificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,5 +98,87 @@ class PhoneVerificationControllerTest {
 					"""))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("ONBOARDING_SESSION_NOT_FOUND"));
+	}
+
+	@Test
+	void resendsPhoneVerificationCode() throws Exception {
+		String onboardingSessionId = "ob_0123456789abcdef0123456789abcdef";
+		String verificationSessionId = "pv_0123456789abcdef0123456789abcdef";
+		when(phoneVerificationService.resendVerification(any())).thenReturn(
+			new ResendPhoneVerificationResponse(
+				onboardingSessionId,
+				verificationSessionId,
+				420,
+				3
+			)
+		);
+
+		mockMvc.perform(post("/api/onboarding/phone/verify/resend")
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "onboardingSessionId": "%s",
+					  "verificationSessionId": "%s"
+					}
+					""".formatted(onboardingSessionId, verificationSessionId)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.onboardingSessionId").value(onboardingSessionId))
+			.andExpect(jsonPath("$.verificationSessionId").value(verificationSessionId))
+			.andExpect(jsonPath("$.expiresInSeconds").value(420))
+			.andExpect(jsonPath("$.remainingRequestCount").value(3));
+	}
+
+	@Test
+	void returnsTooManyRequestsWhenResendLimitIsExceeded() throws Exception {
+		when(phoneVerificationService.resendVerification(any()))
+			.thenThrow(new PhoneVerificationRequestLimitExceededException());
+
+		mockMvc.perform(post("/api/onboarding/phone/verify/resend")
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "onboardingSessionId": "ob_0123456789abcdef0123456789abcdef",
+					  "verificationSessionId": "pv_0123456789abcdef0123456789abcdef"
+					}
+					"""))
+			.andExpect(status().isTooManyRequests())
+			.andExpect(jsonPath("$.code")
+				.value("PHONE_VERIFICATION_REQUEST_LIMIT_EXCEEDED"));
+	}
+
+	@Test
+	void returnsNotFoundForUnknownVerificationSession() throws Exception {
+		when(phoneVerificationService.resendVerification(any()))
+			.thenThrow(new PhoneVerificationSessionNotFoundException("pv_missing"));
+
+		mockMvc.perform(post("/api/onboarding/phone/verify/resend")
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "onboardingSessionId": "ob_0123456789abcdef0123456789abcdef",
+					  "verificationSessionId": "pv_missing"
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code")
+				.value("PHONE_VERIFICATION_SESSION_NOT_FOUND"));
+	}
+
+	@Test
+	void returnsBadRequestForMismatchedSessions() throws Exception {
+		when(phoneVerificationService.resendVerification(any()))
+			.thenThrow(new PhoneVerificationSessionMismatchException());
+
+		mockMvc.perform(post("/api/onboarding/phone/verify/resend")
+				.contentType(APPLICATION_JSON)
+				.content("""
+					{
+					  "onboardingSessionId": "ob_0123456789abcdef0123456789abcdef",
+					  "verificationSessionId": "pv_0123456789abcdef0123456789abcdef"
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code")
+				.value("PHONE_VERIFICATION_SESSION_MISMATCH"));
 	}
 }

@@ -90,4 +90,14 @@ public class PhoneVerificationSession {
 		this.requestCount++;
 		return this;
 	}
+
+	public PhoneVerificationSession resend(
+		String verificationCode,
+		Instant expiresAt
+	) {
+		this.verificationCode = verificationCode;
+		this.expiresAt = expiresAt;
+		this.requestCount++;
+		return this;
+	}
 }
