@@ -5,8 +5,7 @@ import {
   ONBOARDING_DESTINATION_ROUTES,
   resolveEntryRoute,
 } from '../src/lib/navigation';
-import { TX_RECORDS } from '../src/features/main/data';
-import { RECENT_RECIPIENT_CANDIDATES } from '../src/features/main/data';
+import { RECENT_RECIPIENT_CANDIDATES, TX_RECORDS } from '../src/features/main/data';
 import {
   filterUnsavedRecentRecipients,
   findRecipientBySpokenName,
@@ -19,6 +18,7 @@ import { extractAccountNumberCandidates } from '../src/features/main/transfer/oc
 import {
   applyTransactionReviews,
   filterTransactionsByMonth,
+  formatTxOccurredAt,
   sanitizeTransactionReviews,
 } from '../src/features/main/transactions';
 import { QUIZ_QUESTIONS } from '../src/features/missions/data/quiz';
@@ -61,6 +61,22 @@ test('transaction reviews are sanitized and applied', () => {
 test('transaction month selection filters the rendered records', () => {
   assert.equal(filterTransactionsByMonth(TX_RECORDS, 2026 * 12 + 7).length, 5);
   assert.equal(filterTransactionsByMonth(TX_RECORDS, 2026 * 12 + 6).length, 0);
+});
+
+test('transaction records expose detail fields for the history popup', () => {
+  for (const record of TX_RECORDS) {
+    assert.ok(record.merchant);
+    assert.ok(record.category);
+    assert.equal(typeof record.memo, 'string');
+    assert.ok(record.type);
+    assert.ok(record.date);
+    assert.ok(record.time);
+  }
+
+  const convenience = TX_RECORDS.find((record) => record.id === 1);
+  assert.equal(convenience?.merchant, 'CU 선릉점');
+  assert.equal(convenience?.category, '식비');
+  assert.equal(formatTxOccurredAt(convenience!), '8월 29일 오후 2:10');
 });
 
 test('saved recipients support aliases and reject duplicate account saves', () => {

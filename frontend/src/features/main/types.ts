@@ -59,8 +59,11 @@ export interface TxRecord {
   occurredAt: string; // ISO 8601, 월 필터/정렬 기준
   date: string; // "8월 29일"
   time: string; // "오후 2:10"
-  type: string; // "체크카드"
+  type: string; // 결제수단. "체크카드" | "이체" | "입금"
   name: string;
   amount: number; // negative = outgoing
+  merchant: string; // 사용처
+  category: string;
+  memo: string;
   reviewStatus: TransactionReviewStatus;
 }
