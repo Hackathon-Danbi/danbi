@@ -1,12 +1,13 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import type { TxRecord } from '../../types';
 import { AccountCard } from '../../components/AccountCard';
 import { IconCalendar } from '../../components/icons';
-import { HomeBar } from '../../imports/_shared';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
+import type { HistoryHelpTarget } from '../historyHelp';
 
 /** danbi_jj main/screens/history.tsx <TransactionsScreen> 이식. */
 export function TransactionsScreen({
@@ -16,6 +17,8 @@ export function TransactionsScreen({
   transactions,
   month,
   canGoNext,
+  helpTarget = '',
+  onActivity,
   onPrevMonth,
   onNextMonth,
   onSelectTx,
@@ -29,6 +32,8 @@ export function TransactionsScreen({
   transactions: TxRecord[];
   month: string;
   canGoNext: boolean;
+  helpTarget?: HistoryHelpTarget;
+  onActivity?: () => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectTx: (tx: TxRecord) => void;
@@ -43,7 +48,7 @@ export function TransactionsScreen({
   const dates = Object.keys(grouped);
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={onActivity}>
       <View style={styles.header}>
         <AppText size={26} weight={900} color={INK}>
           {reviewOnly ? '확인할 거래' : '거래내역'}
@@ -62,11 +67,13 @@ export function TransactionsScreen({
               <AppText size={13} color="#8A3D3D" lineHeight={20}>
                 실제 모르는 거래라면 은행이나 카드사에 바로 신고해주세요.
               </AppText>
-              <Pressable accessibilityRole="button" onPress={onReviewUnknown} style={styles.dangerBtn}>
-                <AppText size={15} weight={900} color="#fff">
-                  신고 안내 보기
-                </AppText>
-              </Pressable>
+              <PulseHighlight active={helpTarget === 'reportBtn'} borderRadius={12}>
+                <Pressable accessibilityRole="button" onPress={onReviewUnknown} style={styles.dangerBtn}>
+                  <AppText size={15} weight={900} color="#fff">
+                    신고 안내 보기
+                  </AppText>
+                </Pressable>
+              </PulseHighlight>
             </View>
           ) : null}
 
@@ -83,21 +90,25 @@ export function TransactionsScreen({
                   </AppText>
                 </View>
               </View>
-              <Pressable accessibilityRole="button" onPress={onReview} style={styles.warnBtn}>
-                <AppText size={15} weight={900} color={INK}>
-                  확인하기
-                </AppText>
-              </Pressable>
+              <PulseHighlight active={helpTarget === 'reviewBtn'} borderRadius={12}>
+                <Pressable accessibilityRole="button" onPress={onReview} style={styles.warnBtn}>
+                  <AppText size={15} weight={900} color={INK}>
+                    확인하기
+                  </AppText>
+                </Pressable>
+              </PulseHighlight>
             </View>
           ) : null}
 
           <View style={styles.monthNav}>
-            <Pressable accessibilityRole="button" onPress={onPrevMonth} style={styles.monthBtn}>
-              <IconCalendar size={20} />
-              <AppText size={13} weight={800} color={INK}>
-                이전 달
-              </AppText>
-            </Pressable>
+            <PulseHighlight active={helpTarget === 'prevMonth'} borderRadius={14}>
+              <Pressable accessibilityRole="button" onPress={onPrevMonth} style={styles.monthBtn}>
+                <IconCalendar size={20} />
+                <AppText size={13} weight={800} color={INK}>
+                  이전 달
+                </AppText>
+              </Pressable>
+            </PulseHighlight>
 
             <View style={styles.monthNow}>
               <IconCalendar size={22} />

@@ -70,6 +70,13 @@ const STT_FAIL_MESSAGE = '음성을 잘 듣지 못했어요. 다시 말씀해주
 const STT_PERMISSION_MESSAGE = '마이크 사용 권한을 켠 뒤 다시 시도하거나, 직접 입력으로 진행해주세요.';
 const STT_UNAVAILABLE_MESSAGE = '이 기기에서는 음성 송금을 사용할 수 없어요. 직접 입력으로 진행해주세요.';
 const EMPTY_TX: TxInfo = { recipient: '', bank: '', account: '', amount: '' };
+const BOTTOM_ACTION_HELP_TARGETS = new Set([
+  'pinKeypad',
+  'listenActions',
+  'confirmBtn',
+  'ocrManual',
+  'ocrConfirm',
+]);
 
 /**
  * 메인 송금 STT: 사용자가 실제로 말한 값만 사용한다. 파싱에 실패하면 자동으로 채우지 않고
@@ -140,6 +147,8 @@ export function TransferFlow() {
   const helpStepRef = useRef<HelpStep>('idle');
   const helpModeRef = useRef(false);
   const screenRef = useRef<FlowScreen>('transfer');
+  const listenPhaseRef = useRef<ListeningPhase>('idle');
+  const sttErrorRef = useRef('');
   const visitCounts = useRef<Partial<Record<FlowScreen, number>>>({});
   const inputErrCounts = useRef<Partial<Record<FlowScreen, number>>>({});
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,6 +159,12 @@ export function TransferFlow() {
   useEffect(() => {
     screenRef.current = screen;
   }, [screen]);
+  useEffect(() => {
+    listenPhaseRef.current = phase;
+  }, [phase]);
+  useEffect(() => {
+    sttErrorRef.current = sttError;
+  }, [sttError]);
   useEffect(() => {
     helpStepRef.current = helpState.step;
   }, [helpState.step]);
@@ -204,12 +219,25 @@ export function TransferFlow() {
       if (helpStepRef.current !== 'idle' || isInCooldown()) return;
       const def = SCREEN_HELP[s];
       if (!def) return;
-      const target = s === 'pretransfer' && !ptReviewDone ? 'txCard' : def.target;
+      let target = def.target;
+      if (s === 'pretransfer' && !ptReviewDone) target = 'txCard';
+      if (s === 'listening') {
+        target =
+          sttErrorRef.current || listenPhaseRef.current !== 'idle'
+            ? 'listenActions'
+            : 'listenExamples';
+      }
+      const hint =
+        reason === 'voiceFailure'
+          ? '잘 들리지 않으면 직접 입력할 수 있어요.'
+          : reason === 'repeatedReentry'
+            ? REENTRY_HINTS[s] ?? def.hint
+            : def.hint;
       setHelpState({
         step: 'highlight',
         reason,
         target,
-        hint: reason === 'repeatedReentry' ? REENTRY_HINTS[s] ?? def.hint : def.hint,
+        hint,
         voiceText: def.voiceText,
       });
       helpStepRef.current = 'highlight';
@@ -288,30 +316,55 @@ export function TransferFlow() {
 
   // ── screen 진입: 방문 카운트 + 선제적 도움 트리거 ──────────
   useEffect(() => {
-    const isTransfer = (TRANSFER_SCREENS as string[]).includes(screen);
-    if (isTransfer) {
+    if (screen === 'transfer') {
+      visitCounts.current = {};
+      inputErrCounts.current = {};
+    }
+    if (helpStepRef.current === 'highlight') {
+      setHelpState(HELP_IDLE);
+      helpStepRef.current = 'idle';
+      helpModeRef.current = false;
+    }
+    const hasHelp = Boolean(SCREEN_HELP[screen]);
+    if (hasHelp) {
       const visits = (visitCounts.current[screen] ?? 0) + 1;
       visitCounts.current[screen] = visits;
-      if (visits >= 3 && helpStepRef.current === 'idle' && !isInCooldown()) {
+      if (screen === 'ocrfailure' && helpStepRef.current === 'idle' && !isInCooldown()) {
+        doTriggerHighlight(screen, 'inputError');
+      } else if (visits >= 3 && helpStepRef.current === 'idle' && !isInCooldown()) {
         doTriggerHighlight(screen, 'repeatedReentry');
-        return;
+      } else if (helpStepRef.current === 'idle') {
+        startInactivityTimer();
       }
-      if (helpStepRef.current === 'idle') startInactivityTimer();
     } else {
       clearHelpTimer();
-      if (screen === 'transfer') {
-        visitCounts.current = {};
-        inputErrCounts.current = {};
-        if (helpStepRef.current !== 'idle') {
-          setHelpState(HELP_IDLE);
-          helpStepRef.current = 'idle';
-        }
+      if (helpStepRef.current !== 'idle') {
+        setHelpState(HELP_IDLE);
+        helpStepRef.current = 'idle';
         helpModeRef.current = false;
       }
     }
     return clearHelpTimer;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
+
+  // 음성 인식이 실패하면 바로 선제 도움을 연다.
+  useEffect(() => {
+    if (screen !== 'listening' || !sttError) return;
+    if (helpStepRef.current === 'idle' && !isInCooldown()) {
+      doTriggerHighlight('listening', 'voiceFailure');
+      return;
+    }
+    if (helpStepRef.current === 'highlight') doEscalateTo('voice');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sttError, screen]);
+
+  // 듣기 단계가 바뀌면 강조 대상을 예시 ↔ 하단 버튼으로 맞춘다.
+  useEffect(() => {
+    if (screen !== 'listening' || helpStepRef.current !== 'highlight') return;
+    const nextTarget = sttError || phase !== 'idle' ? 'listenActions' : 'listenExamples';
+    setHelpState((prev) => (prev.target === nextTarget ? prev : { ...prev, target: nextTarget }));
+  }, [phase, sttError, screen]);
 
   // ── 비밀번호 4자리 → 완료 ────────────────────────────────
   useEffect(() => {
@@ -386,6 +439,7 @@ export function TransferFlow() {
   }, [router]);
 
   const openTransfer = () => {
+    doResolveHelp();
     clearPhaseTimer();
     setSttError('');
     setPhase('idle');
@@ -395,6 +449,7 @@ export function TransferFlow() {
   };
 
   const retryListening = () => {
+    doResolveHelp();
     setSttError('');
     setPhase('idle');
     setTranscript('');
@@ -407,6 +462,7 @@ export function TransferFlow() {
   };
 
   const afterListenConfirm = () => {
+    doResolveHelp();
     abortStt();
     const parsed = parseSpokenTransfer(transcript, savedRecipients);
     if (parsed) {
@@ -420,6 +476,7 @@ export function TransferFlow() {
   };
 
   const goManualInput = () => {
+    doResolveHelp();
     setSttError('');
     abortStt();
     setScreen('recipient');
@@ -582,8 +639,16 @@ export function TransferFlow() {
           <TransferIntroScreen
             onMic={openTransfer}
             onGoHome={goHome}
-            onDirect={() => setScreen('recipient')}
-            onSavedAccounts={() => setScreen('savedaccounts')}
+            onDirect={() => {
+              doResolveHelp();
+              setScreen('recipient');
+            }}
+            onSavedAccounts={() => {
+              doResolveHelp();
+              setScreen('savedaccounts');
+            }}
+            helpTarget={helpTarget}
+            onActivity={doActivity}
           />
         )}
 
@@ -612,6 +677,8 @@ export function TransferFlow() {
             onRetry={retryListening}
             onConfirm={afterListenConfirm}
             onManualInput={goManualInput}
+            helpTarget={helpTarget}
+            onActivity={doActivity}
           />
         )}
 
@@ -693,9 +760,17 @@ export function TransferFlow() {
             bank={txInfo.bank}
             candidates={ocrCandidates}
             onBack={returnToAccountInput}
-            onRetry={retryAccountPhoto}
-            onManualInput={returnToAccountInput}
+            onRetry={() => {
+              doResolveHelp();
+              retryAccountPhoto();
+            }}
+            onManualInput={() => {
+              doResolveHelp();
+              returnToAccountInput();
+            }}
             onConfirm={(candidate) => confirmNewAccountNumber(candidate.digits)}
+            helpTarget={helpTarget}
+            onActivity={doActivity}
           />
         )}
 
@@ -722,7 +797,12 @@ export function TransferFlow() {
           <VoiceConfirmScreen
             txInfo={txInfo}
             onBack={() => setScreen('transfer')}
-            onConfirm={goPretransfer}
+            onConfirm={() => {
+              doResolveHelp();
+              goPretransfer();
+            }}
+            helpTarget={helpTarget}
+            onActivity={doActivity}
           />
         )}
 
@@ -745,7 +825,17 @@ export function TransferFlow() {
         )}
 
         {screen === 'password' && (
-          <PasswordScreen value={pinValue} onChange={setPinValue} onCancel={goPretransfer} />
+          <PasswordScreen
+            value={pinValue}
+            onChange={(v) => {
+              setPinValue(v);
+              doResolveHelp();
+              doActivity();
+            }}
+            onCancel={goPretransfer}
+            helpTarget={helpTarget}
+            onActivity={doActivity}
+          />
         )}
 
         {screen === 'transferdone' && <TransferDoneScreen txInfo={txInfo} onHome={goHome} />}
@@ -775,7 +865,12 @@ export function TransferFlow() {
       {helpState.step === 'highlight' && !showPopup && !showPhotoSource ? (
         <>
           <View pointerEvents="none" style={styles.dim} />
-          <View style={styles.hintBar}>
+          <View
+            style={[
+              styles.hintBar,
+              BOTTOM_ACTION_HELP_TARGETS.has(helpState.target) ? styles.hintBarTop : styles.hintBarBottom,
+            ]}
+          >
             <View style={styles.hintIcon}>
               <AppText size={15}>💡</AppText>
             </View>
@@ -1059,7 +1154,6 @@ const styles = StyleSheet.create({
   },
   hintBar: {
     position: 'absolute',
-    bottom: 60,
     left: 16,
     right: 16,
     zIndex: 36,
@@ -1071,6 +1165,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  hintBarBottom: { bottom: 60 },
+  hintBarTop: { top: 78 },
   hintIcon: {
     width: 30,
     height: 30,

@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import type { ListeningPhase } from '../../types';
@@ -35,6 +36,8 @@ export function ListeningScreen({
   onRetry,
   onConfirm,
   onManualInput,
+  helpTarget = '',
+  onActivity,
 }: {
   mode: Mode;
   phase: ListeningPhase;
@@ -46,13 +49,15 @@ export function ListeningScreen({
   onRetry: () => void;
   onConfirm: () => void;
   onManualInput?: () => void;
+  helpTarget?: string;
+  onActivity?: () => void;
 }) {
   const copy = COPY[mode];
   const showButtons = phase !== 'idle' || !!error;
   const showRetry = !error || retryable;
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={onActivity}>
       <View style={styles.header}>
         <Pressable accessibilityRole="button" accessibilityLabel="이전" onPress={onBack} style={styles.back} hitSlop={10}>
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -94,18 +99,22 @@ export function ListeningScreen({
                 <AppText size={14} color="#888" align="center" style={styles.idleHint}>
                   궁금한 내용을 편하게 말씀해주세요.
                 </AppText>
-                <AppText size={15} weight={800} color={INK} style={styles.examplesTitle}>
-                  이렇게 말씀해보세요
-                </AppText>
-                <View style={styles.examples}>
-                  {copy.examples.map((t) => (
-                    <View key={t} style={styles.example}>
-                      <AppText size={15} weight={600} color={INK} align="center">
-                        {t}
-                      </AppText>
+                <PulseHighlight active={helpTarget === 'listenExamples'} borderRadius={14}>
+                  <View style={styles.examplesWrap}>
+                    <AppText size={15} weight={800} color={INK} style={styles.examplesTitle}>
+                      이렇게 말씀해보세요
+                    </AppText>
+                    <View style={styles.examples}>
+                      {copy.examples.map((t) => (
+                        <View key={t} style={styles.example}>
+                          <AppText size={15} weight={600} color={INK} align="center">
+                            {t}
+                          </AppText>
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
+                  </View>
+                </PulseHighlight>
               </>
             ) : null}
 
@@ -145,28 +154,30 @@ export function ListeningScreen({
       </ScrollView>
 
       {showButtons ? (
-        <View style={styles.footer}>
-          {showRetry ? (
-            <Pressable accessibilityRole="button" onPress={onRetry} style={[styles.fBtn, styles.fSecondary]}>
-              <AppText size={16} weight={700} color="#555">
-                다시 말하기
-              </AppText>
-            </Pressable>
-          ) : null}
-          {error && onManualInput ? (
-            <Pressable accessibilityRole="button" onPress={onManualInput} style={[styles.fBtn, styles.fPrimary]}>
-              <AppText size={16} weight={700} color={INK}>
-                직접 입력하기
-              </AppText>
-            </Pressable>
-          ) : (
-            <Pressable accessibilityRole="button" onPress={onConfirm} style={[styles.fBtn, styles.fPrimary]}>
-              <AppText size={16} weight={700} color={INK}>
-                네, 맞아요
-              </AppText>
-            </Pressable>
-          )}
-        </View>
+        <PulseHighlight active={helpTarget === 'listenActions'} borderRadius={14}>
+          <View style={styles.footer}>
+            {showRetry ? (
+              <Pressable accessibilityRole="button" onPress={onRetry} style={[styles.fBtn, styles.fSecondary]}>
+                <AppText size={16} weight={700} color="#555">
+                  다시 말하기
+                </AppText>
+              </Pressable>
+            ) : null}
+            {error && onManualInput ? (
+              <Pressable accessibilityRole="button" onPress={onManualInput} style={[styles.fBtn, styles.fPrimary]}>
+                <AppText size={16} weight={700} color={INK}>
+                  직접 입력하기
+                </AppText>
+              </Pressable>
+            ) : (
+              <Pressable accessibilityRole="button" onPress={onConfirm} style={[styles.fBtn, styles.fPrimary]}>
+                <AppText size={16} weight={700} color={INK}>
+                  네, 맞아요
+                </AppText>
+              </Pressable>
+            )}
+          </View>
+        </PulseHighlight>
       ) : null}
     </View>
   );
@@ -200,6 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   idleHint: { marginTop: 20, marginBottom: 24 },
+  examplesWrap: { width: '100%' },
   examplesTitle: { alignSelf: 'flex-start', marginBottom: 14 },
   examples: { width: '100%', gap: 10 },
   example: {

@@ -18,7 +18,7 @@ export function ScreenHelpBar({ guidance, voiceEnabled, onReplay, onToggleVoice 
   if (!guidance) return null;
   return (
     <View style={s.bar} accessibilityLiveRegion="polite">
-      <AppText size={13} weight={600} lineHeight={19} color="#7A6000" style={s.text}>
+      <AppText size={13} weight={600} lineHeight={19} color="#7A6000" style={s.text} numberOfLines={3}>
         {guidance}
       </AppText>
       <View style={s.actions}>
@@ -54,7 +54,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginTop: 14,
+    marginTop: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 14,

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import { AccountCard } from '../../components/AccountCard';
@@ -13,14 +14,18 @@ export function TransferIntroScreen({
   onGoHome,
   onDirect,
   onSavedAccounts,
+  helpTarget,
+  onActivity,
 }: {
   onMic: () => void;
   onGoHome: () => void;
   onDirect: () => void;
   onSavedAccounts: () => void;
+  helpTarget: string;
+  onActivity: () => void;
 }) {
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={onActivity}>
       <View style={styles.top}>
         <View style={styles.header}>
           <AppText size={16} weight={800} color={INK}>
@@ -40,7 +45,9 @@ export function TransferIntroScreen({
         <AppText size={24} weight={900} color={INK} align="center" lineHeight={31} style={styles.title}>
           {'누구에게 얼마를\n보내시겠어요?'}
         </AppText>
-        <MicButton onClick={onMic} size={88} />
+        <PulseHighlight active={helpTarget === 'micButton'} borderRadius={44}>
+          <MicButton onClick={onMic} size={88} />
+        </PulseHighlight>
         <AppText size={14} weight={800} color={INK} style={styles.mt16}>
           마이크를 눌러 말씀해주세요
         </AppText>
