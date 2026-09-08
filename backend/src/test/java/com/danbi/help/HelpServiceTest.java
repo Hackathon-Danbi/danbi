@@ -2,15 +2,15 @@ package com.danbi.help;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.danbi.help.dto.BehaviorEventRequest;
-import com.danbi.help.dto.HelpTriggerResponse;
-import com.danbi.help.entity.EventType;
-import com.danbi.help.entity.FlowType;
-import com.danbi.help.entity.HelpSignal;
-import com.danbi.help.entity.HelpStage;
-import com.danbi.help.entity.HelpUserResponse;
-import com.danbi.help.repository.UserEventRepository;
-import com.danbi.help.service.HelpService;
+import com.danbi.domain.help.dto.BehaviorEventRequest;
+import com.danbi.domain.help.dto.HelpTriggerResponse;
+import com.danbi.domain.help.entity.EventType;
+import com.danbi.domain.help.entity.FlowType;
+import com.danbi.domain.help.entity.HelpSignal;
+import com.danbi.domain.help.entity.HelpStage;
+import com.danbi.domain.help.entity.HelpUserResponse;
+import com.danbi.domain.help.repository.UserEventRepository;
+import com.danbi.domain.help.service.HelpService;
 import com.danbi.support.MutableClock;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;

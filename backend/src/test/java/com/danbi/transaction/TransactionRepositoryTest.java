@@ -2,10 +2,10 @@ package com.danbi.transaction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.danbi.transaction.entity.ReviewStatus;
-import com.danbi.transaction.entity.Transaction;
-import com.danbi.transaction.entity.TransactionType;
-import com.danbi.transaction.repository.TransactionRepository;
+import com.danbi.domain.transaction.entity.ReviewStatus;
+import com.danbi.domain.transaction.entity.Transaction;
+import com.danbi.domain.transaction.entity.TransactionType;
+import com.danbi.domain.transaction.repository.TransactionRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
