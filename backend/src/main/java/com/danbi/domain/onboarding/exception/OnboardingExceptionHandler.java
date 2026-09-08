@@ -6,6 +6,7 @@ import com.danbi.domain.onboarding.controller.FaceVerificationController;
 import com.danbi.domain.onboarding.controller.IdCardScanController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
+import com.danbi.domain.onboarding.controller.OneWonVerificationController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
 import com.danbi.domain.onboarding.dto.AccountPasswordVerificationErrorResponse;
 import com.danbi.domain.onboarding.dto.OnboardingErrorResponse;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 	IdCardScanController.class,
 	OnboardingSessionController.class,
 	OnboardingNameController.class,
+	OneWonVerificationController.class,
 	PhoneVerificationController.class
 })
 public class OnboardingExceptionHandler {
@@ -213,5 +215,13 @@ public class OnboardingExceptionHandler {
 				e.getFailureCount(),
 				0
 			));
+	}
+
+	@ExceptionHandler(OneWonVerificationRequestLimitExceededException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleOneWonVerificationRequestLimitExceeded(
+		OneWonVerificationRequestLimitExceededException e
+	) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
 }
