@@ -4,6 +4,7 @@ import type {
   PracticeInitialState,
   PracticeScreen,
   PracticeStyle,
+  PracticeTarget,
   Praise,
   RecipientChoice,
   TransferMethod,
@@ -16,6 +17,7 @@ type GoOptions = { replace?: boolean; reset?: boolean };
 interface PracticeContextValue {
   screen: PracticeScreen;
   practiceStyle: PracticeStyle;
+  practiceTarget: PracticeTarget;
   setPracticeStyle: (style: PracticeStyle) => void;
   practiceRecipient: string;
   setPracticeRecipient: (value: string) => void;
@@ -40,7 +42,7 @@ interface PracticeContextValue {
   back: () => void;
   /** 내부 history 스택에 돌아갈 화면이 남아 있는지 (Android hardware back 우선 처리용). */
   canGoBack: boolean;
-  guidedNext: (text: string, screen: PracticeScreen) => void;
+  guidedNext: (screen: PracticeScreen) => void;
   choosePracticeStyle: (style: Exclude<PracticeStyle, null>) => void;
   beginPractice: (method: TransferMethod) => void;
 }
@@ -56,11 +58,13 @@ export function usePracticeApp() {
 export function PracticeProvider({
   children,
   onComplete,
+  onTransferAttempt,
   onExit,
   initialState,
 }: {
   children: ReactNode;
   onComplete?: () => void;
+  onTransferAttempt?: () => void;
   onExit?: () => void;
   initialState?: PracticeInitialState;
 }) {
@@ -79,6 +83,11 @@ export function PracticeProvider({
   const [transferMethod, setTransferMethod] = useState<TransferMethod>(initialState?.transferMethod ?? 'voice');
   const [pin, setPin] = useState('');
   const [praise, setPraise] = useState<Praise | null>(null);
+  const practiceTarget = useMemo<PracticeTarget>(() => initialState?.target ?? ({
+    recipient: savedRecipients[0],
+    amount: '30000',
+    amountLabel: '30,000원',
+  }), [initialState?.target]);
 
   // useState 의 setter 는 참조가 고정이므로 아래 콜백들도 마운트 동안 안정적이다.
   const clearPracticeData = useCallback(() => {
@@ -107,12 +116,13 @@ export function PracticeProvider({
 
   const back = useCallback(() => {
     setPracticeMistakeMessage('');
+    if (screen === 'practicePin') setPin('');
     if (history.length <= 1) {
       onExitRef.current?.();
       return;
     }
     setHistory((current) => current.slice(0, -1));
-  }, [history.length]);
+  }, [history.length, screen]);
 
   const choosePracticeStyle = useCallback((style: Exclude<PracticeStyle, null>) => {
     clearPracticeData();
@@ -131,7 +141,7 @@ export function PracticeProvider({
     });
   }, [clearPracticeData]);
 
-  const guidedNext = useCallback((_text: string, next: PracticeScreen) => go(next), [go]);
+  const guidedNext = useCallback((next: PracticeScreen) => go(next), [go]);
 
   const enterPracticeAmount = useCallback((value: string) => {
     setPracticeAmount((current) => appendDigits(current, value, {
@@ -146,9 +156,18 @@ export function PracticeProvider({
       : savedRecipients.find((recipient) => recipient.id === practiceRecipientChoice)?.name ?? ''
   );
 
+  const onTransferAttemptRef = useRef(onTransferAttempt);
+  useEffect(() => {
+    onTransferAttemptRef.current = onTransferAttempt;
+  });
+
   useEffect(() => {
     if (screen !== 'practicePin' || pin.length !== 4) return;
     const timer = setTimeout(() => {
+      if (onTransferAttemptRef.current) {
+        onTransferAttemptRef.current();
+        return;
+      }
       if (practiceStyle === 'guided') {
         setPraise({ text: '송금 연습을 모두 마쳤어요.', next: 'practiceComplete' });
       } else {
@@ -179,6 +198,7 @@ export function PracticeProvider({
   const value = useMemo<PracticeContextValue>(() => ({
     screen,
     practiceStyle,
+    practiceTarget,
     setPracticeStyle,
     practiceRecipient,
     setPracticeRecipient,
@@ -206,7 +226,7 @@ export function PracticeProvider({
     choosePracticeStyle,
     beginPractice,
   }), [
-    screen, history.length, practiceStyle, practiceRecipient, practiceRecipientChoice,
+    screen, history.length, practiceStyle, practiceTarget, practiceRecipient, practiceRecipientChoice,
     practiceVoiceRecipientName, practiceRecipientName, practiceAmount,
     practiceMistakeMessage, transferMethod, pin, praise,
     go, back, guidedNext, choosePracticeStyle, beginPractice, enterPracticeAmount,

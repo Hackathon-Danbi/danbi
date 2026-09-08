@@ -53,7 +53,14 @@ export function AmountEntry({
           <AppText size={13} color={P.muted}>
             {label}
           </AppText>
-          <AppText size={34} weight={900} color={P.ink}>
+          <AppText
+            size={34}
+            weight={900}
+            color={P.ink}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
             {amount ? formattedAmount : '0'}
             <AppText size={20} weight={900} color={P.ink}>
               원

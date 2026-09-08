@@ -25,9 +25,9 @@ export function HistoryFlow() {
   // 월 이동: 원본은 라벨만 바꿨지만, 미래 월로는 이동할 수 없게 현재 날짜 기준으로 제어한다.
   const now = new Date();
   const currentYm = now.getFullYear() * 12 + now.getMonth();
-  const [viewYm, setViewYm] = useState(() => (
-    transactions[0] ? yearMonthOf(transactions[0].occurredAt) : currentYm
-  ));
+  const [viewYm, setViewYm] = useState(() =>
+    transactions[0] ? yearMonthOf(transactions[0].occurredAt) : currentYm,
+  );
   const year = Math.floor(viewYm / 12);
   const monthLabel = `${year}년 ${MONTH_NAMES[viewYm % 12]}월`;
   const canGoNext = viewYm < currentYm;
@@ -35,8 +35,12 @@ export function HistoryFlow() {
   const visibleTransactions = filterTransactionsByMonth(transactions, viewYm);
   // 확인 안내 배지와 '확인하기' 동작은 현재 보고 있는 달 기준으로만 처리한다.
   // (다른 달 거래로 목록이 갑자기 넘어가지 않도록)
-  const visiblePending = visibleTransactions.filter((tx) => tx.reviewStatus === 'pending');
-  const visibleUnknown = visibleTransactions.filter((tx) => tx.reviewStatus === 'unknown');
+  const visiblePending = visibleTransactions.filter(
+    (transaction) => transaction.reviewStatus === 'UNREAD',
+  );
+  const visibleUnknown = visibleTransactions.filter(
+    (transaction) => transaction.reviewStatus === 'UNKNOWN',
+  );
 
   const goHome = () => router.dismissTo('/(app)/home');
 
@@ -76,11 +80,11 @@ export function HistoryFlow() {
         visible={!!selectedTx}
         tx={selectedTx}
         onKnown={() => {
-          if (selectedTx) reviewTransaction(selectedTx.id, 'known');
+          if (selectedTx) reviewTransaction(selectedTx.transactionId, 'KNOWN');
           setSelectedTx(null);
         }}
         onUnknown={() => {
-          if (selectedTx) reviewTransaction(selectedTx.id, 'unknown');
+          if (selectedTx) reviewTransaction(selectedTx.transactionId, 'UNKNOWN');
           setSelectedTx(null);
         }}
         onReport={() => void callCustomerCenter()}

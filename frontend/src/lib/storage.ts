@@ -16,6 +16,8 @@ export const StorageKeys = {
   onboardingDraft: 'danbi.onboarding.draft',
   missionsCompleted: 'danbi.missions.completed',
   dailyPractice: 'danbi.daily.practice',
+  dailyMissionRecords: 'danbi.daily.mission.records',
+  experiencedScenarios: 'danbi.scenarios.experienced',
   quizRecord: 'danbi.quiz.record',
   transactionReviews: 'danbi.transactions.reviews',
 } as const;

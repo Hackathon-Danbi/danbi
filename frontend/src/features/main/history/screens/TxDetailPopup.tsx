@@ -27,7 +27,9 @@ export function TxDetailPopup({
           {tx ? (
             <>
               <AppText size={22} weight={900} color={INK} align="center" style={styles.mb10}>
-                {tx.reviewStatus === 'unknown' ? '모르는 거래로 표시했어요' : '이 거래를 알고 계신가요?'}
+                {tx.reviewStatus === 'UNKNOWN'
+                  ? '모르는 거래로 표시했어요'
+                  : '이 거래를 알고 계신가요?'}
               </AppText>
               <AppText size={14} color="#AAA" align="center" style={styles.mb24}>
                 카드 결제 : {tx.date} {tx.time}
@@ -35,7 +37,7 @@ export function TxDetailPopup({
 
               <View style={styles.center}>
                 <AppText size={26} weight={900} color={INK} align="center" style={styles.mb8}>
-                  {tx.name}
+                  {tx.description}
                 </AppText>
                 <AppText size={38} weight={900} color={INK} align="center" letterSpacing={-1}>
                   {Math.abs(tx.amount).toLocaleString()}원
@@ -43,7 +45,7 @@ export function TxDetailPopup({
               </View>
 
               <View style={styles.actions}>
-                {tx.reviewStatus === 'unknown' ? (
+                {tx.reviewStatus === 'UNKNOWN' ? (
                   <Pressable accessibilityRole="button" onPress={onReport} style={styles.danger}>
                     <AppText size={17} weight={900} color="#fff">
                       고객센터 전화하기
@@ -52,10 +54,10 @@ export function TxDetailPopup({
                 ) : null}
                 <Pressable accessibilityRole="button" onPress={onKnown} style={styles.primary}>
                   <AppText size={17} weight={900} color={INK}>
-                    {tx.reviewStatus === 'unknown' ? '알고 있는 거래로 변경' : '알고 있는 거래에요'}
+                    {tx.reviewStatus === 'UNKNOWN' ? '알고 있는 거래로 변경' : '알고 있는 거래에요'}
                   </AppText>
                 </Pressable>
-                {tx.reviewStatus !== 'unknown' ? (
+                {tx.reviewStatus !== 'UNKNOWN' ? (
                   <Pressable accessibilityRole="button" onPress={onUnknown} style={styles.quiet}>
                     <AppText size={15} weight={700} color="#888">
                       모르는 거래에요

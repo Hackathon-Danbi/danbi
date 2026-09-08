@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { Screen } from '@/components/ui/Screen';
@@ -6,46 +6,169 @@ import { ScreenIn } from '@/components/anim/ScreenIn';
 import { getJSON, setJSON, StorageKeys } from '@/lib/storage';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { PracticeMode } from '@/features/practice/PracticeMode';
-import { MAX_SCORE, MISSIONS, calcScore } from './data/missions';
+import type { PracticeInitialState, PracticeTarget } from '@/features/practice/types';
+import { MISSION_PRACTICE_PRESETS, SOLO_MANUAL_RETRY_PRESET } from '@/features/practice/missionPresets';
+import { savedRecipients } from '@/features/practice/data/recipients.mock';
+import { MAX_SCORE, MISSIONS } from './data/missions';
 import type { Mission, MissionId } from './data/missions';
-import { getTodayString } from './data/quiz';
 import type { QuizQuestion } from './data/quiz';
 import { DailyHubScreen } from './hub/DailyHubScreen';
-import type { DailyPracticeRecord, QuizRecord } from './hub/DailyHubScreen';
 import { MissionCompleteScreen } from './MissionCompleteScreen';
 import { PhishingLearnScreen } from './phishing/PhishingLearnScreen';
-import { PhishingSimulationScreen } from './phishing/PhishingSimulationScreen';
+import { generateDailyMission, getDailyMissionStorageKey, isDailyMission } from './dailyMission';
+import { SCENARIO_BY_ID } from './scenarios/scenarios';
+import { ScenarioFeedbackScreen } from './scenarios/ScenarioFeedbackScreen';
+import { ScenarioSimulationScreen } from './scenarios/ScenarioSimulationScreen';
+import type { RiskScenario } from './scenarios/types';
+import {
+  calculateFinancialScore,
+  completeMission,
+  completePracticeForDate,
+  completeQuizForDate,
+  getLocalDateKey,
+} from './state';
+import type {
+  DailyMission,
+  DailyMissionRecord,
+  DailyMissionRecords,
+  DailyMissionResult,
+  DailyPracticeRecord,
+  ExperiencedScenarios,
+  QuizRecord,
+  RiskScenarioId,
+} from './types';
+
+type ScenarioRun = {
+  dailyMission: DailyMission;
+  scenario: RiskScenario;
+  isDailyMission: boolean;
+};
 
 type View =
   | { tag: 'hub' }
-  | { tag: 'practice'; mission: Mission }
+  | {
+      tag: 'practice';
+      mission: Mission;
+      initialState?: PracticeInitialState;
+      dailyMission?: DailyMission;
+      isDailyMission?: boolean;
+      scenarioRun?: ScenarioRun;
+    }
+  | { tag: 'scenario'; run: ScenarioRun }
+  | { tag: 'scenario-feedback'; run: ScenarioRun; detectedRisk: boolean; attemptedTransfer: boolean }
   | { tag: 'phishing-learn'; missionId: MissionId; mission: Mission }
-  | { tag: 'phishing-sim'; mission: Mission }
-  | { tag: 'complete'; mission: Mission; earnedPoints: number };
+  | {
+      tag: 'complete';
+      mission: Mission;
+      earnedPoints: number;
+      practiceInitialState?: PracticeInitialState;
+      dailyMission?: DailyMission;
+      isDailyMission?: boolean;
+    };
 
-/** danbi_jj missions/MissionMode.tsx 이식. AsyncStorage 3키 hydrate 후 렌더. */
+const NEW_RECIPIENT_TARGET: PracticeTarget['recipient'] = {
+  id: 'new',
+  name: '박지영',
+  bank: '단비연습은행',
+  account: '555666777888',
+};
+
+function missionForDaily(dailyMission: DailyMission): Mission {
+  const missionId: MissionId = dailyMission.scenarioId
+    ? 'phishing-simulation'
+    : dailyMission.assistanceMode === 'guided'
+      ? 'guided-transfer'
+      : dailyMission.inputMethod === 'voice'
+        ? 'voice-transfer'
+        : 'solo-transfer';
+  return MISSIONS.find((mission) => mission.id === missionId) ?? MISSIONS[0];
+}
+
+function targetForDaily(dailyMission: DailyMission, scenario?: RiskScenario): PracticeTarget {
+  if (scenario) {
+    return {
+      recipient: {
+        id: 'new',
+        name: scenario.transferRequest.recipientName,
+        bank: scenario.transferRequest.bank,
+        account: scenario.transferRequest.account,
+      },
+      amount: String(scenario.transferRequest.amount),
+      amountLabel: `${scenario.transferRequest.amount.toLocaleString('ko-KR')}원`,
+    };
+  }
+
+  const saved = savedRecipients.find((recipient) => recipient.id === dailyMission.recipientId);
+  const recipient = dailyMission.recipientType === 'saved' && saved ? saved : NEW_RECIPIENT_TARGET;
+  return {
+    recipient,
+    amount: String(dailyMission.amount),
+    amountLabel: `${dailyMission.amount.toLocaleString('ko-KR')}원`,
+  };
+}
+
+function practiceStateForDaily(dailyMission: DailyMission, scenario?: RiskScenario): PracticeInitialState {
+  return {
+    screen: dailyMission.inputMethod === 'voice' ? 'practiceVoice' : 'practiceRecipient',
+    practiceStyle: dailyMission.assistanceMode,
+    transferMethod: dailyMission.inputMethod,
+    target: targetForDaily(dailyMission, scenario),
+  };
+}
+
+function createMissionRecord(mission: DailyMission, result: DailyMissionResult): DailyMissionRecord {
+  return {
+    date: mission.date,
+    mission: {
+      assistanceMode: mission.assistanceMode,
+      inputMethod: mission.inputMethod,
+      scenarioId: mission.scenarioId,
+    },
+    result,
+  };
+}
+
+/** 날짜별 미션은 새 키로 확장하고, 기존 3개 완료/점수 키는 그대로 유지한다. */
 export function MissionMode({ onExit }: { onExit?: () => void }) {
   const router = useRouter();
   const [view, setView] = useState<View>({ tag: 'hub' });
-
   const [hydrated, setHydrated] = useState(false);
+  const [todayMission, setTodayMission] = useState<DailyMission | null>(null);
   const [completedMissionIds, setCompletedMissionIds] = useState<Set<MissionId>>(new Set());
   const [dailyPracticeRecord, setDailyPracticeRecord] = useState<DailyPracticeRecord>({});
   const [quizRecord, setQuizRecord] = useState<QuizRecord>({});
+  const [dailyMissionRecords, setDailyMissionRecords] = useState<DailyMissionRecords>({});
+  const [experiencedScenarios, setExperiencedScenarios] = useState<Set<RiskScenarioId>>(new Set());
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
     (async () => {
-      const [completed, daily, quiz] = await Promise.all([
+      const dateKey = getLocalDateKey();
+      const missionKey = getDailyMissionStorageKey(dateKey);
+      const [completed, daily, quiz, storedTodayMission, records, experienced] = await Promise.all([
         getJSON<MissionId[]>(StorageKeys.missionsCompleted),
         getJSON<DailyPracticeRecord>(StorageKeys.dailyPractice),
         getJSON<QuizRecord>(StorageKeys.quizRecord),
+        getJSON<unknown>(missionKey),
+        getJSON<DailyMissionRecords>(StorageKeys.dailyMissionRecords),
+        getJSON<ExperiencedScenarios>(StorageKeys.experiencedScenarios),
       ]);
       if (!mounted.current) return;
-      if (completed) setCompletedMissionIds(new Set(completed));
-      if (daily) setDailyPracticeRecord(daily);
-      if (quiz) setQuizRecord(quiz);
+
+      const resolvedTodayMission = isDailyMission(storedTodayMission, dateKey)
+        ? storedTodayMission
+        : generateDailyMission(dateKey);
+      if (!isDailyMission(storedTodayMission, dateKey)) void setJSON(missionKey, resolvedTodayMission);
+
+      if (Array.isArray(completed)) setCompletedMissionIds(new Set(completed));
+      if (daily && typeof daily === 'object') setDailyPracticeRecord(daily);
+      if (quiz && typeof quiz === 'object') setQuizRecord(quiz);
+      if (records && typeof records === 'object') setDailyMissionRecords(records);
+      if (Array.isArray(experienced)) {
+        setExperiencedScenarios(new Set(experienced.filter((id) => id in SCENARIO_BY_ID)));
+      }
+      setTodayMission(resolvedTodayMission);
       setHydrated(true);
     })();
     return () => {
@@ -65,37 +188,111 @@ export function MissionMode({ onExit }: { onExit?: () => void }) {
     setQuizRecord(next);
     void setJSON(StorageKeys.quizRecord, next);
   };
-
-  const handleComplete = useCallback(
-    (mission: Mission) => {
-      const today = getTodayString();
-      const alreadyDone = completedMissionIds.has(mission.id);
-      const earned = alreadyDone ? 0 : mission.points;
-
-      if (!alreadyDone) persistCompleted(new Set([...completedMissionIds, mission.id]));
-      // 오늘의 연습 기록 (idempotent — 같은 날 재획득 방지)
-      if (!(today in dailyPracticeRecord)) {
-        persistDaily({ ...dailyPracticeRecord, [today]: mission.id });
-      }
-      setView({ tag: 'complete', mission, earnedPoints: earned });
-    },
-    [completedMissionIds, dailyPracticeRecord],
-  );
-
-  const startMission = (mission: Mission) => {
-    if (mission.type === 'transfer') {
-      setView({ tag: 'practice', mission });
-    } else if (mission.type === 'phishing-learn') {
-      setView({ tag: 'phishing-learn', missionId: mission.id, mission });
-    } else {
-      setView({ tag: 'phishing-sim', mission });
-    }
+  const persistDailyMissionRecord = (mission: DailyMission, result: DailyMissionResult) => {
+    if (mission.date in dailyMissionRecords) return;
+    const next = { ...dailyMissionRecords, [mission.date]: createMissionRecord(mission, result) };
+    setDailyMissionRecords(next);
+    void setJSON(StorageKeys.dailyMissionRecords, next);
+  };
+  const persistScenarioExperience = (scenarioId: RiskScenarioId) => {
+    if (experiencedScenarios.has(scenarioId)) return;
+    const next = new Set([...experiencedScenarios, scenarioId]);
+    setExperiencedScenarios(next);
+    void setJSON(StorageKeys.experiencedScenarios, [...next]);
   };
 
-  const handleQuizAnswer = (question: QuizQuestion, answeredIndex: number) => {
-    const today = getTodayString();
-    if (today in quizRecord) return; // 같은 날 재획득 불가
-    persistQuiz({ ...quizRecord, [today]: { qId: question.id, answeredIndex } });
+  const handleComplete = ({
+      mission,
+      practiceInitialState,
+      dailyMission,
+      isDailyMission: completingDailyMission = false,
+      result = { completed: true },
+    }: {
+      mission: Mission;
+      practiceInitialState?: PracticeInitialState;
+      dailyMission?: DailyMission;
+      isDailyMission?: boolean;
+      result?: DailyMissionResult;
+    }) => {
+      const missionCompletion = completeMission(completedMissionIds, mission);
+      if (missionCompletion.completedMissionIds !== completedMissionIds) {
+        persistCompleted(missionCompletion.completedMissionIds);
+      }
+
+      if (completingDailyMission && dailyMission) {
+        const nextDailyRecord = completePracticeForDate(dailyPracticeRecord, dailyMission.date, mission.id);
+        if (nextDailyRecord !== dailyPracticeRecord) persistDaily(nextDailyRecord);
+        persistDailyMissionRecord(dailyMission, result);
+      }
+
+      setView({
+        tag: 'complete',
+        mission,
+        earnedPoints: missionCompletion.earnedPoints,
+        practiceInitialState,
+        dailyMission,
+        isDailyMission: completingDailyMission,
+      });
+    };
+
+  const startDailyMission = (dailyMission: DailyMission) => {
+    const mission = missionForDaily(dailyMission);
+    if (dailyMission.scenarioId) {
+      setView({
+        tag: 'scenario',
+        run: { dailyMission, scenario: SCENARIO_BY_ID[dailyMission.scenarioId], isDailyMission: true },
+      });
+      return;
+    }
+    setView({
+      tag: 'practice',
+      mission,
+      initialState: practiceStateForDaily(dailyMission),
+      dailyMission,
+      isDailyMission: true,
+    });
+  };
+
+  const startLegacyMission = (mission: Mission, initialState?: PracticeInitialState) => {
+    if (mission.type === 'transfer') setView({ tag: 'practice', mission, initialState });
+    else setView({ tag: 'phishing-learn', missionId: mission.id, mission });
+  };
+
+  const startScenarioReplay = (scenarioId: RiskScenarioId) => {
+    const scenario = SCENARIO_BY_ID[scenarioId];
+    const replayMission: DailyMission = {
+      date: getLocalDateKey(),
+      assistanceMode: 'solo',
+      inputMethod: 'manual',
+      recipientType: 'new',
+      amount: scenario.transferRequest.amount,
+      scenarioId,
+    };
+    setView({ tag: 'scenario', run: { dailyMission: replayMission, scenario, isDailyMission: false } });
+  };
+
+  const startScenarioTransfer = (run: ScenarioRun) => {
+    setView({
+      tag: 'practice',
+      mission: missionForDaily(run.dailyMission),
+      initialState: practiceStateForDaily(run.dailyMission, run.scenario),
+      dailyMission: run.dailyMission,
+      isDailyMission: run.isDailyMission,
+      scenarioRun: run,
+    });
+  };
+
+  const showScenarioFeedback = (run: ScenarioRun, detectedRisk: boolean, attemptedTransfer: boolean) => {
+    persistScenarioExperience(run.scenario.id);
+    setView({ tag: 'scenario-feedback', run, detectedRisk, attemptedTransfer });
+  };
+
+  const handleQuizComplete = (question: QuizQuestion, answeredIndex: number) => {
+    const nextQuizRecord = completeQuizForDate(quizRecord, getLocalDateKey(), {
+      qId: question.id,
+      answeredIndex,
+    });
+    if (nextQuizRecord !== quizRecord) persistQuiz(nextQuizRecord);
   };
 
   const exitToHome = () => {
@@ -104,6 +301,7 @@ export function MissionMode({ onExit }: { onExit?: () => void }) {
   };
 
   useAndroidBack(() => {
+    if (view.tag === 'practice') return false;
     if (view.tag !== 'hub') {
       setView({ tag: 'hub' });
       return true;
@@ -111,15 +309,63 @@ export function MissionMode({ onExit }: { onExit?: () => void }) {
     return false;
   });
 
-  if (!hydrated) return <Screen background="#fffef9" edges={['top', 'bottom']}>{null}</Screen>;
+  if (!hydrated || !todayMission) {
+    return <Screen background="#fffef9" edges={['top', 'bottom']}>{null}</Screen>;
+  }
+
+  if (view.tag === 'scenario') {
+    return (
+      <Screen background="#fffef9" edges={['top', 'bottom']}>
+        <ScenarioSimulationScreen
+          scenario={view.run.scenario}
+          onRequestTransfer={() => startScenarioTransfer(view.run)}
+          onStop={() => showScenarioFeedback(view.run, true, false)}
+        />
+      </Screen>
+    );
+  }
+
+  if (view.tag === 'scenario-feedback') {
+    return (
+      <Screen background="#fffef9" edges={['top', 'bottom']}>
+        <ScenarioFeedbackScreen
+          scenario={view.run.scenario}
+          detectedRisk={view.detectedRisk}
+          onComplete={() => handleComplete({
+            mission: missionForDaily(view.run.dailyMission),
+            dailyMission: view.run.dailyMission,
+            isDailyMission: view.run.isDailyMission,
+            result: {
+              completed: true,
+              detectedRisk: view.detectedRisk,
+              attemptedTransfer: view.attemptedTransfer,
+              stoppedTransfer: view.detectedRisk,
+            },
+          })}
+        />
+      </Screen>
+    );
+  }
 
   if (view.tag === 'practice') {
     return (
       <Screen background="#eef2ff" edges={['top', 'bottom']}>
         <PracticeMode
           missionId={view.mission.id}
-          onExit={() => setView({ tag: 'hub' })}
-          onComplete={() => handleComplete(view.mission)}
+          initialState={view.initialState}
+          onExit={() => {
+            if (view.scenarioRun) showScenarioFeedback(view.scenarioRun, true, false);
+            else setView({ tag: 'hub' });
+          }}
+          onTransferAttempt={view.scenarioRun
+            ? () => showScenarioFeedback(view.scenarioRun!, false, true)
+            : undefined}
+          onComplete={() => handleComplete({
+            mission: view.mission,
+            practiceInitialState: view.initialState,
+            dailyMission: view.dailyMission,
+            isDailyMission: view.isDailyMission,
+          })}
         />
       </Screen>
     );
@@ -130,18 +376,7 @@ export function MissionMode({ onExit }: { onExit?: () => void }) {
       <Screen background="#fffef9" edges={['top', 'bottom']}>
         <PhishingLearnScreen
           missionId={view.missionId}
-          onComplete={() => handleComplete(view.mission)}
-          onExit={() => setView({ tag: 'hub' })}
-        />
-      </Screen>
-    );
-  }
-
-  if (view.tag === 'phishing-sim') {
-    return (
-      <Screen background="#fffef9" edges={['top', 'bottom']}>
-        <PhishingSimulationScreen
-          onComplete={() => handleComplete(view.mission)}
+          onComplete={() => handleComplete({ mission: view.mission })}
           onExit={() => setView({ tag: 'hub' })}
         />
       </Screen>
@@ -149,15 +384,25 @@ export function MissionMode({ onExit }: { onExit?: () => void }) {
   }
 
   if (view.tag === 'complete') {
-    const currentScore = calcScore(completedMissionIds);
+    const currentScore = calculateFinancialScore(completedMissionIds);
+    const completedPracticeStyle = view.practiceInitialState?.practiceStyle
+      ?? MISSION_PRACTICE_PRESETS[view.mission.id]?.practiceStyle;
+    const completedSoloFromGuided = view.mission.id === 'guided-transfer' && completedPracticeStyle === 'solo';
     return (
       <Screen background="#fffef9" edges={['top', 'bottom']}>
         <MissionCompleteScreen
-          missionTitle={view.mission.title}
+          missionTitle={completedSoloFromGuided ? '혼자 송금해보기' : view.mission.title}
           earnedPoints={view.earnedPoints}
           newScore={currentScore}
           maxScore={MAX_SCORE}
+          dailyMission={view.isDailyMission}
           onBack={() => setView({ tag: 'hub' })}
+          onRetry={view.mission.type === 'transfer' && !view.dailyMission
+            ? () => setView({ tag: 'practice', mission: view.mission, initialState: view.practiceInitialState })
+            : undefined}
+          onSoloRetry={view.mission.id === 'guided-transfer' && completedPracticeStyle === 'guided' && !view.dailyMission
+            ? () => setView({ tag: 'practice', mission: view.mission, initialState: SOLO_MANUAL_RETRY_PRESET })
+            : undefined}
           achieved={currentScore >= MAX_SCORE}
         />
       </Screen>
@@ -171,8 +416,12 @@ export function MissionMode({ onExit }: { onExit?: () => void }) {
           completedMissionIds={completedMissionIds}
           dailyPracticeRecord={dailyPracticeRecord}
           quizRecord={quizRecord}
-          onQuizAnswer={handleQuizAnswer}
-          onStartMission={startMission}
+          todayMission={todayMission}
+          experiencedScenarios={experiencedScenarios}
+          onQuizComplete={handleQuizComplete}
+          onStartDailyMission={startDailyMission}
+          onStartFreePractice={startLegacyMission}
+          onReplayScenario={startScenarioReplay}
           onExit={exitToHome}
         />
       </ScreenIn>

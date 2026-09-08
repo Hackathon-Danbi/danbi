@@ -82,13 +82,14 @@ src/
     onboarding/            계좌 개설 흐름 (screens, components, hooks, help, id-capture)
     main/                  홈 · 송금 · 거래내역 · 예적금 (transfer, history, savings, imports)
     missions/              금융 미션 (hub, phishing, data) + PracticeMode 진입
-    practice/              송금 연습 모드 (screens, components, hooks, data)
+    practice/              송금 연습 모드 (screens, components, data)
     shared/                여러 기능이 공유하는 목데이터
   lib/
     storage.ts             AsyncStorage 래퍼 + usePersistentState (hydrated 플래그)
     useAndroidBack.ts      Android 하드웨어 back 을 내부 상태 머신이 먼저 소비
     speech/
       tts.ts               expo-speech 기반 음성 안내 (speak / stop, 큐 모드 지원)
+      useSpeechRecognition.ts 공통 STT React 훅
       recognition/          STT 엔진 레이어 (아래 참조)
   theme/
     tokens.ts, fonts.ts   색상·간격·반경 토큰, 폰트 패밀리 resolver
@@ -122,8 +123,8 @@ Metro 가 실행 플랫폼에 맞는 `.web` / `.native` 파일을 자동 선택�
 음성 인식이 불가능하거나 실패했을 때, **연습 모드(`PracticeMode`)에서만** 예시
 문장(또는 미션 목 transcript)을 대신 사용해 흐름을 계속 진행합니다.
 
-- 적용 위치: `src/features/practice/hooks/useSpeechRecognition.ts` 의
-  `fallbackTranscript` 옵션. 이 훅은 `PracticeVoiceScreen` 에서만 사용합니다.
+- 적용 위치: `src/lib/speech/useSpeechRecognition.ts` 의 `fallbackTranscript` 옵션.
+  공통 훅은 홈 잔액 조회에서도 사용하지만, fallback을 전달하는 곳은 `PracticeVoiceScreen`뿐입니다.
 - 발동 조건: `!supported` / `create() === null` / `onError` / 무음 `onEnd` /
   인식 실패 → `fallbackTranscript` 가 있으면 약 1.2초 뒤 `finish(fallbackTranscript)`.
 - fallback 으로 채워진 값도 **실제 파서**(`voiceTransfer.ts`)를 그대로 거칩니다.

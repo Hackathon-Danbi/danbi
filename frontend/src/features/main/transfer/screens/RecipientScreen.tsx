@@ -39,7 +39,7 @@ export function RecipientScreen({
           <View style={styles.list}>
             {CONTACTS.map((c) => (
               <Pressable
-                key={c.name}
+                key={c.savedRecipientId}
                 accessibilityRole="button"
                 onPress={() => onSelectContact(c)}
                 style={styles.item}
@@ -51,17 +51,21 @@ export function RecipientScreen({
                 </View>
                 <View style={styles.flex1}>
                   <AppText size={16} weight={900} color={INK} style={styles.mb3}>
-                    {c.name}
+                    {c.recipientName}
                   </AppText>
                   <AppText size={13} color="#999">
-                    {c.bank} · {c.account}
+                    {c.recipientBankName} · {c.recipientAccountNumber}
                   </AppText>
                 </View>
                 <IconChevronRight />
               </Pressable>
             ))}
 
-            <Pressable accessibilityRole="button" onPress={onNewAccount} style={[styles.item, styles.itemNew]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onNewAccount}
+              style={[styles.item, styles.itemNew]}
+            >
               <View style={[styles.avatar, styles.avatarNew]}>
                 <AppText size={22} weight={900} color="#888">
                   +

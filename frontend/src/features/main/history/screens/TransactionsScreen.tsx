@@ -60,7 +60,11 @@ export function TransactionsScreen({
             <AppText size={13} color="#8A3D3D" lineHeight={20}>
               실제 모르는 거래라면 은행이나 카드사에 바로 신고해주세요.
             </AppText>
-            <Pressable accessibilityRole="button" onPress={onReviewUnknown} style={styles.dangerBtn}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onReviewUnknown}
+              style={styles.dangerBtn}
+            >
               <AppText size={15} weight={900} color="#fff">
                 신고 안내 보기
               </AppText>
@@ -92,7 +96,13 @@ export function TransactionsScreen({
         <View style={styles.monthNav}>
           <Pressable accessibilityRole="button" onPress={onPrevMonth} style={styles.monthBtn}>
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-              <Polyline points="15 18 9 12 15 6" stroke="#888" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+              <Polyline
+                points="15 18 9 12 15 6"
+                stroke="#888"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </Svg>
             <AppText size={14} weight={700} color="#888">
               이전 달
@@ -130,26 +140,33 @@ export function TransactionsScreen({
             <View style={styles.list}>
               {grouped[date].map((tx, i) => (
                 <Pressable
-                  key={tx.id}
+                  key={tx.transactionId}
                   accessibilityRole="button"
                   onPress={() => onSelectTx(tx)}
                   style={[styles.item, i > 0 && styles.itemBorder]}
                 >
-                  <View style={[styles.txIcon, { backgroundColor: tx.amount < 0 ? '#FFF3F3' : '#F0FFF6' }]}>
+                  <View
+                    style={[
+                      styles.txIcon,
+                      {
+                        backgroundColor: tx.amount < 0 ? '#FFF3F3' : '#F0FFF6',
+                      },
+                    ]}
+                  >
                     <AppText size={20}>{tx.amount < 0 ? '💳' : '💰'}</AppText>
                   </View>
                   <View style={styles.flex1}>
                     <View style={styles.txNameRow}>
                       <AppText size={15} weight={900} color={INK}>
-                        {tx.name}
+                        {tx.description}
                       </AppText>
-                      {tx.reviewStatus === 'pending' ? (
+                      {tx.reviewStatus === 'UNREAD' ? (
                         <View style={styles.checkPill}>
                           <AppText size={11} weight={700} color="#9A7200">
                             확인 필요
                           </AppText>
                         </View>
-                      ) : tx.reviewStatus === 'unknown' ? (
+                      ) : tx.reviewStatus === 'UNKNOWN' ? (
                         <View style={styles.dangerPill}>
                           <AppText size={11} weight={700} color="#9B1C1C">
                             신고 필요
@@ -158,7 +175,7 @@ export function TransactionsScreen({
                       ) : null}
                     </View>
                     <AppText size={12} color="#AAA">
-                      {tx.time} · {tx.type}
+                      {tx.time} · {tx.transactionType}
                     </AppText>
                   </View>
                   <AppText size={16} weight={900} color={tx.amount < 0 ? '#D94040' : '#2E8B57'}>
@@ -180,7 +197,12 @@ export function TransactionsScreen({
         <View style={styles.spacer} />
       </ScrollView>
 
-      <BottomTabBar active="transactions" onTransfer={onTransfer} onHome={onHome} onTransactions={() => {}} />
+      <BottomTabBar
+        active="transactions"
+        onTransfer={onTransfer}
+        onHome={onHome}
+        onTransactions={() => {}}
+      />
     </View>
   );
 }
@@ -189,7 +211,12 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
   flex1: { flex: 1 },
   mb4: { marginBottom: 4 },
-  header: { paddingTop: 20, paddingBottom: 12, paddingHorizontal: 20, backgroundColor: '#fff' },
+  header: {
+    paddingTop: 20,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+  },
   body: { paddingHorizontal: 18, paddingBottom: 12 },
   warnCard: {
     borderRadius: 16,
@@ -216,7 +243,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#B42318',
     borderRadius: 12,
   },
-  warnHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
+  warnHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 10,
+  },
   warnBtn: {
     width: '100%',
     paddingVertical: 14,
@@ -230,7 +262,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  monthBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8 },
+  monthBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+  },
   monthBtnDisabled: { opacity: 0.6 },
   dateGroup: { marginBottom: 8 },
   dateLabel: { marginBottom: 10 },
@@ -240,7 +277,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#EBEBEB',
   },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: '#fff' },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    backgroundColor: '#fff',
+  },
   itemBorder: { borderTopWidth: 1, borderTopColor: '#F3F3F3' },
   txIcon: {
     width: 42,
@@ -249,7 +292,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  txNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
+  txNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 3,
+  },
   checkPill: {
     backgroundColor: '#FFF3C4',
     paddingVertical: 2,

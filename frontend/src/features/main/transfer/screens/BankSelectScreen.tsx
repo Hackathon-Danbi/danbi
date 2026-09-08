@@ -8,6 +8,8 @@ import { INK, YELLOW } from '../../theme';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 import { NavBar } from '../../components/NavBar';
 
+type Bank = (typeof BANKS)[number];
+
 /** danbi_jj main/screens/transfer.tsx <BankSelectScreen> 이식. */
 export function BankSelectScreen({
   onBack,
@@ -16,7 +18,7 @@ export function BankSelectScreen({
   onActivity,
 }: {
   onBack: () => void;
-  onSelect: (bank: string) => void;
+  onSelect: (bank: Bank) => void;
   helpTarget: string;
   onActivity: () => void;
 }) {
@@ -36,19 +38,19 @@ export function BankSelectScreen({
         <PulseHighlight active={helpTarget === 'bankGrid'} borderRadius={14}>
           <View style={styles.grid}>
             {BANKS.map((b) => {
-              const sel = picked === b.name;
+              const sel = picked === b.bankCode;
               return (
                 <Pressable
-                  key={b.name}
+                  key={b.bankCode}
                   accessibilityRole="button"
                   onPress={() => {
-                    setPicked(b.name);
-                    setTimeout(() => onSelect(b.name), 180);
+                    setPicked(b.bankCode);
+                    setTimeout(() => onSelect(b), 180);
                   }}
                   style={[styles.bank, sel && styles.bankSel]}
                 >
                   <AppText size={16} weight={800} color={INK}>
-                    {b.name}
+                    {b.bankName}
                   </AppText>
                 </Pressable>
               );

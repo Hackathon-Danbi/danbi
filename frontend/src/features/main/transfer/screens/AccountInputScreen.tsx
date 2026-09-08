@@ -49,7 +49,7 @@ export function AccountInputScreen({
               </AppText>
             </View>
             <AppText size={15} weight={800} color={INK}>
-              {b.name}
+              {b.bankName}
             </AppText>
           </View>
           <Pressable accessibilityRole="button" onPress={onReselect} style={styles.reselect}>
