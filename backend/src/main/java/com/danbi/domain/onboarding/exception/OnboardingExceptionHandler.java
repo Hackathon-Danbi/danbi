@@ -10,6 +10,7 @@ import com.danbi.domain.onboarding.controller.OneWonVerificationController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
 import com.danbi.domain.onboarding.dto.AccountPasswordVerificationErrorResponse;
 import com.danbi.domain.onboarding.dto.OnboardingErrorResponse;
+import com.danbi.domain.onboarding.dto.OneWonVerificationErrorResponse;
 import com.danbi.domain.onboarding.dto.PhoneVerificationErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -223,5 +224,34 @@ public class OnboardingExceptionHandler {
 	) {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(OneWonVerificationNotFoundException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleOneWonVerificationNotFound(
+		OneWonVerificationNotFoundException e
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(OneWonVerificationExpiredException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleOneWonVerificationExpired(
+		OneWonVerificationExpiredException e
+	) {
+		return ResponseEntity.status(HttpStatus.GONE)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(OneWonVerificationAttemptLimitExceededException.class)
+	public ResponseEntity<OneWonVerificationErrorResponse> handleOneWonVerificationAttemptLimitExceeded(
+		OneWonVerificationAttemptLimitExceededException e
+	) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+			.body(new OneWonVerificationErrorResponse(
+				e.getCode(),
+				e.getMessage(),
+				e.getFailureCount(),
+				0
+			));
 	}
 }

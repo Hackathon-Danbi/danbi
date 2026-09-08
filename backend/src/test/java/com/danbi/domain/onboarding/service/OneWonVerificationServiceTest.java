@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.danbi.domain.onboarding.dto.OnboardingStep;
+import com.danbi.domain.onboarding.dto.ConfirmOneWonVerificationRequest;
+import com.danbi.domain.onboarding.dto.ConfirmOneWonVerificationResponse;
 import com.danbi.domain.onboarding.dto.RequestOneWonVerificationRequest;
 import com.danbi.domain.onboarding.dto.RequestOneWonVerificationResponse;
 import com.danbi.domain.onboarding.entity.AccountVerificationMethod;
@@ -15,6 +17,9 @@ import com.danbi.domain.onboarding.entity.OneWonVerification;
 import com.danbi.domain.onboarding.exception.AccountVerificationConflictException;
 import com.danbi.domain.onboarding.exception.AccountVerificationTargetNotFoundException;
 import com.danbi.domain.onboarding.exception.OneWonVerificationRequestLimitExceededException;
+import com.danbi.domain.onboarding.exception.OneWonVerificationAttemptLimitExceededException;
+import com.danbi.domain.onboarding.exception.OneWonVerificationExpiredException;
+import com.danbi.domain.onboarding.exception.OneWonVerificationNotFoundException;
 import com.danbi.domain.onboarding.repository.AccountVerificationTargetRepository;
 import com.danbi.domain.onboarding.repository.OneWonVerificationRepository;
 import java.time.Clock;
@@ -132,8 +137,145 @@ class OneWonVerificationServiceTest {
 			.isInstanceOf(AccountVerificationConflictException.class);
 	}
 
+	@Test
+	void confirmsMatchingOneWonVerificationCode() {
+		RequestOneWonVerificationResponse requested = service.request(TARGET_ID, request());
+
+		ConfirmOneWonVerificationResponse response = service.confirm(
+			TARGET_ID,
+			confirmRequest(requested.verificationId(), "4821")
+		);
+
+		assertThat(response.verified()).isTrue();
+		assertThat(response.failureCount()).isZero();
+		assertThat(response.remainingAttempts()).isEqualTo(5);
+		assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.PASSWORD_SETUP);
+		assertThat(target.isVerified()).isTrue();
+		assertThat(storedVerification.get().isVerified()).isTrue();
+	}
+
+	@Test
+	void returnsFailureAndRemainingAttemptsForWrongCode() {
+		RequestOneWonVerificationResponse requested = service.request(TARGET_ID, request());
+
+		ConfirmOneWonVerificationResponse response = service.confirm(
+			TARGET_ID,
+			confirmRequest(requested.verificationId(), "0000")
+		);
+
+		assertThat(response.verified()).isFalse();
+		assertThat(response.failureCount()).isEqualTo(1);
+		assertThat(response.remainingAttempts()).isEqualTo(4);
+		assertThat(response.onboardingStep())
+			.isEqualTo(OnboardingStep.ONE_WON_VERIFICATION);
+	}
+
+	@Test
+	void fourthFailureStillAllowsOneMoreAttempt() {
+		RequestOneWonVerificationResponse requested = service.request(TARGET_ID, request());
+		for (int attempt = 0; attempt < 3; attempt += 1) {
+			service.confirm(
+				TARGET_ID,
+				confirmRequest(requested.verificationId(), "0000")
+			);
+		}
+
+		ConfirmOneWonVerificationResponse response = service.confirm(
+			TARGET_ID,
+			confirmRequest(requested.verificationId(), "0000")
+		);
+
+		assertThat(response.failureCount()).isEqualTo(4);
+		assertThat(response.remainingAttempts()).isEqualTo(1);
+	}
+
+	@Test
+	void locksOnFifthWrongCode() {
+		RequestOneWonVerificationResponse requested = service.request(TARGET_ID, request());
+		for (int attempt = 0; attempt < 4; attempt += 1) {
+			service.confirm(
+				TARGET_ID,
+				confirmRequest(requested.verificationId(), "0000")
+			);
+		}
+
+		assertThatThrownBy(() -> service.confirm(
+			TARGET_ID,
+			confirmRequest(requested.verificationId(), "0000")
+		)).isInstanceOfSatisfying(
+			OneWonVerificationAttemptLimitExceededException.class,
+			exception -> assertThat(exception.getFailureCount()).isEqualTo(5)
+		);
+		assertThat(storedVerification.get().getVerificationAttemptCount()).isEqualTo(5);
+	}
+
+	@Test
+	void rejectsExpiredVerification() {
+		OneWonVerification expired = OneWonVerification.start(
+			TARGET_ID,
+			ISSUANCE_ID,
+			"av_expired",
+			"4821",
+			NOW
+		);
+		storedVerification.set(expired);
+
+		assertThatThrownBy(() -> service.confirm(
+			TARGET_ID,
+			confirmRequest("av_expired", "4821")
+		)).isInstanceOf(OneWonVerificationExpiredException.class);
+	}
+
+	@Test
+	void rejectsVerificationIdInvalidatedByReissue() {
+		RequestOneWonVerificationResponse first = service.request(TARGET_ID, request());
+		service.request(TARGET_ID, request());
+
+		assertThatThrownBy(() -> service.confirm(
+			TARGET_ID,
+			confirmRequest(first.verificationId(), "4821")
+		)).isInstanceOf(AccountVerificationConflictException.class);
+	}
+
+	@Test
+	void returnsCompletedResultForSameCompletedRequest() {
+		RequestOneWonVerificationResponse requested = service.request(TARGET_ID, request());
+		ConfirmOneWonVerificationRequest confirmRequest = confirmRequest(
+			requested.verificationId(),
+			"4821"
+		);
+		service.confirm(TARGET_ID, confirmRequest);
+
+		ConfirmOneWonVerificationResponse retried = service.confirm(
+			TARGET_ID,
+			confirmRequest
+		);
+
+		assertThat(retried.verified()).isTrue();
+		assertThat(retried.onboardingStep()).isEqualTo(OnboardingStep.PASSWORD_SETUP);
+	}
+
+	@Test
+	void rejectsConfirmationBeforeRequest() {
+		assertThatThrownBy(() -> service.confirm(
+			TARGET_ID,
+			confirmRequest("av_missing", "4821")
+		)).isInstanceOf(OneWonVerificationNotFoundException.class);
+	}
+
 	private RequestOneWonVerificationRequest request() {
 		return new RequestOneWonVerificationRequest(ISSUANCE_ID);
+	}
+
+	private ConfirmOneWonVerificationRequest confirmRequest(
+		String verificationId,
+		String verificationCode
+	) {
+		return new ConfirmOneWonVerificationRequest(
+			ISSUANCE_ID,
+			verificationId,
+			verificationCode
+		);
 	}
 
 	private AccountVerificationTarget target(AccountVerificationMethod method) {

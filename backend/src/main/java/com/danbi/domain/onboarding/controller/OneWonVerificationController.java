@@ -2,6 +2,8 @@ package com.danbi.domain.onboarding.controller;
 
 import com.danbi.domain.onboarding.dto.RequestOneWonVerificationRequest;
 import com.danbi.domain.onboarding.dto.RequestOneWonVerificationResponse;
+import com.danbi.domain.onboarding.dto.ConfirmOneWonVerificationRequest;
+import com.danbi.domain.onboarding.dto.ConfirmOneWonVerificationResponse;
 import com.danbi.domain.onboarding.service.OneWonVerificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,17 @@ public class OneWonVerificationController {
 		@Valid @RequestBody RequestOneWonVerificationRequest request
 	) {
 		return oneWonVerificationService.request(
+			accountVerificationTargetId,
+			request
+		);
+	}
+
+	@PostMapping("/confirm")
+	public ConfirmOneWonVerificationResponse confirm(
+		@PathVariable String accountVerificationTargetId,
+		@Valid @RequestBody ConfirmOneWonVerificationRequest request
+	) {
+		return oneWonVerificationService.confirm(
 			accountVerificationTargetId,
 			request
 		);
