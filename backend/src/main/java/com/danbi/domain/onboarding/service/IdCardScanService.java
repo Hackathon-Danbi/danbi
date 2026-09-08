@@ -1,15 +1,20 @@
 package com.danbi.domain.onboarding.service;
 
+import com.danbi.domain.onboarding.dto.ConfirmIdCardRequest;
+import com.danbi.domain.onboarding.dto.ConfirmIdCardResponse;
 import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.ScanIdCardResponse;
 import com.danbi.domain.onboarding.entity.CertificateIssuance;
 import com.danbi.domain.onboarding.entity.IdCardScan;
+import com.danbi.domain.onboarding.entity.IdCardConfirmationStatus;
 import com.danbi.domain.onboarding.entity.IdCardType;
 import com.danbi.domain.onboarding.entity.OnboardingSession;
 import com.danbi.domain.onboarding.exception.CertificateIssuanceNotFoundException;
 import com.danbi.domain.onboarding.exception.IdCardNameMismatchException;
+import com.danbi.domain.onboarding.exception.IdCardConfirmationConflictException;
 import com.danbi.domain.onboarding.exception.IdCardRecognitionFailedException;
 import com.danbi.domain.onboarding.exception.InvalidIdCardImageException;
+import com.danbi.domain.onboarding.exception.IdCardScanNotFoundException;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.repository.CertificateIssuanceRepository;
 import com.danbi.domain.onboarding.repository.IdCardScanRepository;
@@ -82,6 +87,27 @@ public class IdCardScanService {
 		);
 	}
 
+	@Transactional
+	public ConfirmIdCardResponse confirm(ConfirmIdCardRequest request) {
+		certificateIssuanceRepository.findById(request.issuanceId())
+			.orElseThrow(() -> new CertificateIssuanceNotFoundException(request.issuanceId()));
+		IdCardScan scan = idCardScanRepository
+			.findByScanIdAndIssuanceId(request.scanId(), request.issuanceId())
+			.orElseThrow(IdCardScanNotFoundException::new);
+
+		boolean confirmed = request.confirmed();
+		if (scan.hasConfirmationDecision(confirmed)) {
+			return confirmationResponse(scan, confirmed);
+		}
+		if (scan.hasConfirmationDecision()
+			|| confirmed && hasConfirmedScan(request.issuanceId())) {
+			throw new IdCardConfirmationConflictException();
+		}
+
+		scan.decideConfirmation(confirmed, Instant.now(clock));
+		return confirmationResponse(scan, confirmed);
+	}
+
 	private void validateImage(MultipartFile image) {
 		if (image == null || image.isEmpty()) {
 			throw new InvalidIdCardImageException("신분증 이미지가 비어 있습니다.");
@@ -120,5 +146,21 @@ public class IdCardScanService {
 
 	private String generateScanId() {
 		return SCAN_ID_PREFIX + UUID.randomUUID().toString().replace("-", "");
+	}
+
+	private boolean hasConfirmedScan(String issuanceId) {
+		return idCardScanRepository.existsByIssuanceIdAndConfirmationStatus(
+			issuanceId,
+			IdCardConfirmationStatus.CONFIRMED
+		);
+	}
+
+	private ConfirmIdCardResponse confirmationResponse(IdCardScan scan, boolean confirmed) {
+		return new ConfirmIdCardResponse(
+			scan.getIssuanceId(),
+			scan.getScanId(),
+			confirmed,
+			confirmed ? OnboardingStep.FACE_VERIFICATION : OnboardingStep.ID_CARD_SCAN
+		);
 	}
 }
