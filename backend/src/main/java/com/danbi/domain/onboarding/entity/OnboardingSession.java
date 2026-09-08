@@ -1,4 +1,4 @@
-package com.danbi.domain.onboarding.model;
+package com.danbi.domain.onboarding.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

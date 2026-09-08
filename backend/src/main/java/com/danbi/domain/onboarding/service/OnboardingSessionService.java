@@ -4,7 +4,7 @@ import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
-import com.danbi.domain.onboarding.model.OnboardingSession;
+import com.danbi.domain.onboarding.entity.OnboardingSession;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import java.util.UUID;
 import org.springframework.stereotype.Service;

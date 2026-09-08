@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
-import com.danbi.domain.onboarding.model.OnboardingStep;
+import com.danbi.domain.onboarding.entity.OnboardingStep;
 import com.danbi.domain.onboarding.service.OnboardingSessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
