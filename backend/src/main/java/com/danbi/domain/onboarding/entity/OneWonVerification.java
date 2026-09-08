@@ -90,4 +90,30 @@ public class OneWonVerification {
 	public boolean isVerified() {
 		return verifiedAt != null;
 	}
+
+	public boolean belongsTo(String issuanceId) {
+		return this.issuanceId.equals(issuanceId);
+	}
+
+	public boolean hasVerificationId(String verificationId) {
+		return this.verificationId.equals(verificationId);
+	}
+
+	public boolean isExpired(Instant now) {
+		return !now.isBefore(expiresAt);
+	}
+
+	public boolean matchesCode(String verificationCode) {
+		return this.verificationCode.equals(verificationCode);
+	}
+
+	public int recordFailedAttempt() {
+		this.verificationAttemptCount += 1;
+		return this.verificationAttemptCount;
+	}
+
+	public OneWonVerification verify(Instant verifiedAt) {
+		this.verifiedAt = verifiedAt;
+		return this;
+	}
 }
