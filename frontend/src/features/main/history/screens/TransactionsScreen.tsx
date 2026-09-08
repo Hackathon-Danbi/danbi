@@ -2,9 +2,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
+import { AccountSwitcher } from '@/features/shared/components';
+import type { Account } from '@/features/shared/data';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import type { TxRecord } from '../../types';
-import { AccountCard } from '../../components/AccountCard';
 import { IconCalendar } from '../../components/icons';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 import type { HistoryHelpTarget } from '../historyHelp';
@@ -12,6 +13,9 @@ import type { HistoryHelpTarget } from '../historyHelp';
 /** danbi_jj main/screens/history.tsx <TransactionsScreen> 이식. */
 export function TransactionsScreen({
   reviewOnly,
+  accounts,
+  selectedAccount,
+  onChangeAccount,
   needCheckCount,
   unknownCount,
   transactions,
@@ -27,6 +31,9 @@ export function TransactionsScreen({
   onHome,
 }: {
   reviewOnly: boolean;
+  accounts: Account[];
+  selectedAccount: Account;
+  onChangeAccount: (account: Account) => void;
   needCheckCount: number;
   unknownCount: number;
   transactions: TxRecord[];
@@ -56,7 +63,11 @@ export function TransactionsScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        <AccountCard />
+        <AccountSwitcher
+          selectedAccount={selectedAccount}
+          accounts={accounts}
+          onChangeAccount={onChangeAccount}
+        />
 
         <View style={styles.section}>
           {unknownCount > 0 ? (
@@ -198,7 +209,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
   flex1: { flex: 1 },
   mb4: { marginBottom: 4 },
-  header: { paddingTop: 20, paddingBottom: 12, paddingHorizontal: 20, backgroundColor: '#fff' },
+  header: { paddingTop: 16, paddingBottom: 8, paddingHorizontal: 20, backgroundColor: '#fff' },
   body: { paddingBottom: 12 },
   section: { paddingHorizontal: 18 },
   warnCard: {

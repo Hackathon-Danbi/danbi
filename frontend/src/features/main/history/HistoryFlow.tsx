@@ -8,6 +8,7 @@ import { useStagedIdle } from '@/features/onboarding/help/captureHelp';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
+import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 import { useTransactions } from '../TransactionContext';
 import {
   filterReviewTransactions,
@@ -21,6 +22,7 @@ import {
   reviewDetailVoice,
   type HistoryHelpTarget,
 } from './historyHelp';
+import { transactionsForAccount } from './data/accountTransactions.mock';
 import { TransactionsScreen } from './screens/TransactionsScreen';
 import { TxDetailPopup } from './screens/TxDetailPopup';
 
@@ -34,6 +36,7 @@ export function HistoryFlow() {
   const router = useRouter();
   const { view } = useLocalSearchParams<{ view?: string }>();
   const { transactions, reviewTransaction } = useTransactions();
+  const { accounts, selectedAccount, selectAccount } = useSelectedAccount();
   const [selectedTx, setSelectedTx] = useState<TxRecord | null>(null);
   const [showEscalation, setShowEscalation] = useState(false);
   const [forceListTarget, setForceListTarget] = useState<HistoryHelpTarget>('');
@@ -44,16 +47,21 @@ export function HistoryFlow() {
   const popupStageRef = useRef(0);
   const skipListVoiceRef = useRef(false);
 
+  // 선택된 통장 기준 거래내역. 기본(생활비) 통장은 review 가 적용된 목록을 그대로,
+  // 나머지 통장은 통장별 목데이터를 쓴다.
+  const accountTransactions = transactionsForAccount(selectedAccount.accountId, transactions);
+
+  // 월 이동: 원본은 라벨만 바꿨지만, 미래 월로는 이동할 수 없게 현재 날짜 기준으로 제어한다.
   const now = new Date();
   const currentYm = now.getFullYear() * 12 + now.getMonth();
   const [viewYm, setViewYm] = useState(() => (
-    transactions[0] ? yearMonthOf(transactions[0].occurredAt) : currentYm
+    accountTransactions[0] ? yearMonthOf(accountTransactions[0].occurredAt) : currentYm
   ));
   const year = Math.floor(viewYm / 12);
   const monthLabel = `${year}년 ${MONTH_NAMES[viewYm % 12]}월`;
   const canGoNext = viewYm < currentYm;
 
-  const monthlyTransactions = filterTransactionsByMonth(transactions, viewYm);
+  const monthlyTransactions = filterTransactionsByMonth(accountTransactions, viewYm);
   const visibleTransactions = reviewOnly
     ? filterReviewTransactions(monthlyTransactions)
     : monthlyTransactions;
@@ -188,6 +196,9 @@ export function HistoryFlow() {
       <ScreenIn>
         <TransactionsScreen
           reviewOnly={reviewOnly}
+          accounts={accounts}
+          selectedAccount={selectedAccount}
+          onChangeAccount={selectAccount}
           transactions={visibleTransactions}
           needCheckCount={visiblePending.length}
           unknownCount={visibleUnknown.length}

@@ -11,6 +11,7 @@ import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
 import { StorageKeys, usePersistentState } from '@/lib/storage';
+import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 
 import { CONTACTS, RECENT_RECIPIENT_CANDIDATES } from '../data';
 import { CREAM, INK, LARGE_AMOUNT_THRESHOLD, YELLOW } from '../theme';
@@ -123,6 +124,8 @@ export function TransferFlow() {
   } = usePersistentState(StorageKeys.savedRecipients, CONTACTS, {
     parse: parseSavedRecipients,
   });
+
+  const { accounts, selectedAccount, selectAccount } = useSelectedAccount();
 
   const [screen, setScreen] = useState<FlowScreen>('transfer');
   const [phase, setPhase] = useState<ListeningPhase>('idle');
@@ -637,6 +640,9 @@ export function TransferFlow() {
       <ScreenIn key={screen}>
         {screen === 'transfer' && (
           <TransferIntroScreen
+            accounts={accounts}
+            selectedAccount={selectedAccount}
+            onChangeAccount={selectAccount}
             onMic={openTransfer}
             onGoHome={goHome}
             onDirect={() => {
@@ -809,6 +815,7 @@ export function TransferFlow() {
         {screen === 'pretransfer' && (
           <PreTransferScreen
             txInfo={txInfo}
+            fromAccount={selectedAccount}
             onBack={() => setScreen('amountinput')}
             onTransfer={() => {
               doResolveHelp();

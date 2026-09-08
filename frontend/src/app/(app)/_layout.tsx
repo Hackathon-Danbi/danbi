@@ -1,6 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { TransactionProvider } from '@/features/main/TransactionContext';
+import { SelectedAccountProvider } from '@/features/shared/state/selectedAccount';
 import { useBootstrap } from '@/lib/bootstrap';
 import { resolveEntryRoute } from '@/lib/navigation';
 import { colors } from '@/theme/tokens';
@@ -28,12 +29,14 @@ export default function AppLayout() {
 
   return (
     <TransactionProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.paper },
-        }}
-      />
+      <SelectedAccountProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.paper },
+          }}
+        />
+      </SelectedAccountProvider>
     </TransactionProvider>
   );
 }

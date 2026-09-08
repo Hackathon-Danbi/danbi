@@ -12,6 +12,7 @@ export const PATH_TO_SCREEN: Record<string, Screen> = {
   '/home': 'home',
   '/transfer': 'transfer',
   '/history': 'transactions',
+  '/unconfirmed': 'unconfirmed',
   '/practice': 'financialIndependence',
   '/accounts': 'savings',
 };
@@ -20,6 +21,7 @@ export const SCREEN_TO_PATH: Partial<Record<Screen, string>> = {
   home: '/home',
   transfer: '/transfer',
   transactions: '/history',
+  unconfirmed: '/unconfirmed',
   financialIndependence: '/practice',
   savings: '/accounts',
 };

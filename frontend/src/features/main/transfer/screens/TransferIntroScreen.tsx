@@ -2,14 +2,18 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
+import { AccountSwitcher } from '@/features/shared/components';
+import type { Account } from '@/features/shared/data';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
-import { AccountCard } from '../../components/AccountCard';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 import { MicButton } from '../../components/MicButton';
 import { IconCard } from '../../components/icons';
 
 /** danbi_jj main/screens/transfer.tsx <TransferScreen> (송금 진입 화면) 이식. */
 export function TransferIntroScreen({
+  accounts,
+  selectedAccount,
+  onChangeAccount,
   onMic,
   onGoHome,
   onDirect,
@@ -17,6 +21,9 @@ export function TransferIntroScreen({
   helpTarget,
   onActivity,
 }: {
+  accounts: Account[];
+  selectedAccount: Account;
+  onChangeAccount: (account: Account) => void;
   onMic: () => void;
   onGoHome: () => void;
   onDirect: () => void;
@@ -38,7 +45,12 @@ export function TransferIntroScreen({
             </AppText>
           </Pressable>
         </View>
-        <AccountCard />
+        <AccountSwitcher
+          selectedAccount={selectedAccount}
+          accounts={accounts}
+          onChangeAccount={onChangeAccount}
+          title="보낼 통장"
+        />
       </View>
 
       <View style={styles.center}>

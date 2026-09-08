@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
+import type { Account } from '@/features/shared/data';
 import { fmt } from '../../data';
 import { INK, YELLOW } from '../../theme';
 import type { TxInfo } from '../../types';
@@ -12,6 +13,7 @@ import { WarningBar } from '../../components/WarningBar';
 /** danbi_jj main/screens/transfer.tsx <PreTransferScreen> (3구획 확인) 이식. */
 export function PreTransferScreen({
   txInfo,
+  fromAccount,
   onBack,
   onTransfer,
   onRecheck,
@@ -20,6 +22,7 @@ export function PreTransferScreen({
   onSectionReview,
 }: {
   txInfo: TxInfo;
+  fromAccount?: Account;
   onBack: () => void;
   onTransfer: () => void;
   onRecheck: () => void;
@@ -43,6 +46,17 @@ export function PreTransferScreen({
         <AppText size={24} weight={900} color={INK} lineHeight={31}>
           {'보내기 전에\n확인해 주세요'}
         </AppText>
+
+        {fromAccount ? (
+          <View style={styles.fromRow}>
+            <AppText size={13} weight={700} color="#888" style={styles.mb4}>
+              보내는 통장
+            </AppText>
+            <AppText size={16} weight={900} color={INK}>
+              {fromAccount.accountName} · {fromAccount.maskedAccountNumber}
+            </AppText>
+          </View>
+        ) : null}
 
         <PulseHighlight active={helpTarget === 'txCard'} borderRadius={18}>
           <View style={styles.card}>
@@ -132,6 +146,14 @@ const styles = StyleSheet.create({
   mb4: { marginBottom: 4 },
   mb6: { marginBottom: 6 },
   mb8: { marginBottom: 8 },
+  fromRow: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#F6D879',
+    backgroundColor: '#FFFDF8',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
   card: {
     borderRadius: 18,
     borderWidth: 2,

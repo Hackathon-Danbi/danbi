@@ -56,6 +56,8 @@ export type TransactionReviewStatus = 'pending' | 'known' | 'unknown';
 
 export interface TxRecord {
   id: number;
+  /** 어느 통장의 거래인지. 없으면 기본 통장(생활비 통장)으로 본다. */
+  accountId?: number;
   occurredAt: string; // ISO 8601, 월 필터/정렬 기준
   date: string; // "8월 29일"
   time: string; // "오후 2:10"
