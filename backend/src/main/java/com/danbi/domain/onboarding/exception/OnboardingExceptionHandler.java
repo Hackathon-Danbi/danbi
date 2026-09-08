@@ -1,5 +1,6 @@
 package com.danbi.domain.onboarding.exception;
 
+import com.danbi.domain.onboarding.controller.CertificateIssuanceController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
+	CertificateIssuanceController.class,
 	OnboardingSessionController.class,
 	OnboardingNameController.class,
 	PhoneVerificationController.class
@@ -84,6 +86,14 @@ public class OnboardingExceptionHandler {
 	@ExceptionHandler(PhoneVerificationAlreadyCompletedException.class)
 	public ResponseEntity<OnboardingErrorResponse> handleVerificationAlreadyCompleted(
 		PhoneVerificationAlreadyCompletedException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(PhoneVerificationRequiredException.class)
+	public ResponseEntity<OnboardingErrorResponse> handlePhoneVerificationRequired(
+		PhoneVerificationRequiredException e
 	) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
