@@ -1,9 +1,17 @@
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 
 /** danbi_jj practice/components/PracticeMistakeFeedback.tsx 이식. */
 export function PracticeMistakeFeedback({ message }: { message: string }) {
+  useEffect(() => {
+    if (!message) return;
+    ttsSpeak(message);
+    return () => ttsStop();
+  }, [message]);
+
   if (!message) return null;
   return (
     <View style={styles.row} accessibilityLiveRegion="assertive">

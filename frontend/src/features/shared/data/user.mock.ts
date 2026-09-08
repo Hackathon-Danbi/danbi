@@ -4,9 +4,11 @@
  */
 
 export interface User {
+  userId: number;
   name: string;
 }
 
 export const currentUser: User = {
+  userId: 1,
   name: '박옥순',
 };

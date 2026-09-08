@@ -7,16 +7,14 @@ import { BackHeader } from '../components/BackHeader';
 import { PracticeMistakeFeedback } from '../components/PracticeMistakeFeedback';
 import { PracticeProgress } from '../components/PracticeProgress';
 import { SoloHelp } from '../components/SoloHelp';
-import { practiceMission } from '../data/mission.mock';
-import { formatAccountNumber } from '../utils';
+import { formatAccountNumber, getPracticeReviewError } from '../utils';
 import { BottomActions, PrimaryButton, QuietButton } from './shared';
-
-type ReviewError = 'recipient' | 'amount' | 'both' | null;
 
 /** danbi_jj practice/screens/PracticeReviewScreen.tsx 이식. */
 export function PracticeReviewScreen() {
   const {
     practiceStyle,
+    practiceTarget,
     transferMethod,
     practiceRecipient,
     practiceRecipientChoice,
@@ -30,25 +28,21 @@ export function PracticeReviewScreen() {
   } = usePracticeApp();
   const guided = practiceStyle === 'guided';
 
-  const recipientMismatch = practiceRecipientChoice !== practiceMission.recipient.id;
-  const amountMismatch = Number(practiceAmount) !== Number(practiceMission.amount);
-  const reviewError: ReviewError =
-    recipientMismatch && amountMismatch
-      ? 'both'
-      : recipientMismatch
-        ? 'recipient'
-        : amountMismatch
-          ? 'amount'
-          : null;
+  const reviewError = getPracticeReviewError({
+    guided,
+    recipientMatches: practiceRecipientChoice === practiceTarget.recipient.id,
+    amountMatches: Number(practiceAmount) === Number(practiceTarget.amount),
+  });
 
   const normalButtonLabel = guided ? '확인' : '연습 송금하기';
   const retryButtonLabel = transferMethod === 'voice' ? '다시 말해보기' : '다시 입력해보기';
+  const errorPrefix = transferMethod === 'voice' ? '말씀하신' : '입력한';
   const errorTitle =
     reviewError === 'recipient'
-      ? '말씀하신 받는 사람이 달라요. 다시 말해보세요.'
+      ? `${errorPrefix} 받는 사람이 달라요. 다시 확인해보세요.`
       : reviewError === 'amount'
-        ? '말씀하신 금액이 달라요. 다시 말해보세요.'
-        : '말씀하신 내용이 달라요. 다시 말해보세요.';
+        ? `${errorPrefix} 금액이 달라요. 다시 확인해보세요.`
+        : `${errorPrefix} 내용이 달라요. 다시 확인해보세요.`;
 
   const handlePrimaryAction = () => {
     if (reviewError) {
@@ -56,7 +50,7 @@ export function PracticeReviewScreen() {
       return;
     }
     setPin('');
-    guidedNext('맞아요. 마지막으로 비밀번호를 입력해볼게요.', 'practicePin');
+    guidedNext('practicePin');
   };
 
   const recipientDetails = practiceRecipient

@@ -12,6 +12,7 @@ import { IconHistory, IconPractice, IconSavings, IconSend } from '../components/
 export function HomeScreen({
   onMic,
   onHistory,
+  onReviewTransactions,
   onTransfer,
   onFinancialIndependence,
   onSavings,
@@ -20,6 +21,7 @@ export function HomeScreen({
 }: {
   onMic: () => void;
   onHistory: () => void;
+  onReviewTransactions: () => void;
   onTransfer: () => void;
   onFinancialIndependence: () => void;
   onSavings: () => void;
@@ -35,7 +37,11 @@ export function HomeScreen({
 
   return (
     <View style={styles.root}>
-      <HomeHeader onHistory={onHistory} needCheckCount={needCheckCount} unknownCount={unknownCount} />
+      <HomeHeader
+        onHistory={onReviewTransactions}
+        needCheckCount={needCheckCount}
+        unknownCount={unknownCount}
+      />
       <AccountCard />
 
       <View style={styles.center}>

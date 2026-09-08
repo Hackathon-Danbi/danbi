@@ -4,15 +4,33 @@
  */
 
 export interface Account {
-  id: string;
-  bank: string;
-  name: string;
-  number: string;
+  accountId: number;
+  bankName: string;
+  accountName: string;
+  maskedAccountNumber: string;
   color: string;
 }
 
 export const accounts: Account[] = [
-  { id: 'a', bank: 'KB국민은행', name: '생활비 통장', number: '3456', color: '#ffcc00' },
-  { id: 'b', bank: 'KB국민은행', name: '연금 통장', number: '7821', color: '#8c7a58' },
-  { id: 'c', bank: '우체국', name: '저축 통장', number: '1190', color: '#ef8575' },
+  {
+    accountId: 10,
+    bankName: 'KB국민은행',
+    accountName: '생활비 통장',
+    maskedAccountNumber: '****3456',
+    color: '#ffcc00',
+  },
+  {
+    accountId: 11,
+    bankName: 'KB국민은행',
+    accountName: '연금 통장',
+    maskedAccountNumber: '****7821',
+    color: '#8c7a58',
+  },
+  {
+    accountId: 12,
+    bankName: '우체국',
+    accountName: '저축 통장',
+    maskedAccountNumber: '****1190',
+    color: '#ef8575',
+  },
 ];

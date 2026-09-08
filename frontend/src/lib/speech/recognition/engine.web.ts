@@ -1,6 +1,6 @@
 /**
  * 웹 STT — Web Speech API (`window.SpeechRecognition` / `webkitSpeechRecognition`).
- * danbi_jj/app/features/practice/hooks/useSpeechRecognition.ts 의 브라우저 로직을 이관.
+ * 기존 브라우저 SpeechRecognition 로직을 플랫폼 엔진으로 이관.
  */
 import type { RecognitionCallbacks, RecognitionEngine, RecognitionSession } from './types';
 

@@ -11,8 +11,9 @@ import { useFocusEffect } from 'expo-router';
  *
  * - 화면이 포커스된 동안에만 구독하고, 벗어나면 자동으로 해제한다(cleanup 보장).
  * - 핸들러는 ref 로 최신값을 유지하므로 인라인 화살표 함수를 넘겨도 재구독하지 않는다.
- * - 한 라우트 안에서 여러 번 호출하면 마지막에 마운트된(=가장 안쪽) 것부터 먼저 실행된다
- *   (BackHandler 는 LIFO). 안쪽 핸들러가 false 를 반환하면 바깥 핸들러로 넘어간다.
+ * - 한 라우트 안에서 여러 번 호출하면 BackHandler 의 LIFO 순서로 실행된다.
+ *   React effect 등록 순서는 컴포넌트 중첩과 다를 수 있으므로, 중첩된 흐름은 자신이
+ *   처리하지 않을 상태에서 false 를 반환해 다음 handler로 넘겨야 한다.
  */
 export function useAndroidBack(handler: () => boolean) {
   const ref = useRef(handler);
