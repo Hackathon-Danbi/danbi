@@ -5,6 +5,7 @@ import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationAlreadyCompletedException;
 import com.danbi.domain.onboarding.entity.OnboardingSession;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import com.danbi.domain.onboarding.repository.PhoneVerificationSessionRepository;
@@ -40,6 +41,13 @@ public class OnboardingSessionService {
 	public SaveOnboardingNameResponse saveName(SaveOnboardingNameRequest request) {
 		OnboardingSession session = onboardingSessionRepository.findById(request.onboardingSessionId())
 			.orElseThrow(() -> new OnboardingSessionNotFoundException(request.onboardingSessionId()));
+		phoneVerificationSessionRepository
+			.findByOnboardingSessionId(session.getOnboardingSessionId())
+			.ifPresent(verificationSession -> {
+				if (verificationSession.isVerified()) {
+					throw new PhoneVerificationAlreadyCompletedException();
+				}
+			});
 		OnboardingSession updatedSession = session.saveName(request.name());
 		phoneVerificationSessionRepository.deleteByOnboardingSessionId(
 			session.getOnboardingSessionId()
