@@ -1,6 +1,7 @@
 package com.danbi.domain.onboarding.exception;
 
 import com.danbi.domain.onboarding.controller.CertificateIssuanceController;
+import com.danbi.domain.onboarding.controller.IdCardScanController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
 	CertificateIssuanceController.class,
+	IdCardScanController.class,
 	OnboardingSessionController.class,
 	OnboardingNameController.class,
 	PhoneVerificationController.class
@@ -96,6 +98,38 @@ public class OnboardingExceptionHandler {
 		PhoneVerificationRequiredException e
 	) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(CertificateIssuanceNotFoundException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleCertificateIssuanceNotFound(
+		CertificateIssuanceNotFoundException e
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(InvalidIdCardImageException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleInvalidIdCardImage(
+		InvalidIdCardImageException e
+	) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(IdCardRecognitionFailedException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleIdCardRecognitionFailed(
+		IdCardRecognitionFailedException e
+	) {
+		return ResponseEntity.unprocessableContent()
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(IdCardNameMismatchException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleIdCardNameMismatch(
+		IdCardNameMismatchException e
+	) {
+		return ResponseEntity.unprocessableContent()
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
 }
