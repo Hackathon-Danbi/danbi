@@ -14,4 +14,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     @EntityGraph(attributePaths = "product")
     Optional<Account> findByAccountIdAndUserId(Long accountId, Long userId);
+
+    List<Account> findByUserId(Long userId);
 }

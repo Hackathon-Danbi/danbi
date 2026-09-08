@@ -62,4 +62,27 @@ public class Account {
             createdAt = LocalDateTime.now();
         }
     }
+
+    public Long getProductId() {
+        return product == null ? null : product.getProductId();
+    }
+
+    /** 송금 실행 시 출금. 잔액이 부족하면 예외. */
+    public void withdraw(long amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("출금액은 0보다 커야 합니다.");
+        }
+        if (this.balance < amount) {
+            throw new IllegalArgumentException("잔액이 부족합니다.");
+        }
+        this.balance -= amount;
+    }
+
+    /** 입금. */
+    public void deposit(long amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("입금액은 0보다 커야 합니다.");
+        }
+        this.balance += amount;
+    }
 }
