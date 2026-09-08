@@ -8,6 +8,7 @@ import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
 import com.danbi.domain.onboarding.controller.OneWonVerificationController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
+import com.danbi.domain.onboarding.controller.SimplePasswordController;
 import com.danbi.domain.onboarding.dto.AccountPasswordVerificationErrorResponse;
 import com.danbi.domain.onboarding.dto.OnboardingErrorResponse;
 import com.danbi.domain.onboarding.dto.OneWonVerificationErrorResponse;
@@ -25,7 +26,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 	OnboardingSessionController.class,
 	OnboardingNameController.class,
 	OneWonVerificationController.class,
-	PhoneVerificationController.class
+	PhoneVerificationController.class,
+	SimplePasswordController.class
 })
 public class OnboardingExceptionHandler {
 
@@ -253,5 +255,27 @@ public class OnboardingExceptionHandler {
 				e.getFailureCount(),
 				0
 			));
+	}
+
+	@ExceptionHandler({
+		SimplePasswordMismatchException.class,
+		WeakSimplePasswordException.class
+	})
+	public ResponseEntity<OnboardingErrorResponse> handleInvalidSimplePassword(
+		RuntimeException e
+	) {
+		String code = e instanceof SimplePasswordMismatchException mismatch
+			? mismatch.getCode()
+			: ((WeakSimplePasswordException) e).getCode();
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new OnboardingErrorResponse(code, e.getMessage()));
+	}
+
+	@ExceptionHandler(CertificateAlreadyIssuedException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleCertificateAlreadyIssued(
+		CertificateAlreadyIssuedException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
 }

@@ -25,14 +25,19 @@ public class CertificateIssuance {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
+	@Column(name = "issued_at")
+	private Instant issuedAt;
+
 	private CertificateIssuance(
 		String issuanceId,
 		String onboardingSessionId,
-		Instant createdAt
+		Instant createdAt,
+		Instant issuedAt
 	) {
 		this.issuanceId = issuanceId;
 		this.onboardingSessionId = onboardingSessionId;
 		this.createdAt = createdAt;
+		this.issuedAt = issuedAt;
 	}
 
 	public static CertificateIssuance start(
@@ -40,6 +45,20 @@ public class CertificateIssuance {
 		String onboardingSessionId,
 		Instant createdAt
 	) {
-		return new CertificateIssuance(issuanceId, onboardingSessionId, createdAt);
+		return new CertificateIssuance(
+			issuanceId,
+			onboardingSessionId,
+			createdAt,
+			null
+		);
+	}
+
+	public boolean isIssued() {
+		return issuedAt != null;
+	}
+
+	public CertificateIssuance issue(Instant issuedAt) {
+		this.issuedAt = issuedAt;
+		return this;
 	}
 }
