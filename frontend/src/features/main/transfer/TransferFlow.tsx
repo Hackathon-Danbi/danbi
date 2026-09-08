@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 
 import { AppText } from '@/components/ui/AppText';
@@ -31,7 +32,11 @@ import {
 import type { HelpReason, HelpState, HelpStep } from '../proactiveHelp';
 import { Waveform } from '../components/Waveform';
 
+import { findAccountNumbersInImage } from './accountPhotoOcr';
+import { AccountPhotoSourceSheet } from './components/AccountPhotoSourceSheet';
+import type { AccountNumberCandidate } from './ocrAccountNumber';
 import { AccountInputScreen } from './screens/AccountInputScreen';
+import { AccountPhotoOcrScreen } from './screens/AccountPhotoOcrScreen';
 import { AmountInputScreen } from './screens/AmountInputScreen';
 import { BankSelectScreen } from './screens/BankSelectScreen';
 import { ConfirmPopup } from './screens/ConfirmPopup';
@@ -51,6 +56,10 @@ type FlowScreen =
   | 'recipient'
   | 'bankselect'
   | 'accountinput'
+  | 'ocrprocessing'
+  | 'ocrconfirm'
+  | 'ocrselect'
+  | 'ocrfailure'
   | 'amountinput'
   | 'voiceconfirm'
   | 'pretransfer'
@@ -117,6 +126,8 @@ export function TransferFlow() {
   const [isNewAccount, setIsNew] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [pinValue, setPinValue] = useState('');
+  const [showPhotoSource, setShowPhotoSource] = useState(false);
+  const [ocrCandidates, setOcrCandidates] = useState<AccountNumberCandidate[]>([]);
 
   // ── Proactive help ─────────────────────────────────────
   const [helpState, setHelpState] = useState<HelpState>(HELP_IDLE);
@@ -134,6 +145,7 @@ export function TransferFlow() {
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advisorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttSessionRef = useRef<{ start: () => void; abort: () => void } | null>(null);
+  const ocrRequestRef = useRef(0);
 
   useEffect(() => {
     screenRef.current = screen;
@@ -357,6 +369,7 @@ export function TransferFlow() {
       clearPhaseTimer();
       clearAdvisorTimer();
       abortStt();
+      ocrRequestRef.current += 1;
       ttsStop();
     },
     [],
@@ -367,6 +380,7 @@ export function TransferFlow() {
     clearPhaseTimer();
     clearHelpTimer();
     abortStt();
+    ocrRequestRef.current += 1;
     ttsStop();
     router.dismissTo('/(app)/home');
   }, [router]);
@@ -411,6 +425,81 @@ export function TransferFlow() {
     setScreen('recipient');
   };
 
+  const confirmNewAccountNumber = (accountNumber: string) => {
+    doResolveHelp();
+    setTxInfo((current) => ({
+      ...current,
+      account: accountNumber,
+      recipient: current.recipient || `${current.bank} 계좌 ${accountNumber.slice(-4)}`,
+    }));
+    setScreen('amountinput');
+  };
+
+  const returnToAccountInput = () => {
+    ocrRequestRef.current += 1;
+    setScreen('accountinput');
+  };
+
+  const retryAccountPhoto = () => {
+    returnToAccountInput();
+    setShowPhotoSource(true);
+  };
+
+  const pickAccountPhoto = async (source: 'camera' | 'album') => {
+    setShowPhotoSource(false);
+    let requestId: number | null = null;
+
+    try {
+      if (source === 'camera') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert(
+            '카메라 권한이 필요해요',
+            '사진을 촬영하려면 기기 설정에서 단비의 카메라 권한을 켜주세요.',
+          );
+          return;
+        }
+      }
+
+      const result =
+        source === 'camera'
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: false,
+              quality: 1,
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: false,
+              quality: 1,
+              selectionLimit: 1,
+            });
+
+      if (result.canceled || !result.assets[0]) return;
+
+      requestId = ocrRequestRef.current + 1;
+      ocrRequestRef.current = requestId;
+      setOcrCandidates([]);
+      setScreen('ocrprocessing');
+
+      const candidates = await findAccountNumbersInImage(result.assets[0].uri);
+      if (ocrRequestRef.current !== requestId) return;
+
+      setOcrCandidates(candidates);
+      setScreen(
+        candidates.length === 0
+          ? 'ocrfailure'
+          : candidates.length === 1
+            ? 'ocrconfirm'
+            : 'ocrselect',
+      );
+    } catch {
+      if (requestId !== null && ocrRequestRef.current !== requestId) return;
+      setOcrCandidates([]);
+      setScreen('ocrfailure');
+    }
+  };
+
   const initiateTransfer = () => {
     const amt = parseInt(txInfo.amount || '0', 10);
     if (isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
@@ -426,6 +515,10 @@ export function TransferFlow() {
 
   // ── Android 하드웨어 back: 내부 이전 단계 우선 ────────────
   useAndroidBack(() => {
+    if (showPhotoSource) {
+      setShowPhotoSource(false);
+      return true;
+    }
     if (showPopup) {
       setShowPopup(false);
       return true;
@@ -450,6 +543,12 @@ export function TransferFlow() {
         return true;
       case 'accountinput':
         setScreen('bankselect');
+        return true;
+      case 'ocrprocessing':
+      case 'ocrconfirm':
+      case 'ocrselect':
+      case 'ocrfailure':
+        returnToAccountInput();
         return true;
       case 'amountinput':
         setScreen(txInfo.account ? 'accountinput' : 'recipient');
@@ -566,17 +665,37 @@ export function TransferFlow() {
             }}
             onBack={() => setScreen('bankselect')}
             onReselect={() => setScreen('bankselect')}
-            onNext={() => {
+            onFindFromPhoto={() => {
               doResolveHelp();
-              setTxInfo((p) => ({
-                ...p,
-                recipient: p.recipient || `${p.bank} 계좌 ${p.account.slice(-4)}`,
-              }));
-              setScreen('amountinput');
+              setShowPhotoSource(true);
             }}
+            onNext={() => confirmNewAccountNumber(txInfo.account)}
             helpTarget={helpTarget}
             onActivity={doActivity}
             onBlockedHelp={() => doInputError('accountinput')}
+          />
+        )}
+
+        {(screen === 'ocrprocessing' ||
+          screen === 'ocrconfirm' ||
+          screen === 'ocrselect' ||
+          screen === 'ocrfailure') && (
+          <AccountPhotoOcrScreen
+            mode={
+              screen === 'ocrprocessing'
+                ? 'processing'
+                : screen === 'ocrconfirm'
+                  ? 'single'
+                  : screen === 'ocrselect'
+                    ? 'multiple'
+                    : 'failure'
+            }
+            bank={txInfo.bank}
+            candidates={ocrCandidates}
+            onBack={returnToAccountInput}
+            onRetry={retryAccountPhoto}
+            onManualInput={returnToAccountInput}
+            onConfirm={(candidate) => confirmNewAccountNumber(candidate.digits)}
           />
         )}
 
@@ -645,8 +764,15 @@ export function TransferFlow() {
         onCancel={() => setShowPopup(false)}
       />
 
+      <AccountPhotoSourceSheet
+        visible={showPhotoSource}
+        onClose={() => setShowPhotoSource(false)}
+        onCamera={() => void pickAccountPhoto('camera')}
+        onAlbum={() => void pickAccountPhoto('album')}
+      />
+
       {/* ── 1단계: 조작 영역 강조 (non-blocking dim + hint bar) ── */}
-      {helpState.step === 'highlight' && !showPopup ? (
+      {helpState.step === 'highlight' && !showPopup && !showPhotoSource ? (
         <>
           <View pointerEvents="none" style={styles.dim} />
           <View style={styles.hintBar}>
