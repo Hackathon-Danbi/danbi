@@ -9,11 +9,18 @@ import { recognitionEngine } from '@/lib/speech/recognition';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
-import { useTransactions } from '@/features/main/TransactionContext';
+import { StorageKeys, usePersistentState } from '@/lib/storage';
 
-import { CONTACTS } from '../data';
+import { CONTACTS, RECENT_RECIPIENT_CANDIDATES } from '../data';
 import { CREAM, INK, LARGE_AMOUNT_THRESHOLD, YELLOW } from '../theme';
-import type { ListeningPhase, TxInfo } from '../types';
+import type { ListeningPhase, SavedRecipient, TxInfo } from '../types';
+import {
+  findRecipientBySpokenName,
+  parseSavedRecipients,
+  recipientDisplayName,
+  saveRecipient,
+  updateRecipientNickname,
+} from '../savedRecipients';
 import {
   HELP_IDLE,
   REENTRY_HINTS,
@@ -32,12 +39,14 @@ import { ListeningScreen } from './screens/ListeningScreen';
 import { PasswordScreen } from './screens/PasswordScreen';
 import { PreTransferScreen } from './screens/PreTransferScreen';
 import { RecipientScreen } from './screens/RecipientScreen';
+import { SavedAccountsScreen } from './screens/SavedAccountsScreen';
 import { TransferDoneScreen } from './screens/TransferDoneScreen';
 import { TransferIntroScreen } from './screens/TransferIntroScreen';
 import { VoiceConfirmScreen } from './screens/VoiceConfirmScreen';
 
 type FlowScreen =
   | 'transfer'
+  | 'savedaccounts'
   | 'listening'
   | 'recipient'
   | 'bankselect'
@@ -59,13 +68,12 @@ const EMPTY_TX: TxInfo = { recipient: '', bank: '', account: '', amount: '' };
  */
 function parseSpokenTransfer(
   transcript: string,
+  recipients: readonly SavedRecipient[],
 ): { txInfo: TxInfo } | null {
   const compact = transcript.replace(/\s/g, '');
   const nameMatch = compact.match(/^(.+?)(?:님)?(?:에게|한테|에게로|한테로)/);
   const name = nameMatch?.[1]?.replace(/님$/, '') ?? '';
-  const contact = name
-    ? CONTACTS.find((c) => c.name === name || c.name.slice(1) === name)
-    : undefined;
+  const contact = name ? findRecipientBySpokenName(recipients, name) : undefined;
 
   let amount = '';
   const man = compact.match(/(\d+)만원?/);
@@ -77,7 +85,12 @@ function parseSpokenTransfer(
 
   if (!contact || !amount) return null;
   return {
-    txInfo: { recipient: contact.name, bank: contact.bank, account: contact.account, amount },
+    txInfo: {
+      recipient: recipientDisplayName(contact),
+      bank: contact.recipientBankName,
+      account: contact.recipientAccountNumber,
+      amount,
+    },
   };
 }
 
@@ -87,7 +100,13 @@ function parseSpokenTransfer(
  */
 export function TransferFlow() {
   const router = useRouter();
-  const { pendingTransactions, unknownTransactions } = useTransactions();
+  const {
+    value: savedRecipients,
+    setValue: setSavedRecipients,
+    hydrated: savedRecipientsHydrated,
+  } = usePersistentState(StorageKeys.savedRecipients, CONTACTS, {
+    parse: parseSavedRecipients,
+  });
 
   const [screen, setScreen] = useState<FlowScreen>('transfer');
   const [phase, setPhase] = useState<ListeningPhase>('idle');
@@ -375,7 +394,7 @@ export function TransferFlow() {
 
   const afterListenConfirm = () => {
     abortStt();
-    const parsed = parseSpokenTransfer(transcript);
+    const parsed = parseSpokenTransfer(transcript, savedRecipients);
     if (parsed) {
       setTxInfo(parsed.txInfo);
       setIsNew(false);
@@ -418,6 +437,9 @@ export function TransferFlow() {
     switch (screen) {
       case 'transfer':
         return false; // 퍼널 첫 화면 → expo-router 가 /home 으로
+      case 'savedaccounts':
+        setScreen('transfer');
+        return true;
       case 'listening':
       case 'recipient':
       case 'voiceconfirm':
@@ -446,6 +468,14 @@ export function TransferFlow() {
     }
   });
 
+  if (!savedRecipientsHydrated) {
+    return (
+      <Screen background="#fff" edges={['top', 'bottom']}>
+        {null}
+      </Screen>
+    );
+  }
+
   return (
     <Screen background="#fff" edges={['top', 'bottom']}>
       <ScreenIn key={screen}>
@@ -454,9 +484,21 @@ export function TransferFlow() {
             onMic={openTransfer}
             onGoHome={goHome}
             onDirect={() => setScreen('recipient')}
-            onHistory={() => router.replace('/(app)/history')}
-            needCheckCount={pendingTransactions.length}
-            unknownCount={unknownTransactions.length}
+            onSavedAccounts={() => setScreen('savedaccounts')}
+          />
+        )}
+
+        {screen === 'savedaccounts' && (
+          <SavedAccountsScreen
+            recipients={savedRecipients}
+            recentCandidates={RECENT_RECIPIENT_CANDIDATES}
+            onBack={() => setScreen('transfer')}
+            onSave={(input) => setSavedRecipients((current) => saveRecipient(current, input))}
+            onNicknameChange={(savedRecipientId, nickname) =>
+              setSavedRecipients((current) =>
+                updateRecipientNickname(current, savedRecipientId, nickname),
+              )
+            }
           />
         )}
 
@@ -476,10 +518,16 @@ export function TransferFlow() {
 
         {screen === 'recipient' && (
           <RecipientScreen
+            recipients={savedRecipients}
             onBack={() => setScreen('transfer')}
             onSelectContact={(c) => {
               doResolveHelp();
-              setTxInfo({ recipient: c.name, bank: c.bank, account: c.account, amount: '' });
+              setTxInfo({
+                recipient: recipientDisplayName(c),
+                bank: c.recipientBankName,
+                account: c.recipientAccountNumber,
+                amount: '',
+              });
               setIsNew(false);
               setScreen('amountinput');
             }}
