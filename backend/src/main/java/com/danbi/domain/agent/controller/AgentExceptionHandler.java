@@ -21,6 +21,6 @@ public class AgentExceptionHandler {
     }
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> large() {
-        return ResponseEntity.status(413).contentType(MediaType.APPLICATION_JSON).body(Map.of("message", "10MB 이하의 음성 파일을 보내 주세요."));
+        return ResponseEntity.status(413).contentType(MediaType.APPLICATION_JSON).body(Map.of("message", "2MB 이하의 음성 파일을 보내 주세요."));
     }
 }

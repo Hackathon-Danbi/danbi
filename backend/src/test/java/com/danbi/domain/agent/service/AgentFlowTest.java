@@ -9,6 +9,7 @@ import com.danbi.domain.agent.llm.AiGateway;
 import com.danbi.domain.agent.llm.Prompts;
 import com.danbi.domain.agent.model.AgentException;
 import com.danbi.domain.agent.model.AgentModels.*;
+import com.danbi.domain.agent.model.Screen;
 import com.danbi.domain.agent.rag.KnowledgeStore;
 import com.danbi.domain.agent.tools.DemoBankTools;
 import com.danbi.support.MutableClock;
@@ -32,8 +33,8 @@ class AgentFlowTest {
         sessions = new AgentSessions(clock, AgentTestSupport.properties());
         session = sessions.require("Bearer " + sessions.create().token());
         var easy = new EasyLanguageAgent(ai, new Prompts());
-        app = new Orchestrator(ai, new Prompts(), new FinanceAgent(new DemoBankTools(clock), knowledge, easy, clock),
-                new SignupAgent(knowledge, easy), new PracticeCoachAgent(easy), clock);
+        app = new Orchestrator(ai, new Prompts(), List.of(new FinanceAgent(new DemoBankTools(clock), knowledge, easy, clock),
+                new SignupAgent(knowledge, easy), new PracticeCoachAgent(easy)), clock);
     }
 
     private Decision transfer(String recipient, Long amount) { return new Decision(Intent.TRANSFER, recipient, amount, null, null, false); }
@@ -46,19 +47,19 @@ class AgentFlowTest {
         decisions(transfer("민수", null), transfer(null, 30000L), transfer(null, 20000L),
                 new Decision(Intent.CANCEL, null, null, null, null, false));
         assertEquals("얼마를 보낼까요?", app.chat(session, "민수에게 보내줘").text());
-        assertEquals(30000L, app.chat(session, "삼만 원").screen().get("amount"));
-        assertEquals(20000L, app.chat(session, "이만 원으로").screen().get("amount"));
+        assertEquals(30000L, assertInstanceOf(Screen.TransferConfirmation.class, app.chat(session, "삼만 원").screen()).amount());
+        assertEquals(20000L, assertInstanceOf(Screen.TransferConfirmation.class, app.chat(session, "이만 원으로").screen()).amount());
         app.chat(session, "취소해");
         assertNull(session.amount);
         assertNull(session.recipient);
-        assertEquals(150000L, new DemoBankTools(clock).balance());
+        assertEquals(150000L, new DemoBankTools(clock).getBalance());
     }
 
     @Test
     void unclearInterpretationDoesNotOverwriteDraft() {
         decisions(transfer("민수", 30000L), new Decision(Intent.TRANSFER, "지영", 500000L, null, null, true));
         app.chat(session, "민수 삼만 원");
-        assertEquals("message", app.chat(session, "오만인지 오십만인지").screen().get("type"));
+        assertEquals("message", app.chat(session, "오만인지 오십만인지").screen().type());
         assertEquals("민수", session.recipient);
         assertEquals(30000L, session.amount);
     }
@@ -66,9 +67,9 @@ class AgentFlowTest {
     @Test
     void duplicateRecipientsAndOutOfRangeAmountsNeverCreateConfirmation() {
         decisions(transfer("영희", 30000L), transfer("김영희", -1L), transfer(null, 150001L));
-        assertEquals("message", app.chat(session, "영희 삼만 원").screen().get("type"));
-        assertEquals("message", app.chat(session, "김영희 마이너스 일 원").screen().get("type"));
-        assertEquals("message", app.chat(session, "십오만 일 원").screen().get("type"));
+        assertEquals("message", app.chat(session, "영희 삼만 원").screen().type());
+        assertEquals("message", app.chat(session, "김영희 마이너스 일 원").screen().type());
+        assertEquals("message", app.chat(session, "십오만 일 원").screen().type());
     }
 
     @Test
@@ -121,6 +122,6 @@ class AgentFlowTest {
         app.chat(session, "민수 삼만 원");
         Reply reply = app.chat(session, "이만 원");
         assertEquals(1, session.amountCorrections);
-        assertEquals(true, reply.screen().get("practice"));
+        assertEquals(true, assertInstanceOf(Screen.TransferConfirmation.class, reply.screen()).practice());
     }
 }
