@@ -28,6 +28,19 @@ import {
   sanitizeOnboardingDraft,
 } from '../src/features/onboarding/onboardingDraft';
 import { TERMS } from '../src/features/onboarding/terms';
+import { STEP_HELP, isFullBleedHelpStep } from '../src/features/onboarding/help/onboardingHelp';
+import {
+  FACE_CAPTURE_HELP,
+  FACE_HELP_OPTIONS,
+  ID_CAPTURE_HELP,
+} from '../src/features/onboarding/help/captureHelp';
+import { SCREEN_HELP, TRANSFER_SCREENS } from '../src/features/main/proactiveHelp';
+import {
+  HISTORY_HELP,
+  formatWonVoice,
+  listHelpTarget,
+  reviewDetailVoice,
+} from '../src/features/main/history/historyHelp';
 
 test('entry and onboarding destination routes remain distinct', () => {
   assert.equal(resolveEntryRoute(null, false), '/welcome');
@@ -223,4 +236,85 @@ test('onboarding terms include KB certificate, electronic document, phone, and f
   assert.match(TERMS['face-auth'].body, /얼굴확인\(인증거래용\)/);
   assert.match(TERMS['face-auth'].body, /얼굴사진 특징정보/);
   assert.match(TERMS['face-auth'].summary, /본인확인이 끝나면 바로 삭제/);
+});
+
+test('onboarding proactive help covers every join step', () => {
+  for (let step = 0; step <= 20; step += 1) {
+    const help = STEP_HELP[step];
+    assert.ok(help, `step ${step} needs help copy`);
+    assert.ok(help.entryVoice.length > 8, `step ${step} needs entry voice`);
+    assert.ok(help.hint.length > 8, `step ${step} needs a short hint`);
+  }
+  assert.equal(STEP_HELP[2].showBar, true);
+  assert.equal(STEP_HELP[0].showBar, false);
+  assert.equal(STEP_HELP[11].showBar, false);
+  assert.equal(STEP_HELP[14].showBar, false);
+  assert.equal(isFullBleedHelpStep(11), true);
+  assert.equal(isFullBleedHelpStep(14), true);
+  assert.equal(isFullBleedHelpStep(12), false);
+});
+
+test('onboarding capture help covers permission, idle, and coaching', () => {
+  for (const help of [ID_CAPTURE_HELP, FACE_CAPTURE_HELP]) {
+    assert.ok(help.entry.length > 8);
+    assert.ok(help.idle.length > 8);
+    assert.ok(help.permission.length > 8);
+    assert.ok(help.permissionBlocked.length > 8);
+    assert.ok(help.captureFail.length > 8);
+    assert.ok(help.openCoach.length > 8);
+  }
+  assert.match(ID_CAPTURE_HELP.idle, /촬영하기/);
+  assert.match(FACE_CAPTURE_HELP.idle, /얼굴 찍기/);
+  assert.equal(FACE_HELP_OPTIONS.length, 4);
+});
+
+test('transfer proactive help covers voice, ocr, and pin screens', () => {
+  const screens = [
+    'transfer',
+    'listening',
+    'voiceconfirm',
+    'recipient',
+    'bankselect',
+    'accountinput',
+    'ocrconfirm',
+    'ocrselect',
+    'ocrfailure',
+    'amountinput',
+    'pretransfer',
+    'password',
+  ] as const;
+  for (const screen of screens) {
+    const help = SCREEN_HELP[screen];
+    assert.ok(help, `${screen} needs help copy`);
+    assert.ok(help!.target, `${screen} needs a highlight target`);
+    assert.ok(help!.hint.length > 8, `${screen} needs a short hint`);
+    assert.ok(help!.voiceText.length > 8, `${screen} needs voice text`);
+    assert.ok(TRANSFER_SCREENS.includes(screen), `${screen} should start the inactivity timer`);
+  }
+  assert.equal(SCREEN_HELP.listening?.target, 'listenExamples');
+  assert.equal(SCREEN_HELP.password?.target, 'pinKeypad');
+  assert.equal(SCREEN_HELP.ocrfailure?.target, 'ocrManual');
+  assert.equal(SCREEN_HELP.ocrconfirm?.target, 'ocrConfirm');
+  assert.equal(SCREEN_HELP.transfer?.target, 'micButton');
+});
+
+test('history proactive help prefers report, then empty month, then review', () => {
+  assert.equal(formatWonVoice(40000), '4만 원');
+  assert.equal(formatWonVoice(53000), '5만 3,000원');
+  assert.match(HISTORY_HELP.gateIdle, /자세히 보기/);
+  assert.equal(
+    listHelpTarget({ unknownCount: 1, needCheckCount: 2, empty: false, hasReviewElsewhere: false }),
+    'reportBtn',
+  );
+  assert.equal(
+    listHelpTarget({ unknownCount: 0, needCheckCount: 0, empty: true, hasReviewElsewhere: true }),
+    'prevMonth',
+  );
+  assert.equal(
+    listHelpTarget({ unknownCount: 0, needCheckCount: 2, empty: false, hasReviewElsewhere: false }),
+    'reviewBtn',
+  );
+  const pending = TX_RECORDS.find((tx) => tx.reviewStatus === 'pending');
+  assert.ok(pending);
+  assert.match(reviewDetailVoice(pending!), /노란 버튼/);
 });

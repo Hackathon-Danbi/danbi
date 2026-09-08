@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
@@ -48,6 +49,11 @@ import { useScreenHelp } from '../help/useScreenHelp';
 import { ScreenHelpBar } from '../help/ScreenHelpBar';
 import { EscalationSheet } from '../help/EscalationSheet';
 import {
+  getStepHelp,
+  isFullBleedHelpStep,
+  ONBOARDING_IDLE_MS,
+} from '../help/onboardingHelp';
+import {
   resolveOnboardingResumeStep,
   sanitizeOnboardingDraft,
   type OnboardingDraft,
@@ -87,13 +93,6 @@ const STEPS = {
 
 type Step = (typeof STEPS)[keyof typeof STEPS];
 type PageMeta = readonly [title: string, progress: number];
-
-// 임시 정책: 가입 과정에서는 약관과 신분증 촬영 화면에 TTS를 제공한다.
-const TTS_ENABLED_STEPS: readonly Step[] = [
-  STEPS.CERTIFICATE_TERMS,
-  STEPS.PHONE_TERMS,
-  STEPS.FACE_TERMS,
-];
 
 const REENTER_PIN_NOTICE = '이제 방금 정한 번호를 한 번 더 입력해주세요.';
 
@@ -162,16 +161,25 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   const [title, progress] = pageMeta[step];
   const requiredTermsComplete = state.requiredTerms.every(Boolean);
   const certificateTermsComplete = state.certificateTerms.every(Boolean);
-  const isTtsEnabled = TTS_ENABLED_STEPS.includes(step);
+  const stepHelp = getStepHelp(step);
 
   const help = useScreenHelp();
   const [otpFailCount, setOtpFailCount] = useState(0);
   const [faceFailCount, setFaceFailCount] = useState(0);
   const [accountFailCount, setAccountFailCount] = useState(0);
+  const [pinFailCount, setPinFailCount] = useState(0);
+  const [idleHelp, setIdleHelp] = useState(false);
+  const [captureHelpEscalation, setCaptureHelpEscalation] = useState(false);
   const [escalationDismissed, setEscalationDismissed] = useState(false);
   const prevOtpErrorRef = useRef('');
   const prevFaceStatusRef = useRef('');
   const prevAccountErrorRef = useRef('');
+  const prevPinErrorRef = useRef('');
+
+  useEffect(() => {
+    if (isFullBleedHelpStep(step)) return;
+    setCaptureHelpEscalation(false);
+  }, [step]);
 
   useEffect(() => {
     let active = true;
@@ -280,11 +288,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     return true;
   });
 
-  // TTS 지원 화면을 벗어나면 재생 중인 안내를 끊는다.
+  // 화면이 바뀌면 재생 중인 안내를 끊는다.
   useEffect(() => {
-    if (!isTtsEnabled) ttsStop();
     return () => ttsStop();
-  }, [isTtsEnabled]);
+  }, [step]);
 
   useEffect(() => {
     if (step === STEPS.PIN && state.pinPhase === 'confirm') {
@@ -326,7 +333,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   }, [step, state.otpVerified, state.idScanStatus, state.faceStatus, state.pinPhase, state.pinError]);
 
   const speakGuide = () => {
-    if (!isTtsEnabled) return;
     if (isReading) {
       stopReading();
       setNotice('읽어주기를 멈췄어요.');
@@ -337,25 +343,15 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     setNotice('화면 안내를 천천히 읽어드리고 있어요.');
   };
 
-  // 선제적 도움: 화면 진입 시 TTS
+  // 선제적 도움: 모든 단계 진입 시 TTS
   useEffect(() => {
-    if (step === STEPS.OTP && !state.otpVerified) {
-      help.speakIfEnabled(
-        '인증번호 입력 화면이에요. 방금 받은 문자에서 숫자 6자리를 확인해주세요. 자동으로 입력되지 않았다면 직접 입력해주세요. 인증번호는 다른 사람에게 알려주지 마세요.',
-      );
-    } else if (step === STEPS.ID_SCAN) {
-      help.speakIfEnabled('신분증 촬영 화면이에요. 신분증 전체가 네모 안에 들어오도록 놓아주세요.');
-    } else if (step === STEPS.FACE_CHECK && state.faceStatus === 'idle') {
-      help.speakIfEnabled('얼굴 확인 화면이에요. 화면을 정면으로 바라봐주세요. 밝은 곳에서 하면 더 잘 돼요.');
-    } else if (step === STEPS.ACCOUNT_BANK) {
-      help.speakIfEnabled('계좌 은행 선택 화면이에요. 가입에 사용할 계좌의 은행을 하나 선택해주세요.');
-    } else if (step === STEPS.ACCOUNT_NUMBER) {
-      help.speakIfEnabled('계좌번호 입력 화면이에요. 통장이나 카드에 적힌 계좌번호를 순서대로 입력해주세요.');
-    } else if (step === STEPS.ACCOUNT_PASSWORD) {
-      help.speakIfEnabled('계좌 비밀번호 입력 화면이에요. 계좌를 만들 때 정한 비밀번호 4자리를 입력해주세요.');
-    } else if (step === STEPS.ACCOUNT_CODE) {
-      help.speakIfEnabled('1원 인증 화면이에요. 통장 입금 내역에서 KB 뒤에 적힌 숫자 4자리를 입력해주세요.');
+    if (agreementDetail || showExit) return;
+    if (isFullBleedHelpStep(step)) return;
+    if (step === STEPS.OTP && state.otpVerified) {
+      help.speakIfEnabled('본인 확인이 끝났어요. 이제 신분증을 확인할게요.');
+      return;
     }
+    if (stepHelp.entryVoice) help.speakIfEnabled(stepHelp.entryVoice);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
@@ -406,32 +402,123 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.accountError, step]);
 
-  // 에스컬레이션 임계값: OTP 3회, 얼굴 5회, 계좌 3회 실패.
-  const escalationThresholdHit = otpFailCount >= 3 || faceFailCount >= 5 || accountFailCount >= 3;
+  // 선제적 도움: PIN 불일치
+  useEffect(() => {
+    if (step !== STEPS.PIN) return;
+    if (!state.pinError) {
+      prevPinErrorRef.current = '';
+      return;
+    }
+    if (state.pinError === prevPinErrorRef.current) return;
+    prevPinErrorRef.current = state.pinError;
+    setPinFailCount((c) => c + 1);
+    help.speakIfEnabled('비밀번호가 서로 달라요. 처음부터 다시 입력해주세요.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pinError, step]);
+
+  // 선제적 도움: 본인 명의가 아닐 때
+  useEffect(() => {
+    if (step !== STEPS.PHONE_OWNERSHIP) return;
+    if (state.phoneOwnership !== false) return;
+    help.speakIfEnabled(
+      '이 휴대폰으로는 지금 가입을 끝내기 어려워요. 본인 명의 휴대폰이 있으면 다시 시도하거나, 전화로 상담받을 수 있어요.',
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phoneOwnership, step]);
+
+  const activityKey = [
+    step,
+    state.userName,
+    state.otp,
+    state.phoneNumber,
+    state.carrier,
+    state.idType,
+    state.bank,
+    state.accountNumber,
+    state.accountCode,
+    state.accountPassword,
+    state.pinPhase,
+    state.currentPin,
+    state.faceStatus,
+    state.certificateTerms.join(','),
+    state.requiredTerms.join(','),
+    state.faceTermAccepted,
+    state.phoneOwnership,
+    state.electronicDocTermAccepted,
+    state.marketingTermAccepted,
+    agreementDetail,
+    showExit,
+  ].join('|');
+
+  // 선제적 도움: 잠시 머뭇거리면 안내 줄과 버튼 강조
+  useEffect(() => {
+    if (agreementDetail || showExit) {
+      setIdleHelp(false);
+      return;
+    }
+    if (isFullBleedHelpStep(step)) {
+      setIdleHelp(false);
+      return;
+    }
+    setIdleHelp(false);
+    const timer = setTimeout(() => {
+      setIdleHelp(true);
+      if (stepHelp.hint) help.speakIfEnabled(stepHelp.hint);
+    }, ONBOARDING_IDLE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityKey]);
+
+  // 에스컬레이션: OTP 3회, 얼굴 매칭 5회, 계좌 3회, PIN 3회, 촬영 권한/재촬영/코치 이후 무조작.
+  const escalationThresholdHit =
+    otpFailCount >= 3 ||
+    faceFailCount >= 5 ||
+    accountFailCount >= 3 ||
+    pinFailCount >= 3 ||
+    captureHelpEscalation;
   const showEscalation = escalationThresholdHit && !escalationDismissed;
 
   const currentGuidance = useMemo(() => {
     if (step === STEPS.OTP && !state.otpVerified) {
       return state.otpError
         ? '번호가 맞지 않아요. 문자에서 숫자 6자리를 다시 확인해주세요.'
-        : '방금 받은 문자에서 숫자 6자리를 확인해주세요.';
+        : stepHelp.hint;
     }
     if (step === STEPS.FACE_CHECK) {
       if (state.faceStatus === 'checking') return '얼굴을 확인하고 있어요. 움직이지 말고 기다려주세요.';
       if (state.faceStatus === 'failure') return '얼굴이 잘 보이지 않았어요. 더 밝은 곳에서 다시 시도해주세요.';
       if (state.faceStatus === 'success') return '얼굴 확인이 끝났어요.';
-      return '화면을 정면으로 바라봐주세요. 밝은 곳이 더 좋아요.';
+      return stepHelp.hint;
     }
-    if (step === STEPS.ACCOUNT_BANK) return '계좌가 있는 은행을 하나 선택해주세요.';
-    if (step === STEPS.ACCOUNT_NUMBER) return '계좌번호를 순서대로 입력해주세요.';
-    if (step === STEPS.ACCOUNT_PASSWORD) return '계좌 비밀번호 4자리를 입력해주세요.';
-    if (step === STEPS.ACCOUNT_CODE) {
-      return state.accountError
-        ? '숫자가 맞지 않아요. 통장 입금 내역에서 KB 뒤의 숫자 4자리를 다시 확인해주세요.'
-        : '통장 입금 내역에서 KB 뒤에 적힌 숫자 4자리를 입력해주세요.';
+    if (step === STEPS.ACCOUNT_CODE && state.accountError) {
+      return '숫자가 맞지 않아요. 통장 입금 내역에서 KB 뒤의 숫자 4자리를 다시 확인해주세요.';
     }
-    return '';
-  }, [step, state.otpVerified, state.otpError, state.faceStatus, state.accountError]);
+    if (step === STEPS.PIN && state.pinError) {
+      return '비밀번호가 서로 달라요. 처음부터 다시 입력해주세요.';
+    }
+    if (step === STEPS.PIN && state.pinPhase === 'confirm') {
+      return '같은 비밀번호를 한 번 더 입력해주세요.';
+    }
+    if (step === STEPS.PHONE_OWNERSHIP && state.phoneOwnership === false) {
+      return '본인 명의 휴대폰이 아니면 지금 가입을 끝내기 어려워요.';
+    }
+    return stepHelp.hint;
+  }, [
+    step,
+    stepHelp.hint,
+    state.otpVerified,
+    state.otpError,
+    state.faceStatus,
+    state.accountError,
+    state.pinError,
+    state.pinPhase,
+    state.phoneOwnership,
+  ]);
+
+  const showHelpBar =
+    !isFullBleedHelpStep(step) &&
+    Boolean(currentGuidance) &&
+    (stepHelp.showBar || idleHelp || Boolean(state.otpError) || Boolean(state.accountError) || Boolean(state.pinError) || state.phoneOwnership === false);
 
   const helpBarProps = {
     guidance: currentGuidance,
@@ -452,9 +539,15 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         onBack={back}
         onExit={() => setShowExit(true)}
         showBack={step !== STEPS.INTRO && step !== STEPS.COMPLETE}
-        onVoice={isTtsEnabled ? speakGuide : undefined}
+        onVoice={speakGuide}
         isReading={isReading}
       />
+
+      {showHelpBar ? (
+        <View style={st.helpBarWrap}>
+          <ScreenHelpBar {...helpBarProps} />
+        </View>
+      ) : null}
 
       {page.fullBleed ? (
         <View style={st.fullBleed}>{page.body}</View>
@@ -470,7 +563,11 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           <View style={st.page}>
             {page.body}
           </View>
-          {page.actions}
+          {page.actions ? (
+            <PulseHighlight active={idleHelp} borderRadius={16}>
+              {page.actions}
+            </PulseHighlight>
+          ) : null}
         </KeyboardAvoidingView>
       )}
 
@@ -827,7 +924,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 <>
                   <StepBadge icon="message">2단계 · 문자 확인</StepBadge>
                   <PageTitle>{'문자로 받은 숫자\n6자리를 입력해주세요'}</PageTitle>
-                  <ScreenHelpBar {...helpBarProps} />
                   <SeniorTextInput
                     label="인증번호"
                     value={state.otp}
@@ -899,6 +995,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               onCaptured={state.completeIdScan}
               onAccepted={next}
               onRetake={state.resetIdVerification}
+              onNeedEscalation={() => {
+                setEscalationDismissed(false);
+                setCaptureHelpEscalation(true);
+              }}
             />
           ),
           actions: null,
@@ -982,6 +1082,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               failed={failed}
               success={success}
               userName={state.userName}
+              matchFailCount={faceFailCount}
               onCaptured={() => {
                 stopReading();
                 state.startFaceCheck();
@@ -991,6 +1092,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 state.resetFaceCheck();
               }}
               onContinue={next}
+              onNeedEscalation={() => {
+                setEscalationDismissed(false);
+                setCaptureHelpEscalation(true);
+              }}
             />
           ),
           actions: null,
@@ -1297,6 +1402,10 @@ const st = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 14,
+  },
+  helpBarWrap: {
+    paddingHorizontal: 18,
+    flexShrink: 0,
   },
   fullBleed: { flex: 1 },
 

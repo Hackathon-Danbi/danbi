@@ -1,8 +1,14 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
+import { EscalationSheet } from '@/features/onboarding/help/EscalationSheet';
+import { useStagedIdle } from '@/features/onboarding/help/captureHelp';
+import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { INK, YELLOW } from '../../theme';
 import { NavBar } from '../../components/NavBar';
+import { HISTORY_HELP } from '../historyHelp';
 
 /** danbi_jj main/screens/history.tsx <UnconfirmedScreen> 이식. */
 export function UnconfirmedScreen({
@@ -14,8 +20,30 @@ export function UnconfirmedScreen({
   onDetail: () => void;
   onHome: () => void;
 }) {
+  const { stage, bump } = useStagedIdle(true);
+  const [showEscalation, setShowEscalation] = useState(false);
+  const escalatedRef = useRef(false);
+  const prevStage = useRef(0);
+
+  useEffect(() => {
+    ttsSpeak(HISTORY_HELP.gateEntry(count));
+    return () => ttsStop();
+  }, [count]);
+
+  useEffect(() => {
+    if (stage === prevStage.current) return;
+    const previous = prevStage.current;
+    prevStage.current = stage;
+    if (stage <= previous) return;
+    if (stage === 1) ttsSpeak(HISTORY_HELP.gateIdle);
+    if (stage >= 3 && !escalatedRef.current) {
+      escalatedRef.current = true;
+      setShowEscalation(true);
+    }
+  }, [stage]);
+
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={bump}>
       <NavBar title="미확인 거래내역" onBack={onHome} />
 
       <View style={styles.center}>
@@ -33,22 +61,33 @@ export function UnconfirmedScreen({
           이 있어요
         </AppText>
         <AppText size={15} color="#888" align="center" lineHeight={24}>
-          {'최근 거래를 음성으로 듣거나\n직접 확인할 수 있어요.'}
+          최근 거래를 하나씩 확인해주세요.
         </AppText>
       </View>
 
       <View style={styles.footer}>
-        <Pressable accessibilityRole="button" onPress={onDetail} style={styles.primary}>
-          <AppText size={17} weight={900} color={INK}>
-            자세히 보기
-          </AppText>
-        </Pressable>
+        <PulseHighlight active={stage >= 1} borderRadius={16}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              ttsStop();
+              onDetail();
+            }}
+            style={styles.primary}
+          >
+            <AppText size={17} weight={900} color={INK}>
+              자세히 보기
+            </AppText>
+          </Pressable>
+        </PulseHighlight>
         <Pressable accessibilityRole="button" onPress={onHome} style={styles.secondary}>
           <AppText size={16} weight={700} color="#666">
             홈으로 가기
           </AppText>
         </Pressable>
       </View>
+
+      <EscalationSheet visible={showEscalation} onDismiss={() => setShowEscalation(false)} />
     </View>
   );
 }

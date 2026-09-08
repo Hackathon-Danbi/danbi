@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { fmt } from '../../data';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
@@ -12,13 +13,17 @@ export function VoiceConfirmScreen({
   txInfo,
   onBack,
   onConfirm,
+  helpTarget,
+  onActivity,
 }: {
   txInfo: TxInfo;
   onBack: () => void;
   onConfirm: () => void;
+  helpTarget: string;
+  onActivity: () => void;
 }) {
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={onActivity}>
       <NavBar title="내용을 확인해 주세요" onBack={onBack} />
       <View style={styles.body}>
         <View style={styles.card}>
@@ -43,11 +48,19 @@ export function VoiceConfirmScreen({
             {'아니요,\n다시 말하기'}
           </AppText>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={onConfirm} style={[styles.btn, styles.primary]}>
-          <AppText size={16} weight={900} color={INK} align="center">
-            송금하기
-          </AppText>
-        </Pressable>
+        <View style={styles.flex1}>
+          <PulseHighlight active={helpTarget === 'confirmBtn'} borderRadius={14}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onConfirm}
+              style={[styles.btn, styles.primary, styles.confirmBtn]}
+            >
+              <AppText size={16} weight={900} color={INK} align="center">
+                송금하기
+              </AppText>
+            </Pressable>
+          </PulseHighlight>
+        </View>
       </View>
     </View>
   );
@@ -55,6 +68,7 @@ export function VoiceConfirmScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
+  flex1: { flex: 1 },
   body: {
     flex: 1,
     paddingVertical: 28,
@@ -90,5 +104,9 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: YELLOW,
+  },
+  confirmBtn: {
+    width: '100%',
+    flex: 0,
   },
 });

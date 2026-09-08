@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { INK, YELLOW } from '../../theme';
 import { NavBar } from '../../components/NavBar';
@@ -12,10 +13,14 @@ export function PasswordScreen({
   value,
   onChange,
   onCancel,
+  helpTarget,
+  onActivity,
 }: {
   value: string;
   onChange: (v: string) => void;
   onCancel: () => void;
+  helpTarget: string;
+  onActivity: () => void;
 }) {
   const handleKey = (k: string) => {
     if (k === '취소') {
@@ -29,7 +34,7 @@ export function PasswordScreen({
   };
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={onActivity}>
       <NavBar title="비밀번호 입력" onBack={onCancel} />
       <View style={styles.body}>
         <View style={styles.lockBox}>
@@ -61,28 +66,30 @@ export function PasswordScreen({
         </AppText>
       </View>
 
-      <View style={styles.grid}>
-        {Array.from({ length: 4 }, (_, row) => (
-          <View key={row} style={styles.row}>
-            {KEYS.slice(row * 3, row * 3 + 3).map((k) => {
-              const isText = k === '취소' || k === '지우기';
-              return (
-                <Pressable
-                  key={k}
-                  accessibilityRole="button"
-                  accessibilityLabel={k}
-                  onPress={() => handleKey(k)}
-                  style={[styles.key, isText && styles.keyText]}
-                >
-                  <AppText size={isText ? 14 : 22} weight={700} color={k === '취소' ? '#E05050' : INK}>
-                    {k}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
-      </View>
+      <PulseHighlight active={helpTarget === 'pinKeypad'} borderRadius={12} style={styles.gridPulse}>
+        <View style={styles.grid}>
+          {Array.from({ length: 4 }, (_, row) => (
+            <View key={row} style={styles.row}>
+              {KEYS.slice(row * 3, row * 3 + 3).map((k) => {
+                const isText = k === '취소' || k === '지우기';
+                return (
+                  <Pressable
+                    key={k}
+                    accessibilityRole="button"
+                    accessibilityLabel={k}
+                    onPress={() => handleKey(k)}
+                    style={[styles.key, isText && styles.keyText]}
+                  >
+                    <AppText size={isText ? 14 : 22} weight={700} color={k === '취소' ? '#E05050' : INK}>
+                      {k}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </PulseHighlight>
     </View>
   );
 }
@@ -116,6 +123,10 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
+  },
+  gridPulse: {
+    flex: 1,
+    minHeight: 0,
   },
   grid: {
     flex: 1,

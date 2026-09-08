@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import type { CameraView } from 'expo-camera';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { Sheet } from '@/components/ui/Sheet';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
@@ -13,6 +14,7 @@ import {
   PageTitle,
   StepBadge,
 } from '../../components/OnboardingComponents';
+import { ID_CAPTURE_HELP, useStagedIdle } from '../../help/captureHelp';
 import {
   CameraPermissionGate,
   LiveCameraPreview,
@@ -45,25 +47,25 @@ const COACH_STEPS: Record<HelpKind, string[]> = {
     '먼저 신분증을 책상 위에 놓아주세요.',
     '휴대폰을 신분증 바로 위에 들어주세요.',
     '네 모서리가 모두 보이도록 조금 멀리해주세요.',
-    '좋아요. 신분증이 모두 들어왔어요.',
+    '좋아요. 아래 촬영하기를 눌러주세요.',
   ],
   blur: [
     '휴대폰을 두 손으로 잡아주세요.',
     '신분증을 화면 가운데에 맞춰주세요.',
     '좋아요. 이제 잠시 움직이지 말아주세요.',
-    '좋아요. 그대로 계세요. 제가 촬영할게요.',
+    '좋아요. 아래 촬영하기를 눌러주세요.',
   ],
   glare: [
     '신분증에 빛이 비치고 있어요.',
     '휴대폰을 오른쪽으로 살짝 기울여주세요.',
     '이번에는 왼쪽으로 조금 기울여주세요.',
-    '좋아요. 이제 잘 보여요.',
+    '좋아요. 아래 촬영하기를 눌러주세요.',
   ],
   full: [
     '먼저 신분증을 책상 위에 놓아주세요.',
     '휴대폰을 신분증 바로 위에 들어주세요.',
     '네 모서리가 보이도록 거리를 맞춰주세요.',
-    '좋아요. 그대로 계세요. 제가 촬영할게요.',
+    '좋아요. 아래 촬영하기를 눌러주세요.',
   ],
 };
 
@@ -72,11 +74,13 @@ export function IdCaptureExperience({
   onCaptured,
   onAccepted,
   onRetake,
+  onNeedEscalation,
 }: {
   initiallyCaptured: boolean;
   onCaptured: () => void;
   onAccepted: () => void;
   onRetake: () => void;
+  onNeedEscalation?: () => void;
 }) {
   const cameraRef = useRef<CameraView>(null);
   const takePhoto = useCameraCapture(cameraRef);
@@ -88,10 +92,37 @@ export function IdCaptureExperience({
   const [cameraReady, setCameraReady] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [coach, setCoach] = useState<Coach>(null);
+  const [coachCompleted, setCoachCompleted] = useState(false);
+  const [forcePulse, setForcePulse] = useState(false);
+  const [retakeCount, setRetakeCount] = useState(0);
   const [slot, setSlot] = useState({ width: 0, height: 0 });
   const frameBox = useMemo(() => fitIdFrame(slot.width, slot.height), [slot.height, slot.width]);
+  const escalatedRef = useRef(false);
+  const prevIdleStage = useRef(0);
+  const permissionSpokenRef = useRef(false);
 
+  const permissionReady = !camera.loading;
+  const permissionDenied = permissionReady && !camera.granted;
+  const permissionBlocked = permissionDenied && !camera.canAskAgain;
   const coachingText = coach ? COACH_STEPS[coach.kind][coach.step] : '';
+
+  const idleActive =
+    !busy &&
+    !coach &&
+    !showHelp &&
+    (phase === 'review' || camera.granted);
+  const { stage, bump } = useStagedIdle(idleActive);
+
+  const escalate = useCallback(() => {
+    if (escalatedRef.current) return;
+    escalatedRef.current = true;
+    onNeedEscalation?.();
+  }, [onNeedEscalation]);
+
+  const openHelp = useCallback((spoken: boolean) => {
+    setShowHelp(true);
+    if (spoken) ttsSpeak(ID_CAPTURE_HELP.openCoach);
+  }, []);
 
   const renderFrame = (inner: ReactNode) => (
     <View
@@ -115,9 +146,16 @@ export function IdCaptureExperience({
 
   useEffect(() => {
     if (phase !== 'camera' || !camera.granted || coach) return;
-    ttsSpeak('신분증을 노란 네모 안에 맞춰주세요.');
+    ttsSpeak(ID_CAPTURE_HELP.entry);
     return () => ttsStop();
   }, [camera.granted, coach, phase]);
+
+  useEffect(() => {
+    if (!permissionDenied || phase !== 'camera' || permissionSpokenRef.current) return;
+    permissionSpokenRef.current = true;
+    ttsSpeak(permissionBlocked ? ID_CAPTURE_HELP.permissionBlocked : ID_CAPTURE_HELP.permission);
+    if (permissionBlocked) escalate();
+  }, [escalate, permissionBlocked, permissionDenied, phase]);
 
   useEffect(() => {
     if (!coach) return;
@@ -131,6 +169,8 @@ export function IdCaptureExperience({
         return;
       }
       setCoach(null);
+      setCoachCompleted(true);
+      setForcePulse(true);
     }, 2000);
     return () => {
       clearTimeout(speakTimer);
@@ -138,34 +178,77 @@ export function IdCaptureExperience({
     };
   }, [coach]);
 
+  useEffect(() => {
+    if (stage === prevIdleStage.current) return;
+    const previous = prevIdleStage.current;
+    prevIdleStage.current = stage;
+    if (stage <= previous) return;
+    if (phase === 'review') {
+      if (stage === 1) ttsSpeak(ID_CAPTURE_HELP.reviewIdle);
+      return;
+    }
+    if (!camera.granted) return;
+    if (coachCompleted) {
+      escalate();
+      return;
+    }
+    if (stage === 1) ttsSpeak(ID_CAPTURE_HELP.idle);
+    if (stage === 2) openHelp(true);
+    if (stage >= 3) escalate();
+  }, [camera.granted, coachCompleted, escalate, openHelp, phase, stage]);
+
   const captureFrame = useCallback(async () => {
     ttsStop();
     setCaptureError('');
+    setForcePulse(false);
+    bump();
     setBusy(true);
     const uri = await takePhoto();
     setBusy(false);
     if (!uri) {
       setCaptureError('사진을 찍지 못했어요. 다시 눌러주세요.');
+      setForcePulse(true);
+      ttsSpeak(ID_CAPTURE_HELP.captureFail);
       return;
     }
     setPhotoUri(uri);
     setPhase('review');
+    setCoachCompleted(false);
     onCaptured();
-  }, [onCaptured, takePhoto]);
+  }, [bump, onCaptured, takePhoto]);
 
   const startCoach = (kind: HelpKind) => {
     setShowHelp(false);
+    setCoachCompleted(false);
+    setForcePulse(false);
+    bump();
     ttsStop();
     setCoach({ kind, step: 0 });
   };
 
   const retake = () => {
+    const nextCount = retakeCount + 1;
+    setRetakeCount(nextCount);
     onRetake();
     setPhotoUri(null);
     setCaptureError('');
     setCameraReady(false);
     setPhase('camera');
+    setForcePulse(false);
+    bump();
+    if (nextCount >= 3) {
+      escalate();
+      return;
+    }
+    if (nextCount >= 2) openHelp(true);
   };
+
+  const pulsePrimary =
+    !busy &&
+    (forcePulse ||
+      permissionDenied ||
+      (phase === 'camera' && camera.granted && cameraReady && stage >= 1) ||
+      (phase === 'review' && stage >= 1));
 
   const heading = (
     <>
@@ -184,9 +267,34 @@ export function IdCaptureExperience({
     </>
   );
 
+  const helpSheet = (
+    <Sheet visible={showHelp} onClose={() => setShowHelp(false)} title="촬영이 조금 어려우신가요?">
+      <AppText size={14} lineHeight={21} color="#888" style={s.sheetGuide}>
+        괜찮아요. 단비가 하나씩 알려드릴게요.
+      </AppText>
+      {(
+        [
+          ['fit', '신분증이 화면에 잘 안 들어가요'],
+          ['blur', '사진이 자꾸 흐리게 나와요'],
+          ['glare', '빛이 반사돼요'],
+          ['full', '처음부터 도움받기'],
+        ] as [HelpKind, string][]
+      ).map(([kind, label]) => (
+        <Pressable key={kind} accessibilityRole="button" onPress={() => startCoach(kind)} style={s.helpRow}>
+          <AppText size={15} weight={800} color={INK} style={s.flex1}>
+            {label}
+          </AppText>
+          <AppText size={16} color="#888">
+            ›
+          </AppText>
+        </Pressable>
+      ))}
+    </Sheet>
+  );
+
   if (phase === 'review') {
     return (
-      <View style={s.sheet}>
+      <View style={s.sheet} onTouchStart={bump}>
         <View style={s.sheetBody}>
           <View style={s.heading}>{heading}</View>
           {renderFrame(
@@ -199,18 +307,21 @@ export function IdCaptureExperience({
             ),
           )}
         </View>
-        <BottomActionArea
-          primary="네, 잘 보여요"
-          onPrimary={onAccepted}
-          secondary="다시 찍을게요"
-          onSecondary={retake}
-        />
+        <PulseHighlight active={pulsePrimary} borderRadius={16}>
+          <BottomActionArea
+            primary="네, 잘 보여요"
+            onPrimary={onAccepted}
+            secondary="다시 찍을게요"
+            onSecondary={retake}
+          />
+        </PulseHighlight>
+        {helpSheet}
       </View>
     );
   }
 
   return (
-    <View style={s.sheet}>
+    <View style={s.sheet} onTouchStart={bump}>
       <View style={s.sheetBody}>
         <View style={s.heading}>{heading}</View>
         {captureError ? (
@@ -236,45 +347,28 @@ export function IdCaptureExperience({
           ),
         )}
       </View>
-      <BottomActionArea
-        primary={camera.granted ? (busy ? '찍고 있어요' : '촬영하기') : '카메라 허용하기'}
-        onPrimary={() => {
-          if (!camera.granted) {
-            void camera.requestPermission();
-            return;
-          }
-          void captureFrame();
-        }}
-        primaryDisabled={busy || (camera.granted && !cameraReady)}
-        secondary="촬영이 어려우신가요?"
-        onSecondary={() => {
-          ttsStop();
-          setShowHelp(true);
-        }}
-      />
-
-      <Sheet visible={showHelp} onClose={() => setShowHelp(false)} title="촬영이 조금 어려우신가요?">
-        <AppText size={14} lineHeight={21} color="#888" style={s.sheetGuide}>
-          괜찮아요. 단비가 하나씩 알려드릴게요.
-        </AppText>
-        {(
-          [
-            ['fit', '신분증이 화면에 잘 안 들어가요'],
-            ['blur', '사진이 자꾸 흐리게 나와요'],
-            ['glare', '빛이 반사돼요'],
-            ['full', '처음부터 도움받기'],
-          ] as [HelpKind, string][]
-        ).map(([kind, label]) => (
-          <Pressable key={kind} accessibilityRole="button" onPress={() => startCoach(kind)} style={s.helpRow}>
-            <AppText size={15} weight={800} color={INK} style={s.flex1}>
-              {label}
-            </AppText>
-            <AppText size={16} color="#888">
-              ›
-            </AppText>
-          </Pressable>
-        ))}
-      </Sheet>
+      <PulseHighlight active={pulsePrimary} borderRadius={16}>
+        <BottomActionArea
+          primary={camera.granted ? (busy ? '찍고 있어요' : '촬영하기') : '카메라 허용하기'}
+          onPrimary={() => {
+            bump();
+            setForcePulse(false);
+            if (!camera.granted) {
+              void camera.requestPermission();
+              return;
+            }
+            void captureFrame();
+          }}
+          primaryDisabled={busy || (camera.granted && !cameraReady)}
+          secondary="촬영이 어려우신가요?"
+          onSecondary={() => {
+            ttsStop();
+            bump();
+            setShowHelp(true);
+          }}
+        />
+      </PulseHighlight>
+      {helpSheet}
     </View>
   );
 }

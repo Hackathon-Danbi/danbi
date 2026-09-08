@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
 import { bankOf } from '../../data';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
@@ -16,6 +17,8 @@ type Props = {
   onRetry: () => void;
   onManualInput: () => void;
   onConfirm: (candidate: AccountNumberCandidate) => void;
+  helpTarget?: string;
+  onActivity?: () => void;
 };
 
 export function AccountPhotoOcrScreen({
@@ -26,6 +29,8 @@ export function AccountPhotoOcrScreen({
   onRetry,
   onManualInput,
   onConfirm,
+  helpTarget = '',
+  onActivity,
 }: Props) {
   const [selectedDigits, setSelectedDigits] = useState('');
   const selected = candidates.find((candidate) => candidate.digits === selectedDigits);
@@ -49,7 +54,7 @@ export function AccountPhotoOcrScreen({
 
   if (mode === 'failure') {
     return (
-      <View style={styles.root}>
+      <View style={styles.root} onTouchStart={onActivity}>
         <NavBar title="사진에서 찾기" onBack={onBack} />
         <View style={styles.failureBody}>
           <IconScan />
@@ -62,7 +67,9 @@ export function AccountPhotoOcrScreen({
         </View>
         <View style={styles.footer}>
           <SecondaryButton label="사진 다시 선택" onPress={onRetry} />
-          <PrimaryButton label="직접 입력하기" onPress={onManualInput} />
+          <PulseHighlight active={helpTarget === 'ocrManual'} borderRadius={16}>
+            <PrimaryButton label="직접 입력하기" onPress={onManualInput} />
+          </PulseHighlight>
         </View>
       </View>
     );
@@ -72,7 +79,7 @@ export function AccountPhotoOcrScreen({
   const singleCandidate = candidates[0];
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onTouchStart={onActivity}>
       <NavBar title="계좌번호 확인" onBack={onBack} />
       <ScrollView style={styles.flex1} contentContainerStyle={styles.body}>
         <AppText size={28} weight={900} color={INK} lineHeight={36} style={styles.title}>
@@ -83,27 +90,29 @@ export function AccountPhotoOcrScreen({
         </AppText>
 
         {multiple ? (
-          <View style={styles.candidateList}>
-            {candidates.map((candidate) => {
-              const isSelected = selectedDigits === candidate.digits;
-              return (
-                <Pressable
-                  key={candidate.digits}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: isSelected }}
-                  onPress={() => setSelectedDigits(candidate.digits)}
-                  style={[styles.candidateCard, isSelected && styles.candidateCardSelected]}
-                >
-                  <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                    {isSelected ? <View style={styles.radioDot} /> : null}
-                  </View>
-                  <AppText size={21} weight={900} color={INK} style={styles.flex1}>
-                    {candidate.display}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
+          <PulseHighlight active={helpTarget === 'ocrList'} borderRadius={16}>
+            <View style={styles.candidateList}>
+              {candidates.map((candidate) => {
+                const isSelected = selectedDigits === candidate.digits;
+                return (
+                  <Pressable
+                    key={candidate.digits}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected }}
+                    onPress={() => setSelectedDigits(candidate.digits)}
+                    style={[styles.candidateCard, isSelected && styles.candidateCardSelected]}
+                  >
+                    <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                      {isSelected ? <View style={styles.radioDot} /> : null}
+                    </View>
+                    <AppText size={21} weight={900} color={INK} style={styles.flex1}>
+                      {candidate.display}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </PulseHighlight>
         ) : singleCandidate ? (
           <AccountCard bank={bank} accountNumber={singleCandidate.display} />
         ) : null}
@@ -111,14 +120,16 @@ export function AccountPhotoOcrScreen({
 
       <View style={styles.footer}>
         {!multiple ? <SecondaryButton label="다시 사진 선택" onPress={onRetry} /> : null}
-        <PrimaryButton
-          label={multiple ? '이 계좌번호 사용하기' : '네, 맞아요'}
-          disabled={multiple && !selected}
-          onPress={() => {
-            const candidate = multiple ? selected : singleCandidate;
-            if (candidate) onConfirm(candidate);
-          }}
-        />
+        <PulseHighlight active={helpTarget === 'ocrConfirm'} borderRadius={16}>
+          <PrimaryButton
+            label={multiple ? '이 계좌번호 사용하기' : '네, 맞아요'}
+            disabled={multiple && !selected}
+            onPress={() => {
+              const candidate = multiple ? selected : singleCandidate;
+              if (candidate) onConfirm(candidate);
+            }}
+          />
+        </PulseHighlight>
       </View>
     </View>
   );
