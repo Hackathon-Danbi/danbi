@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, Vibration } from 'react-native';
 import Animated, {
   Easing,
@@ -10,34 +10,38 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
+import { Sheet } from '@/components/ui/Sheet';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
-import { colors, radius } from '@/theme/tokens';
-import { OnboardingIcon } from '../../components/OnboardingComponents';
+import {
+  BottomActionArea,
+  CertProgress,
+  GuideText,
+  PageTitle,
+  StepBadge,
+} from '../../components/OnboardingComponents';
 import { CAPTURE_GUIDANCE } from '../constants';
 import type { IdCaptureObservation, IdCaptureStatus } from '../types';
 import { resolvePrimaryStatus } from '../utils';
 import { useCaptureGuidance } from '../hooks/useCaptureGuidance';
 
-const ABS_FILL = { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 } as const;
-
-type Phase = 'prepare' | 'camera' | 'review';
+type Phase = 'camera' | 'review';
 type HelpKind = 'fit' | 'blur' | 'glare' | 'full';
 type Coach = { kind: HelpKind; step: number } | null;
 
 const MOCK_STATUS_OPTIONS: { status: IdCaptureStatus; label: string }[] = [
-  { status: 'TOO_CLOSE', label: '너무 가까움' },
-  { status: 'TOO_FAR', label: '너무 멂' },
-  { status: 'CROPPED', label: '일부 잘림' },
+  { status: 'TOO_CLOSE', label: '가까움' },
+  { status: 'TOO_FAR', label: '멈' },
+  { status: 'CROPPED', label: '잘림' },
   { status: 'BLURRY', label: '흐림' },
-  { status: 'GLARE', label: '빛 반사' },
-  { status: 'GOOD_POSITION', label: '좋은 위치' },
+  { status: 'GLARE', label: '반사' },
+  { status: 'GOOD_POSITION', label: '좋음' },
 ];
 
 const COACH_STEPS: Record<HelpKind, string[]> = {
   fit: [
     '먼저 신분증을 책상 위에 놓아주세요.',
     '휴대폰을 신분증 바로 위에 들어주세요.',
-    '신분증 네 모서리가 모두 보이도록 휴대폰을 조금 멀리해주세요.',
+    '네 모서리가 모두 보이도록 조금 멀리해주세요.',
     '좋아요. 신분증이 모두 들어왔어요.',
   ],
   blur: [
@@ -55,10 +59,7 @@ const COACH_STEPS: Record<HelpKind, string[]> = {
   full: [
     '먼저 신분증을 책상 위에 놓아주세요.',
     '휴대폰을 신분증 바로 위에 들어주세요.',
-    '신분증 네 모서리가 보이도록 거리를 맞춰주세요.',
-    '좋아요. 신분증 전체가 보여요.',
-    '빛이 반사되지 않는지 확인할게요.',
-    '휴대폰을 두 손으로 잡고 잠시 움직이지 말아주세요.',
+    '네 모서리가 보이도록 거리를 맞춰주세요.',
     '좋아요. 그대로 계세요. 제가 촬영할게요.',
   ],
 };
@@ -71,38 +72,23 @@ function arrowFor(observation: IdCaptureObservation, status: IdCaptureStatus) {
   return '';
 }
 
-function coachArrow(coach: Coach) {
-  if (!coach || coach.kind !== 'glare') return '';
-  if (coach.step === 1) return '→';
-  if (coach.step === 2) return '←';
-  return '';
-}
-
 function MockIdCard() {
   return (
     <View style={s.mockCard} accessibilityLabel="촬영된 신분증 예시">
-      <AppText size={20} weight={900} color="#403821" letterSpacing={1.6}>
+      <AppText size={16} weight={900} color={INK}>
         주민등록증
       </AppText>
       <View style={s.mockBody}>
-        <View style={s.mockPhoto}>
-          <OnboardingIcon name="user" size={40} color="#676255" />
-        </View>
+        <View style={s.mockPhoto} />
         <View style={s.flex1}>
-          <AppText size={20} weight={700} color="#403821" letterSpacing={2.8}>
+          <AppText size={18} weight={800} color={INK}>
             홍 길 동
           </AppText>
-          <AppText size={13} color="#403821" style={s.mt5}>
+          <AppText size={13} color="#888" style={s.mt4}>
             900101-1******
-          </AppText>
-          <AppText size={13} color="#403821">
-            서울특별시
           </AppText>
         </View>
       </View>
-      <AppText size={12} weight={850} color="#403821" align="right">
-        대한민국
-      </AppText>
     </View>
   );
 }
@@ -115,11 +101,11 @@ function PulseArrow({ char }: { char: string }) {
   }, [t]);
   const style = useAnimatedStyle(() => ({
     opacity: 0.72 + t.value * 0.28,
-    transform: [{ translateX: -5 + t.value * 10 }],
+    transform: [{ translateX: -4 + t.value * 8 }],
   }));
   return (
     <Animated.View style={style} pointerEvents="none">
-      <AppText size={78} weight={900} color={YELLOW}>
+      <AppText size={40} weight={900} color={YELLOW}>
         {char}
       </AppText>
     </Animated.View>
@@ -151,7 +137,7 @@ export function IdCaptureExperience({
   onAccepted: () => void;
   onRetake: () => void;
 }) {
-  const [phase, setPhase] = useState<Phase>(initiallyCaptured ? 'review' : 'prepare');
+  const [phase, setPhase] = useState<Phase>(initiallyCaptured ? 'review' : 'camera');
   const [observation, setObservation] = useState<IdCaptureObservation>({
     issues: ['TOO_FAR'],
     cropDirection: 'right',
@@ -164,9 +150,6 @@ export function IdCaptureExperience({
   const [mockManuallyChanged, setMockManuallyChanged] = useState(false);
   const [issueCount, setIssueCount] = useState(0);
   const previousIssueRef = useRef<IdCaptureStatus | null>(null);
-
-  // RN 에는 카메라를 붙이지 않는다. 원본의 mock/시뮬레이션 흐름을 그대로 유지한다.
-  const cameraUnavailable = true;
 
   const captureFrame = useCallback(() => {
     setPhase('review');
@@ -183,15 +166,14 @@ export function IdCaptureExperience({
   const primaryGuidance = CAPTURE_GUIDANCE[primaryStatus];
   const directionArrow = arrowFor(observation, primaryStatus);
   const coachingText = coach ? COACH_STEPS[coach.kind][coach.step] : '';
+  const good = primaryStatus === 'GOOD_POSITION' || primaryStatus === 'CAPTURED';
 
-  // 목 분석기는 처음 한 번 거리 조절을 안내한 뒤 좋은 위치로 전환합니다.
   useEffect(() => {
     if (phase !== 'camera' || mockManuallyChanged || coach) return;
     const timer = setTimeout(() => setObservation({ issues: ['GOOD_POSITION'] }), 3200);
     return () => clearTimeout(timer);
   }, [coach, mockManuallyChanged, phase]);
 
-  // 같은 문제가 해결되지 않고 되풀이될 때만 실패 횟수로 계산합니다.
   useEffect(() => {
     if (phase !== 'camera') return;
     if (primaryStatus === 'GOOD_POSITION' || primaryStatus === 'CAPTURED') {
@@ -210,7 +192,6 @@ export function IdCaptureExperience({
     return () => clearTimeout(timer);
   }, [coach, phase, primaryStatus, showHelp, showStuckHelp]);
 
-  // 도움 흐름은 프로토타입에서 단계별 감지 결과를 모사합니다.
   useEffect(() => {
     if (!coach) return;
     stopSpeaking();
@@ -226,7 +207,7 @@ export function IdCaptureExperience({
         setObservation({ issues: ['GOOD_POSITION'] });
         setCoach(null);
       },
-      coach.kind === 'full' ? 1900 : 2200,
+      2000,
     );
     return () => {
       clearTimeout(speakTimer);
@@ -237,13 +218,6 @@ export function IdCaptureExperience({
   useEffect(() => {
     if (primaryStatus === 'CAPTURED') Vibration.vibrate(55);
   }, [primaryStatus]);
-
-  const startCamera = () => {
-    setPhase('camera');
-    setObservation({ issues: ['TOO_FAR'] });
-    setMockManuallyChanged(false);
-    setIssueCount(0);
-  };
 
   const chooseMockStatus = (status: IdCaptureStatus) => {
     stopSpeaking();
@@ -267,603 +241,235 @@ export function IdCaptureExperience({
   const retake = () => {
     onRetake();
     resetCapture();
-    startCamera();
+    setPhase('camera');
+    setObservation({ issues: ['TOO_FAR'] });
+    setMockManuallyChanged(false);
+    setIssueCount(0);
   };
 
-  const multipleIssueLabel = useMemo(() => {
-    if (observation.issues.length < 2) return '';
-    return `${observation.issues.length}개 상태 중 가장 먼저 해결할 문제를 안내하고 있어요.`;
-  }, [observation.issues.length]);
-
-  const good = primaryStatus === 'GOOD_POSITION' || primaryStatus === 'CAPTURED';
-
-  if (phase === 'prepare') {
-    return (
-      <View style={s.sheet}>
-        <View style={s.sheetBody}>
-          <AppText size={24} weight={900} color={INK} lineHeight={33}>
-            {'신분증을\n준비해주세요'}
-          </AppText>
-          <AppText size={15} color="#888" lineHeight={22} style={s.mt8}>
-            주민등록증이나 운전면허증을 준비해주세요.
-          </AppText>
-          <View style={s.prepareList}>
-            {[
-              '신분증을 평평한 곳에 놓아주세요.',
-              '밝은 곳에서 촬영해주세요.',
-              '신분증을 가리는 것이 없는지 확인해주세요.',
-            ].map((text, i) => (
-              <View key={text} style={s.prepareRow}>
-                <View style={s.prepareNum}>
-                  <AppText size={13} weight={900} color={INK}>
-                    {i + 1}
-                  </AppText>
-                </View>
-                <AppText size={15} weight={700} lineHeight={21} color={INK} style={s.flex1}>
-                  {text}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        </View>
-        <View style={s.sheetActions}>
-          <Pressable accessibilityRole="button" onPress={startCamera} style={s.primaryBtn}>
-            <AppText size={17} weight={900} color={INK}>
-              신분증 촬영하기
-            </AppText>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
+  const heading = (
+    <>
+      <CertProgress current={1} />
+      <StepBadge icon="id">1/4 신분증</StepBadge>
+      <PageTitle>
+        {phase === 'review' ? '신분증이\n잘 보이나요?' : '신분증을 네모 안에\n맞춰주세요'}
+      </PageTitle>
+      <GuideText>
+        {phase === 'review'
+          ? '글자와 사진이 선명하면 계속 진행해주세요.'
+          : coach
+            ? coachingText
+            : primaryGuidance.screen.replace('\n', ' ')}
+      </GuideText>
+    </>
+  );
 
   if (phase === 'review') {
     return (
       <View style={s.sheet}>
         <View style={s.sheetBody}>
-          <View style={s.capturedBadge}>
-            <OnboardingIcon name="check" size={15} color={INK} />
-            <AppText size={12} weight={700} color={INK}>
-              잘 찍혔어요!
-            </AppText>
-          </View>
-          <AppText size={24} weight={900} color={INK} lineHeight={33} style={s.mt12}>
-            {'신분증이\n잘 보이나요?'}
-          </AppText>
-          <AppText size={15} color="#888" lineHeight={22} style={s.mt8}>
-            글자와 사진이 선명하게 보이면 계속 진행해주세요.
-          </AppText>
-          <View style={s.reviewPhoto}>
-            <MockIdCard />
-          </View>
+          {heading}
+          <View style={s.frame}>{<MockIdCard />}</View>
         </View>
-        <View style={s.sheetActions}>
-          <Pressable accessibilityRole="button" onPress={onAccepted} style={s.primaryBtn}>
-            <AppText size={17} weight={900} color={INK}>
-              네, 잘 보여요
-            </AppText>
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={retake} style={s.secondaryBtn}>
-            <AppText size={17} weight={900} color={INK}>
-              다시 찍을게요
-            </AppText>
-          </Pressable>
-        </View>
+        <BottomActionArea
+          primary="네, 잘 보여요"
+          onPrimary={onAccepted}
+          secondary="다시 찍을게요"
+          onSecondary={retake}
+        />
       </View>
     );
   }
 
-  // phase === 'camera'
   return (
-    <View style={s.stage}>
-      <View style={s.shade} pointerEvents="none" />
-
-      <View style={s.liveMessage} accessibilityLiveRegion="polite">
-        <View style={[s.liveDot, good && s.liveDotGood]} />
-        <AppText size={21} weight={900} lineHeight={28} color={colors.white} align="center">
-          {primaryStatus === 'CAPTURED' ? '잘 찍혔어요!' : primaryGuidance.screen.replace('\n', ' ')}
-        </AppText>
-      </View>
-
-      <View style={[s.guideFrame, good && s.guideFrameGood]} accessibilityLabel="신분증을 맞출 촬영 영역">
-        <View style={[s.corner, s.cornerTL, good && s.cornerGood]} />
-        <View style={[s.corner, s.cornerTR, good && s.cornerGood]} />
-        <View style={[s.corner, s.cornerBL, good && s.cornerGood]} />
-        <View style={[s.corner, s.cornerBR, good && s.cornerGood]} />
-        <View style={s.frameLabel}>
-          <AppText size={17} weight={900} color="#29240c">
-            신분증을 네모 안에 맞춰주세요
-          </AppText>
+    <View style={s.sheet}>
+      <View style={s.sheetBody}>
+        {heading}
+        <View style={[s.frame, good && s.frameGood]} accessibilityLabel="신분증을 맞출 촬영 영역">
+          <View style={[s.corner, s.cornerTL, good && s.cornerGood]} />
+          <View style={[s.corner, s.cornerTR, good && s.cornerGood]} />
+          <View style={[s.corner, s.cornerBL, good && s.cornerGood]} />
+          <View style={[s.corner, s.cornerBR, good && s.cornerGood]} />
+          <MockIdCard />
+          {directionArrow ? (
+            <View style={s.arrow} pointerEvents="none">
+              <PulseArrow char={directionArrow} />
+            </View>
+          ) : null}
+          {primaryStatus === 'GOOD_POSITION' ? <HoldIndicator /> : null}
         </View>
-        {directionArrow ? (
-          <View style={s.directionArrow} pointerEvents="none">
-            <PulseArrow char={directionArrow} />
-          </View>
-        ) : null}
-        {primaryStatus === 'GOOD_POSITION' ? <HoldIndicator /> : null}
-      </View>
-
-      <AppText size={19} weight={850} color={colors.white} align="center" style={s.cameraSupport}>
-        신분증 전체가 보이게 해주세요
-      </AppText>
-      {cameraUnavailable ? (
-        <AppText size={14} color="#deded8" align="center" style={s.cameraFallback}>
-          카메라를 사용할 수 없어 연습 화면으로 보여드려요.
-        </AppText>
-      ) : null}
-      {multipleIssueLabel ? (
-        <AppText style={s.srOnly}>{multipleIssueLabel}</AppText>
-      ) : null}
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          stopSpeaking();
-          setShowHelp(true);
-        }}
-        style={s.helpTrigger}
-      >
-        <AppText size={18} weight={850} color={colors.white} style={s.underline}>
-          촬영이 어려우신가요?
-        </AppText>
-      </Pressable>
-
-      <View style={s.mockControls}>
-        <Pressable accessibilityRole="button" onPress={() => setMockOpen((v) => !v)} style={s.mockSummary}>
-          <AppText size={13} color="rgba(255,255,255,0.86)">
-            프로토타입 상태 테스트 {mockOpen ? '▲' : '▼'}
+        <Pressable accessibilityRole="button" onPress={() => setMockOpen((v) => !v)} style={s.mockToggle}>
+          <AppText size={12} color="#BBB">
+            프로토타입 상태 {mockOpen ? '닫기' : '열기'}
           </AppText>
         </Pressable>
         {mockOpen ? (
           <View style={s.mockRow}>
-            {MOCK_STATUS_OPTIONS.map(({ status, label }) => {
-              const active = resolvePrimaryStatus(observation.issues) === status;
-              return (
-                <Pressable
-                  key={status}
-                  accessibilityRole="button"
-                  onPress={() => chooseMockStatus(status)}
-                  style={[s.mockBtn, active && s.mockBtnActive]}
-                >
-                  <AppText size={12} color={colors.white}>
-                    {label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                resetCapture();
-                setMockManuallyChanged(true);
-                setObservation({
-                  issues: ['CROPPED', 'GLARE', 'BLURRY'],
-                  cropDirection: 'left',
-                  glareDirection: 'right',
-                });
-              }}
-              style={s.mockBtn}
-            >
-              <AppText size={12} color={colors.white}>
-                여러 문제
-              </AppText>
-            </Pressable>
+            {MOCK_STATUS_OPTIONS.map(({ status, label }) => (
+              <Pressable
+                key={status}
+                accessibilityRole="button"
+                onPress={() => chooseMockStatus(status)}
+                style={[s.mockBtn, resolvePrimaryStatus(observation.issues) === status && s.mockBtnOn]}
+              >
+                <AppText size={12} weight={700} color={INK}>
+                  {label}
+                </AppText>
+              </Pressable>
+            ))}
           </View>
         ) : null}
       </View>
+      <BottomActionArea
+        primary="촬영하기"
+        onPrimary={() => {
+          stopSpeaking();
+          captureFrame();
+        }}
+        secondary="촬영이 어려우신가요?"
+        onSecondary={() => {
+          stopSpeaking();
+          setShowHelp(true);
+        }}
+      />
 
-      {coach ? (
-        <View style={s.coachCard} accessibilityLiveRegion="polite">
-          <AppText size={15} weight={850} color={YELLOW} align="center">
-            단비의 안내 · {coach.step + 1}/{COACH_STEPS[coach.kind].length}
+      <Sheet visible={showHelp} onClose={() => setShowHelp(false)} title="촬영이 조금 어려우신가요?">
+        <AppText size={14} lineHeight={21} color="#888" style={s.sheetGuide}>
+          괜찮아요. 단비가 하나씩 알려드릴게요.
+        </AppText>
+        {(
+          [
+            ['fit', '신분증이 화면에 잘 안 들어가요'],
+            ['blur', '사진이 자꾸 흐리게 나와요'],
+            ['glare', '빛이 반사돼요'],
+            ['full', '처음부터 도움받기'],
+          ] as [HelpKind, string][]
+        ).map(([kind, label]) => (
+          <Pressable key={kind} accessibilityRole="button" onPress={() => startCoach(kind)} style={s.helpRow}>
+            <AppText size={15} weight={800} color={INK} style={s.flex1}>
+              {label}
+            </AppText>
+            <AppText size={16} color="#888">
+              ›
+            </AppText>
+          </Pressable>
+        ))}
+      </Sheet>
+
+      <Sheet
+        visible={showStuckHelp || issueCount >= 3}
+        onClose={() => {
+          setIssueCount(0);
+          setShowStuckHelp(false);
+        }}
+        title="촬영이 계속 어려우신가요?"
+      >
+        <AppText size={14} lineHeight={21} color="#888" style={s.sheetGuide}>
+          단비가 처음부터 천천히 같이 해드릴게요.
+        </AppText>
+        <Pressable accessibilityRole="button" onPress={() => startCoach('full')} style={s.helpPrimary}>
+          <AppText size={17} weight={900} color={INK}>
+            처음부터 도움받기
           </AppText>
-          {coachArrow(coach) ? (
-            <AppText size={40} weight={900} color={YELLOW} align="center">
-              {coachArrow(coach)}
-            </AppText>
-          ) : null}
-          <AppText size={22} weight={900} lineHeight={31} color={colors.white} align="center" style={s.mt9}>
-            {coachingText}
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setIssueCount(0);
+            setShowStuckHelp(false);
+          }}
+          style={s.helpQuiet}
+        >
+          <AppText size={14} weight={700} color="#888">
+            다시 해볼게요
           </AppText>
-        </View>
-      ) : null}
-
-      {showHelp ? (
-        <View style={s.modalBackdrop}>
-          <View style={s.helpModal}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="도움말 닫기"
-              onPress={() => setShowHelp(false)}
-              style={s.modalClose}
-            >
-              <AppText size={20} color="#46423a">
-                ✕
-              </AppText>
-            </Pressable>
-            <AppText size={26} weight={900} lineHeight={33} letterSpacing={-1}>
-              촬영이 조금 어려우신가요?
-            </AppText>
-            <AppText size={19} lineHeight={27} color="#59554d" style={s.modalBody}>
-              괜찮아요. 단비가 하나씩 알려드릴게요.
-            </AppText>
-            <View style={s.modalOptions}>
-              {(
-                [
-                  ['fit', '신분증이 화면에 잘 안 들어가요'],
-                  ['blur', '사진이 자꾸 흐리게 나와요'],
-                  ['glare', '빛이 반사돼요'],
-                  ['full', '처음부터 도움받기'],
-                ] as [HelpKind, string][]
-              ).map(([kind, label], idx, arr) => (
-                <Pressable
-                  key={kind}
-                  accessibilityRole="button"
-                  onPress={() => startCoach(kind)}
-                  style={[s.modalOption, idx === arr.length - 1 && s.modalOptionEmphasis]}
-                >
-                  <AppText size={18} weight={850} lineHeight={24} color="#302e29" style={s.flex1}>
-                    {label}
-                  </AppText>
-                  <AppText size={24} color="#302e29">
-                    ›
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      {showStuckHelp || issueCount >= 3 ? (
-        <View style={s.modalBackdrop}>
-          <View style={s.helpModal}>
-            <AppText size={26} weight={900} lineHeight={33} letterSpacing={-1}>
-              촬영이 계속 어려우신가요?
-            </AppText>
-            <AppText size={19} lineHeight={27} color="#59554d" style={s.modalBody}>
-              단비가 처음부터 천천히 같이 해드릴게요.
-            </AppText>
-            <View style={s.modalOptions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => startCoach('full')}
-                style={[s.modalOption, s.modalOptionEmphasis, s.modalOptionCenter]}
-              >
-                <AppText size={18} weight={850} color="#302e29" align="center">
-                  처음부터 도움받기
-                </AppText>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  setIssueCount(0);
-                  setShowStuckHelp(false);
-                }}
-                style={[s.modalOption, s.modalOptionCenter]}
-              >
-                <AppText size={18} weight={850} color="#302e29" align="center">
-                  다시 해볼게요
-                </AppText>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
+        </Pressable>
+      </Sheet>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   flex1: { flex: 1 },
-  mt5: { marginTop: 5 },
-  mt8: { marginTop: 8 },
-  mt9: { marginTop: 9 },
-  mt12: { marginTop: 12 },
-  underline: { textDecorationLine: 'underline' },
-  srOnly: { position: 'absolute', width: 1, height: 1, opacity: 0 },
-
-  // prepare / review 공통 레이아웃 — 다른 가입 화면과 같은 규격
+  mt4: { marginTop: 4 },
   sheet: { flex: 1, backgroundColor: '#fff' },
   sheetBody: { flex: 1, paddingHorizontal: 18, paddingTop: 14 },
-  sheetActions: { gap: 8, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14 },
-  primaryBtn: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 16,
-    backgroundColor: YELLOW,
-  },
-  secondaryBtn: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    backgroundColor: '#fff',
-  },
+  sheetGuide: { marginTop: 8, marginBottom: 12 },
 
-  prepareList: { gap: 8, marginTop: 16 },
-  prepareRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1.8,
-    borderColor: BORDER,
-    borderRadius: 16,
-    backgroundColor: CREAM,
-  },
-  prepareNum: {
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 13,
-    backgroundColor: YELLOW,
-  },
-
-  capturedBadge: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 5,
-    paddingLeft: 8,
-    paddingRight: 10,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: BORDER,
-    backgroundColor: CREAM,
-  },
-  reviewPhoto: {
-    width: '100%',
-    aspectRatio: 1.48,
+  frame: {
+    position: 'relative',
     marginTop: 16,
+    padding: 14,
+    aspectRatio: 1.48,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 16,
     borderWidth: 1.8,
     borderColor: BORDER,
-    borderRadius: 16,
-    backgroundColor: '#F7F5EF',
-  },
-
-  // mock id card
-  mockCard: {
-    width: '92%',
-    aspectRatio: 1.586,
-    padding: 17,
-    borderRadius: 14,
-    backgroundColor: '#ecdcae',
-  },
-  mockBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 13 },
-  mockPhoto: {
-    width: 64,
-    height: 76,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#c5c0ad',
-  },
-
-  // camera stage
-  stage: {
-    flex: 1,
-    minHeight: 520,
-    backgroundColor: '#22251f',
+    backgroundColor: CREAM,
     overflow: 'hidden',
   },
-  shade: {
-    ...ABS_FILL,
-    backgroundColor: 'rgba(11,13,12,0.35)',
-  },
-  liveMessage: {
-    position: 'absolute',
-    zIndex: 3,
-    top: 18,
-    left: 18,
-    right: 18,
-    minHeight: 76,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 13,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(24,26,24,0.9)',
-  },
-  liveDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: YELLOW,
-  },
-  liveDotGood: { backgroundColor: '#55d78b' },
-
-  guideFrame: {
-    position: 'absolute',
-    zIndex: 2,
-    top: '29%',
-    left: '7%',
-    width: '86%',
-    aspectRatio: 1.586,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.88)',
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  guideFrameGood: { borderColor: '#68e39b' },
+  frameGood: { borderColor: YELLOW },
   corner: {
     position: 'absolute',
-    width: 40,
-    height: 40,
+    width: 22,
+    height: 22,
     borderColor: YELLOW,
   },
-  cornerGood: { borderColor: '#68e39b' },
-  cornerTL: { top: -4, left: -4, borderTopWidth: 5, borderLeftWidth: 5, borderTopLeftRadius: 17 },
-  cornerTR: { top: -4, right: -4, borderTopWidth: 5, borderRightWidth: 5, borderTopRightRadius: 17 },
-  cornerBL: { bottom: -4, left: -4, borderBottomWidth: 5, borderLeftWidth: 5, borderBottomLeftRadius: 17 },
-  cornerBR: { bottom: -4, right: -4, borderBottomWidth: 5, borderRightWidth: 5, borderBottomRightRadius: 17 },
-  frameLabel: {
-    position: 'absolute',
-    top: -44,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: YELLOW,
-  },
-  directionArrow: {
-    ...ABS_FILL,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cornerGood: { borderColor: '#2F8B5D' },
+  cornerTL: { top: 8, left: 8, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 },
+  cornerTR: { top: 8, right: 8, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 },
+  cornerBL: { bottom: 8, left: 8, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 },
+  cornerBR: { bottom: 8, right: 8, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
+  arrow: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
   holdTrack: {
     position: 'absolute',
     left: 18,
     right: 18,
-    bottom: 15,
+    bottom: 12,
     height: 6,
-    borderRadius: 99,
-    backgroundColor: 'rgba(255,255,255,0.32)',
     overflow: 'hidden',
-  },
-  holdFill: {
-    height: '100%',
     borderRadius: 99,
-    backgroundColor: '#68e39b',
-    transform: [{ scaleX: 0 }],
+    backgroundColor: '#F0E6C4',
   },
+  holdFill: { height: '100%', borderRadius: 99, backgroundColor: YELLOW, transform: [{ scaleX: 0 }] },
 
-  cameraSupport: {
-    position: 'absolute',
-    zIndex: 3,
-    top: '64%',
-    left: 18,
-    right: 18,
-  },
-  cameraFallback: {
-    position: 'absolute',
-    zIndex: 3,
-    left: 30,
-    right: 30,
-    top: '64%',
-    marginTop: 34,
-  },
-  helpTrigger: {
-    position: 'absolute',
-    zIndex: 4,
-    alignSelf: 'center',
-    bottom: 92,
-    minHeight: 52,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.8)',
-    borderRadius: radius.md + 1,
-    backgroundColor: 'rgba(23,25,23,0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mockControls: {
-    position: 'absolute',
-    zIndex: 4,
-    left: 12,
-    right: 12,
-    bottom: 15,
-    alignItems: 'center',
-  },
-  mockSummary: {
-    paddingVertical: 5,
-    paddingHorizontal: 9,
-    borderRadius: 9,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  mockRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 5,
-    marginTop: 7,
-    padding: 8,
-    borderRadius: 14,
-    backgroundColor: 'rgba(17,19,17,0.92)',
-  },
-  mockBtn: {
-    minHeight: 32,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#858984',
-    borderRadius: 9,
-    backgroundColor: '#343733',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mockBtnActive: { borderColor: YELLOW, backgroundColor: '#665817' },
-
-  coachCard: {
-    position: 'absolute',
-    zIndex: 10,
-    left: 18,
-    right: 18,
-    bottom: 72,
-    padding: 18,
-    borderWidth: 2,
-    borderColor: YELLOW,
-    borderRadius: radius.lg + 2,
-    backgroundColor: 'rgba(24,26,24,0.94)',
-  },
-
-  modalBackdrop: {
-    ...ABS_FILL,
-    zIndex: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: 'rgba(38,39,37,0.72)',
-  },
-  helpModal: {
+  mockCard: {
     width: '100%',
-    maxHeight: '92%',
-    padding: 20,
-    paddingTop: 28,
-    borderRadius: 26,
-    backgroundColor: colors.paper,
-  },
-  modalBody: { marginTop: 11, marginBottom: 20 },
-  modalOptions: { gap: 10 },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    minHeight: 62,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 14,
-    borderWidth: 2,
-    borderColor: '#dedad0',
-    borderRadius: radius.md + 1,
-    backgroundColor: colors.white,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
-  modalOptionEmphasis: { borderColor: colors.accentBorder, backgroundColor: colors.yellowSoft },
-  modalOptionCenter: { justifyContent: 'center' },
-  modalClose: {
-    position: 'absolute',
-    top: 13,
-    right: 13,
-    width: 46,
-    height: 46,
+  mockBody: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  mockPhoto: { width: 48, height: 58, borderRadius: 8, backgroundColor: '#EEE8D8' },
+
+  mockToggle: { alignSelf: 'center', paddingVertical: 8 },
+  mockRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  mockBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
+  },
+  mockBtnOn: { borderColor: YELLOW, backgroundColor: CREAM },
+
+  helpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  helpPrimary: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: '#efede7',
-    zIndex: 1,
+    paddingVertical: 18,
+    borderRadius: 16,
+    backgroundColor: YELLOW,
   },
+  helpQuiet: { alignItems: 'center', paddingVertical: 12 },
 });

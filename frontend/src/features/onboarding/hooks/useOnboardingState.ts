@@ -111,6 +111,10 @@ export function useOnboardingState() {
     );
   };
 
+  const setAllCertificateTerms = (value: boolean) => {
+    setCertificateTerms((current) => current.map(() => value));
+  };
+
   const sendOtp = () => {
     setOtpSent(true);
     setOtpSendCount((count) => count + 1);
@@ -335,6 +339,7 @@ export function useOnboardingState() {
     verifyOtp,
     certificateTerms,
     toggleCertificateTerm,
+    setAllCertificateTerms,
     faceStatus,
     faceVerified,
     startFaceCheck,

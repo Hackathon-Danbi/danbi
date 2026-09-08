@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { CloudMascot } from '@/components/icons/CloudMascot';
 import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
 import { speak, stop } from '@/lib/speech/tts';
@@ -64,8 +63,13 @@ export function WelcomeModeScreen({ onSelect }: Props) {
           </AppText>
         </View>
 
-        <View style={styles.mascot}>
-          <CloudMascot />
+        <View style={styles.logoWrap}>
+          <Image
+            accessibilityLabel="단비"
+            source={require('@/assets/images/danbi-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.actions}>
@@ -133,11 +137,16 @@ const styles = StyleSheet.create({
   copyBody: {
     marginTop: 24,
   },
-  mascot: {
+  logoWrap: {
     flex: 1,
-    minHeight: 210,
+    minHeight: 180,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: '100%',
+    maxWidth: 280,
+    height: 180,
   },
   actions: {
     gap: 14,

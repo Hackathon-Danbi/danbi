@@ -123,12 +123,16 @@ export function OnboardingHeader({
   onBack,
   onExit,
   showBack = true,
+  onVoice,
+  isReading,
 }: {
   title: string;
   progress: number;
   onBack: () => void;
   onExit: () => void;
   showBack?: boolean;
+  onVoice?: () => void;
+  isReading?: boolean;
 }) {
   const pct = Math.max(0, Math.min(100, progress));
   return (
@@ -156,6 +160,17 @@ export function OnboardingHeader({
         <AppText size={17} weight={900} color={INK}>
           {title}
         </AppText>
+        {onVoice ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={isReading ? '읽어주는 중, 멈추기' : '이 화면 읽어주기'}
+            onPress={onVoice}
+            style={s.headerVoice}
+            hitSlop={10}
+          >
+            <OnboardingIcon name="volume" size={20} color={isReading ? INK : '#888'} />
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="가입 그만하기"
@@ -218,6 +233,39 @@ export function GuideText({ children }: { children: string }) {
     <AppText size={15} weight={400} color="#888" lineHeight={22} style={s.guide}>
       {children}
     </AppText>
+  );
+}
+
+const CERT_STEPS = ['신분증', '얼굴', '계좌', '비밀번호'] as const;
+
+/** 국민인증서 4단계를 모든 발급 화면에서 같은 위치에 보여 준다. */
+export function CertProgress({ current }: { current: 0 | 1 | 2 | 3 | 4 }) {
+  return (
+    <View style={s.certProgress}>
+      {CERT_STEPS.map((label, i) => {
+        const n = (i + 1) as 1 | 2 | 3 | 4;
+        const done = current > n;
+        const active = current === n;
+        return (
+          <View
+            key={label}
+            style={[s.certChip, (done || active) && s.certChipOn, active && s.certChipActive]}
+          >
+            <AppText size={12} weight={800} color={INK}>
+              {label}
+            </AppText>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+export function HeroMark({ icon }: { icon: string }) {
+  return (
+    <View style={s.heroMark}>
+      <OnboardingIcon name={icon} size={34} color={INK} />
+    </View>
   );
 }
 
@@ -554,7 +602,28 @@ const s = StyleSheet.create({
     backgroundColor: '#fff',
   },
   headerBack: { position: 'absolute', left: 16, padding: 6 },
+  headerVoice: { position: 'absolute', right: 48, padding: 6 },
   headerExit: { position: 'absolute', right: 16, padding: 6 },
+  certProgress: { flexDirection: 'row', gap: 6, marginTop: 4, marginBottom: 4 },
+  certChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
+    backgroundColor: '#fff',
+  },
+  certChipOn: { borderColor: BORDER, backgroundColor: CREAM },
+  certChipActive: { borderColor: YELLOW, backgroundColor: YELLOW },
+  heroMark: {
+    width: 68,
+    height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    backgroundColor: YELLOW,
+  },
   progressTrack: { height: 4, backgroundColor: '#F1F1F1' },
   progressFill: { height: '100%', backgroundColor: YELLOW },
 
