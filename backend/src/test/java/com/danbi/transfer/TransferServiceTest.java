@@ -79,7 +79,7 @@ class TransferServiceTest {
 	private Account account(String number, Long productId, AccountStatus status) {
 		return Account.builder()
 			.userId(1L)
-			.productId(productId)
+			.product(accountProductRepository.getReferenceById(productId))
 			.accountName("주거래 입출금")
 			.accountNumber(number)
 			.balance(2_000_000L)
