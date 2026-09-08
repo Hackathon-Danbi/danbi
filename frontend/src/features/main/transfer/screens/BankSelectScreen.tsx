@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
-import { BANKS } from '../../data';
-import { INK, YELLOW } from '../../theme';
+import { INK } from '../../theme';
+import { BankGrid } from '../../components/BankGrid';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 import { NavBar } from '../../components/NavBar';
 
@@ -34,26 +34,13 @@ export function BankSelectScreen({
         </AppText>
 
         <PulseHighlight active={helpTarget === 'bankGrid'} borderRadius={14}>
-          <View style={styles.grid}>
-            {BANKS.map((b) => {
-              const sel = picked === b.name;
-              return (
-                <Pressable
-                  key={b.name}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setPicked(b.name);
-                    setTimeout(() => onSelect(b.name), 180);
-                  }}
-                  style={[styles.bank, sel && styles.bankSel]}
-                >
-                  <AppText size={16} weight={800} color={INK}>
-                    {b.name}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
+          <BankGrid
+            selected={picked}
+            onSelect={(bank) => {
+              setPicked(bank);
+              setTimeout(() => onSelect(bank), 180);
+            }}
+          />
         </PulseHighlight>
       </View>
       <FloatingHomeButton onGoHome={onBack} />
@@ -66,25 +53,4 @@ const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 28 },
   mb8: { marginBottom: 8 },
   mb26: { marginBottom: 26 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 12,
-  },
-  bank: {
-    width: '47.5%',
-    flexGrow: 1,
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1.8,
-    borderColor: '#E8E8E8',
-  },
-  bankSel: {
-    borderWidth: 2,
-    borderColor: YELLOW,
-  },
 });
