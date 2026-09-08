@@ -3,11 +3,15 @@ package com.danbi.domain.onboarding.service;
 import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationRequest;
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationResponse;
+import com.danbi.domain.onboarding.dto.ResendPhoneVerificationRequest;
+import com.danbi.domain.onboarding.dto.ResendPhoneVerificationResponse;
 import com.danbi.domain.onboarding.entity.OnboardingSession;
 import com.danbi.domain.onboarding.entity.PhoneVerificationSession;
 import com.danbi.domain.onboarding.exception.InvalidOnboardingStepException;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.exception.PhoneVerificationRequestLimitExceededException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationSessionMismatchException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationSessionNotFoundException;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import com.danbi.domain.onboarding.repository.PhoneVerificationSessionRepository;
 import java.time.Clock;
@@ -55,6 +59,35 @@ public class PhoneVerificationService {
 		);
 	}
 
+	@Transactional
+	public ResendPhoneVerificationResponse resendVerification(
+		ResendPhoneVerificationRequest request
+	) {
+		OnboardingSession onboardingSession = onboardingSessionRepository
+			.findById(request.onboardingSessionId())
+			.orElseThrow(() -> new OnboardingSessionNotFoundException(request.onboardingSessionId()));
+		PhoneVerificationSession verificationSession = phoneVerificationSessionRepository
+			.findById(request.verificationSessionId())
+			.orElseThrow(() -> new PhoneVerificationSessionNotFoundException(
+				request.verificationSessionId()
+			));
+		validateSessionOwner(verificationSession, onboardingSession);
+		validateRequestLimit(verificationSession);
+
+		verificationSession.resend(
+			verificationCodeGenerator.generate(),
+			Instant.now(clock).plusSeconds(EXPIRES_IN_SECONDS)
+		);
+		phoneVerificationSessionRepository.save(verificationSession);
+
+		return new ResendPhoneVerificationResponse(
+			onboardingSession.getOnboardingSessionId(),
+			verificationSession.getVerificationSessionId(),
+			EXPIRES_IN_SECONDS,
+			MAX_REQUEST_COUNT - verificationSession.getRequestCount()
+		);
+	}
+
 	private PhoneVerificationSession startVerification(
 		OnboardingSession onboardingSession,
 		RequestPhoneVerificationRequest request
@@ -73,9 +106,7 @@ public class PhoneVerificationService {
 		PhoneVerificationSession existing,
 		RequestPhoneVerificationRequest request
 	) {
-		if (existing.getRequestCount() >= MAX_REQUEST_COUNT) {
-			throw new PhoneVerificationRequestLimitExceededException();
-		}
+		validateRequestLimit(existing);
 
 		return existing.requestAgain(
 			request.carrier(),
@@ -88,6 +119,22 @@ public class PhoneVerificationService {
 	private void validateNameSaved(OnboardingSession onboardingSession) {
 		if (onboardingSession.getName() == null || onboardingSession.getName().isBlank()) {
 			throw new InvalidOnboardingStepException(OnboardingStep.NAME_INPUT);
+		}
+	}
+
+	private void validateSessionOwner(
+		PhoneVerificationSession verificationSession,
+		OnboardingSession onboardingSession
+	) {
+		if (!verificationSession.getOnboardingSessionId()
+			.equals(onboardingSession.getOnboardingSessionId())) {
+			throw new PhoneVerificationSessionMismatchException();
+		}
+	}
+
+	private void validateRequestLimit(PhoneVerificationSession verificationSession) {
+		if (verificationSession.getRequestCount() >= MAX_REQUEST_COUNT) {
+			throw new PhoneVerificationRequestLimitExceededException();
 		}
 	}
 

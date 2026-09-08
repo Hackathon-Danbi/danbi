@@ -35,4 +35,20 @@ public class OnboardingExceptionHandler {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
+
+	@ExceptionHandler(PhoneVerificationSessionNotFoundException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleVerificationSessionNotFound(
+		PhoneVerificationSessionNotFoundException e
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(PhoneVerificationSessionMismatchException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleVerificationSessionMismatch(
+		PhoneVerificationSessionMismatchException e
+	) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
 }
