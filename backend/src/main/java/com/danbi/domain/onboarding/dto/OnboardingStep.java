@@ -1,4 +1,4 @@
-package com.danbi.domain.onboarding.entity;
+package com.danbi.domain.onboarding.dto;
 
 public enum OnboardingStep {
 	NAME_INPUT,

@@ -2,8 +2,6 @@ package com.danbi.domain.onboarding.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -18,26 +16,20 @@ public class OnboardingSession {
 	@Column(name = "name", length = 50)
 	private String name;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "onboarding_step", length = 40, nullable = false)
-	private OnboardingStep step;
-
 	protected OnboardingSession() {
 	}
 
-	private OnboardingSession(String id, String name, OnboardingStep step) {
+	private OnboardingSession(String id, String name) {
 		this.id = id;
 		this.name = name;
-		this.step = step;
 	}
 
 	public static OnboardingSession start(String id) {
-		return new OnboardingSession(id, null, OnboardingStep.NAME_INPUT);
+		return new OnboardingSession(id, null);
 	}
 
 	public OnboardingSession saveName(String name) {
 		this.name = name.strip();
-		this.step = OnboardingStep.PHONE_OWNERSHIP;
 		return this;
 	}
 
@@ -47,9 +39,5 @@ public class OnboardingSession {
 
 	public String name() {
 		return name;
-	}
-
-	public OnboardingStep step() {
-		return step;
 	}
 }

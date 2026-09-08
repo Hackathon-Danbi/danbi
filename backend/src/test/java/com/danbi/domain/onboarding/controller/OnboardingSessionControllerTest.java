@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
-import com.danbi.domain.onboarding.entity.OnboardingStep;
+import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.service.OnboardingSessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

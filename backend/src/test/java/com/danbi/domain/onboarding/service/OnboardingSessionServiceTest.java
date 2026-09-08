@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
+import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.entity.OnboardingSession;
-import com.danbi.domain.onboarding.entity.OnboardingStep;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +34,7 @@ class OnboardingSessionServiceTest {
 		assertThat(response.estimatedMinutes()).isEqualTo(15);
 
 		OnboardingSession storedSession = repository.findById(response.onboardingSessionId()).orElseThrow();
-		assertThat(storedSession.step()).isEqualTo(OnboardingStep.NAME_INPUT);
+		assertThat(storedSession.name()).isNull();
 	}
 
 	@Test
@@ -57,7 +57,6 @@ class OnboardingSessionServiceTest {
 		assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.PHONE_OWNERSHIP);
 		OnboardingSession storedSession = repository.findById(created.onboardingSessionId()).orElseThrow();
 		assertThat(storedSession.name()).isEqualTo("홍길동");
-		assertThat(storedSession.step()).isEqualTo(OnboardingStep.PHONE_OWNERSHIP);
 	}
 
 	@Test

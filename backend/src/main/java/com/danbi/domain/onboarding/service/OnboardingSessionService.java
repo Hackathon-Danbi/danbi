@@ -1,6 +1,7 @@
 package com.danbi.domain.onboarding.service;
 
 import com.danbi.domain.onboarding.dto.CreateOnboardingSessionResponse;
+import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
 import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
@@ -29,7 +30,7 @@ public class OnboardingSessionService {
 
 		return new CreateOnboardingSessionResponse(
 			session.id(),
-			session.step(),
+			OnboardingStep.NAME_INPUT,
 			ESTIMATED_MINUTES
 		);
 	}
@@ -44,7 +45,7 @@ public class OnboardingSessionService {
 		return new SaveOnboardingNameResponse(
 			updatedSession.id(),
 			updatedSession.name(),
-			updatedSession.step()
+			OnboardingStep.PHONE_OWNERSHIP
 		);
 	}
 
