@@ -6,6 +6,15 @@ import {
   resolveEntryRoute,
 } from '../src/lib/navigation';
 import { TX_RECORDS } from '../src/features/main/data';
+import { RECENT_RECIPIENT_CANDIDATES } from '../src/features/main/data';
+import {
+  filterUnsavedRecentRecipients,
+  findRecipientBySpokenName,
+  recipientDisplayName,
+  sanitizeSavedRecipients,
+  saveRecipient,
+  updateRecipientNickname,
+} from '../src/features/main/savedRecipients';
 import {
   applyTransactionReviews,
   filterTransactionsByMonth,
@@ -53,6 +62,46 @@ test('transaction month selection filters the rendered records', () => {
   assert.equal(filterTransactionsByMonth(TX_RECORDS, 2026 * 12 + 6).length, 0);
 });
 
+test('saved recipients support aliases and reject duplicate account saves', () => {
+  const initial = sanitizeSavedRecipients([
+    {
+      savedRecipientId: 7,
+      recipientBankCode: '004',
+      recipientBankName: 'KB국민은행',
+      recipientAccountNumber: '123-456',
+      recipientName: '김민수',
+      nickname: null,
+    },
+    { savedRecipientId: 'invalid' },
+  ]);
+  const renamed = updateRecipientNickname(initial, 7, '아들');
+  const duplicateSave = saveRecipient(renamed, {
+    recipientBankCode: '004',
+    recipientBankName: 'KB국민은행',
+    recipientAccountNumber: '123456',
+    recipientName: '김민수',
+    nickname: '민수',
+  });
+
+  assert.equal(initial.length, 1);
+  assert.equal(recipientDisplayName(renamed[0]), '아들');
+  assert.equal(findRecipientBySpokenName(renamed, '아들')?.savedRecipientId, 7);
+  assert.equal(duplicateSave.length, 1);
+  assert.equal(recipientDisplayName(duplicateSave[0]), '민수');
+});
+
+test('saving a frequent recent account removes it from recommendations', () => {
+  const candidate = RECENT_RECIPIENT_CANDIDATES[0];
+  const saved = saveRecipient([], { ...candidate, nickname: null });
+
+  assert.equal(filterUnsavedRecentRecipients([], RECENT_RECIPIENT_CANDIDATES).length, 2);
+  assert.deepEqual(
+    filterUnsavedRecentRecipients(saved, RECENT_RECIPIENT_CANDIDATES).map(
+      (recipient) => recipient.recipientName,
+    ),
+    ['최영호'],
+  );
+});
 test('deposit protection quiz reflects the current 100 million won limit', () => {
   const question = QUIZ_QUESTIONS.find((item) => item.id === 14);
   assert.equal(question?.correctIndex, 0);

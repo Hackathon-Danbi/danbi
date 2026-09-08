@@ -1,19 +1,53 @@
-import type { TxRecord } from './types';
+import type { RecentRecipientCandidate, SavedRecipient, TxRecord } from './types';
 
 /** danbi_jj app/features/main/data.ts 이식. */
 
 export const BANKS = [
-  { name: 'KB국민은행', short: 'KB', bg: '#F5C100', fg: '#111' },
-  { name: '신한은행', short: '신', bg: '#E85C2A', fg: '#fff' },
-  { name: '우리은행', short: '우', bg: '#0073CF', fg: '#fff' },
-  { name: '하나은행', short: '하', bg: '#009B63', fg: '#fff' },
-  { name: 'NH농협은행', short: 'NH', bg: '#00A0C4', fg: '#fff' },
-  { name: '카카오뱅크', short: '카', bg: '#FEE500', fg: '#111' },
+  { bankCode: '004', name: 'KB국민은행', short: 'KB', bg: '#F5C100', fg: '#111' },
+  { bankCode: '088', name: '신한은행', short: '신', bg: '#E85C2A', fg: '#fff' },
+  { bankCode: '020', name: '우리은행', short: '우', bg: '#0073CF', fg: '#fff' },
+  { bankCode: '081', name: '하나은행', short: '하', bg: '#009B63', fg: '#fff' },
+  { bankCode: '011', name: 'NH농협은행', short: 'NH', bg: '#00A0C4', fg: '#fff' },
+  { bankCode: '090', name: '카카오뱅크', short: '카', bg: '#FEE500', fg: '#111' },
 ];
 
-export const CONTACTS = [
-  { name: '김민수', bank: 'KB국민은행', account: '123-456-789012', initial: '김', bg: '#F5C100', fg: '#111' },
-  { name: '이영희', bank: '신한은행', account: '110-234-567890', initial: '이', bg: '#E85C2A', fg: '#fff' },
+export const CONTACTS: SavedRecipient[] = [
+  {
+    savedRecipientId: 7,
+    recipientName: '김민수',
+    recipientBankCode: '004',
+    recipientBankName: 'KB국민은행',
+    recipientAccountNumber: '123-456-789012',
+    nickname: null,
+  },
+  {
+    savedRecipientId: 8,
+    recipientName: '이영희',
+    recipientBankCode: '088',
+    recipientBankName: '신한은행',
+    recipientAccountNumber: '110-234-567890',
+    nickname: '영희',
+  },
+];
+
+/** 실제 연동 전, 최근 송금 이력을 계좌별로 집계한 추천 목데이터. */
+export const RECENT_RECIPIENT_CANDIDATES: RecentRecipientCandidate[] = [
+  {
+    recipientName: '박수진',
+    recipientBankCode: '020',
+    recipientBankName: '우리은행',
+    recipientAccountNumber: '1002-456-789012',
+    recentTransferCount: 5,
+    lastTransferredAt: '8월 27일',
+  },
+  {
+    recipientName: '최영호',
+    recipientBankCode: '081',
+    recipientBankName: '하나은행',
+    recipientAccountNumber: '357-910-246813',
+    recentTransferCount: 3,
+    lastTransferredAt: '8월 24일',
+  },
 ];
 
 export const TX_RECORDS: TxRecord[] = [
