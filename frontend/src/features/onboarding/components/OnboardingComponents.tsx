@@ -464,9 +464,15 @@ export function AgreementCard({
           </AppText>
         </View>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={onDetail} style={s.agreeDetail} hitSlop={6}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${title} 전체 보기`}
+        onPress={onDetail}
+        style={s.agreeDetail}
+        hitSlop={6}
+      >
         <AppText size={13} weight={700} color="#888">
-          보기 ›
+          전체 보기
         </AppText>
       </Pressable>
     </View>
@@ -571,6 +577,19 @@ export function AgreementDetail({
   const title = term?.title ?? '';
   return (
     <Sheet visible={visible} onClose={onClose} title={title} a11yLabel={`${title} 상세 내용`} tall>
+      {term?.summary ? (
+        <View style={[s.notice, s.noticeNeutral, s.summaryBox]}>
+          <AppText size={13} weight={800} color="#7A6000">
+            쉬운 설명
+          </AppText>
+          <AppText size={16} weight={600} color={INK} lineHeight={24} style={s.mt3}>
+            {term.summary}
+          </AppText>
+        </View>
+      ) : null}
+      <AppText size={13} weight={700} color="#888" style={s.fullTermsLabel}>
+        전체 약관
+      </AppText>
       <ScrollView
         style={[s.detailScroll, Platform.OS === 'web' ? s.detailScrollWeb : null]}
         contentContainerStyle={s.detailScrollContent}
@@ -584,11 +603,6 @@ export function AgreementDetail({
         </AppText>
       </ScrollView>
       <View style={s.detailFooter}>
-        <View style={[s.notice, s.noticeNeutral, s.mb16, s.mt3]}>
-          <AppText size={13} lineHeight={19} color="#7A6000">
-            동의하기 전에 내용을 천천히 읽어보세요. 궁금한 점은 직원에게 물어볼 수 있어요.
-          </AppText>
-        </View>
         <Pressable accessibilityRole="button" onPress={onClose} style={s.primaryBtn}>
           <AppText size={17} weight={900} color={INK}>
             확인했어요
@@ -844,8 +858,10 @@ const s = StyleSheet.create({
   quietBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
   pressed: { opacity: 0.85 },
 
-  detailScroll: { flex: 1, minHeight: 0, marginTop: 10, marginBottom: 8 },
+  detailScroll: { flex: 1, minHeight: 0, marginTop: 8, marginBottom: 8 },
   detailScrollWeb: { height: 0, flexGrow: 1 },
   detailScrollContent: { paddingBottom: 16, flexGrow: 0 },
-  detailFooter: { flexShrink: 0 },
+  detailFooter: { flexShrink: 0, paddingTop: 4 },
+  summaryBox: { marginTop: 4, marginBottom: 4, flexShrink: 0 },
+  fullTermsLabel: { marginTop: 10, flexShrink: 0 },
 });

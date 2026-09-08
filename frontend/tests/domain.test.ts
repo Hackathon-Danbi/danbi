@@ -214,9 +214,13 @@ test('onboarding resume never skips a sensitive verification boundary', () => {
 test('onboarding terms include KB certificate, electronic document, phone, and face full text', () => {
   assert.match(TERMS['kb-certificate'].body, /KB국민인증서 서비스/);
   assert.match(TERMS['kb-certificate'].body, /제1조 \(목적\)/);
+  assert.match(TERMS['kb-certificate'].summary, /로그인, 본인확인과 전자서명/);
   assert.match(TERMS['electronic-document'].body, /전자문서 중계서비스/);
+  assert.match(TERMS['electronic-document'].summary, /동의하지 않아도 기본 가입에는 영향이 없습니다/);
   assert.match(TERMS['phone-auth'].body, /고유식별정보 처리 동의/);
   assert.match(TERMS['phone-auth'].body, /휴대폰본인확인/);
+  assert.match(TERMS['phone-auth'].summary, /본인 명의인지 확인/);
   assert.match(TERMS['face-auth'].body, /얼굴확인\(인증거래용\)/);
   assert.match(TERMS['face-auth'].body, /얼굴사진 특징정보/);
+  assert.match(TERMS['face-auth'].summary, /본인확인이 끝나면 바로 삭제/);
 });
