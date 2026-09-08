@@ -1,6 +1,7 @@
 package com.danbi.domain.onboarding.exception;
 
 import com.danbi.domain.onboarding.controller.CertificateIssuanceController;
+import com.danbi.domain.onboarding.controller.AccountVerificationTargetController;
 import com.danbi.domain.onboarding.controller.FaceVerificationController;
 import com.danbi.domain.onboarding.controller.IdCardScanController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
 	CertificateIssuanceController.class,
+	AccountVerificationTargetController.class,
 	FaceVerificationController.class,
 	IdCardScanController.class,
 	OnboardingSessionController.class,
@@ -172,6 +174,22 @@ public class OnboardingExceptionHandler {
 		FaceQualityCheckFailedException e
 	) {
 		return ResponseEntity.unprocessableContent()
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(UnsupportedBankException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleUnsupportedBank(
+		UnsupportedBankException e
+	) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(AccountVerificationConflictException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleAccountVerificationConflict(
+		AccountVerificationConflictException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
 }
