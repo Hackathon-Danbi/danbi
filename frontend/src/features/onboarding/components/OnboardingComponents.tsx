@@ -254,7 +254,7 @@ export function CertProgress({ current }: { current: 0 | 1 | 2 | 3 | 4 }) {
             key={label}
             style={[s.certChip, (done || active) && s.certChipOn, active && s.certChipActive]}
           >
-            <AppText size={12} weight={800} color={INK}>
+            <AppText size={12} weight={800} color={INK} numberOfLines={1}>
               {label}
             </AppText>
           </View>
@@ -532,7 +532,7 @@ export function BottomActionArea({
           pressed && !primaryDisabled && s.pressed,
         ]}
       >
-        <AppText size={17} weight={900} color={primaryDisabled ? '#AAA' : INK}>
+        <AppText size={17} weight={900} color={primaryDisabled ? '#AAA' : INK} numberOfLines={1} style={s.btnLabel}>
           {primary}
         </AppText>
       </Pressable>
@@ -542,7 +542,7 @@ export function BottomActionArea({
           onPress={onSecondary}
           style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}
         >
-          <AppText size={17} weight={900} color={INK}>
+          <AppText size={17} weight={900} color={INK} numberOfLines={1} style={s.btnLabel}>
             {secondary}
           </AppText>
         </Pressable>
@@ -813,25 +813,33 @@ const s = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 14,
     backgroundColor: '#fff',
+    flexShrink: 0,
+    zIndex: 2,
+    elevation: 8,
   },
+  btnLabel: { includeFontPadding: false },
   primaryBtn: {
     width: '100%',
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderRadius: 16,
     backgroundColor: YELLOW,
+    flexShrink: 0,
   },
   primaryBtnOff: { backgroundColor: '#F0F0F0' },
   secondaryBtn: {
     width: '100%',
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#EBEBEB',
     backgroundColor: '#fff',
+    flexShrink: 0,
   },
   quietBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
   pressed: { opacity: 0.85 },
