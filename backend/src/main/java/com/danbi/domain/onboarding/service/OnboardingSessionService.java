@@ -7,6 +7,7 @@ import com.danbi.domain.onboarding.dto.SaveOnboardingNameResponse;
 import com.danbi.domain.onboarding.exception.OnboardingSessionNotFoundException;
 import com.danbi.domain.onboarding.entity.OnboardingSession;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
+import com.danbi.domain.onboarding.repository.PhoneVerificationSessionRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class OnboardingSessionService {
 	private static final int ESTIMATED_MINUTES = 15;
 
 	private final OnboardingSessionRepository onboardingSessionRepository;
+	private final PhoneVerificationSessionRepository phoneVerificationSessionRepository;
 
 	@Transactional
 	public CreateOnboardingSessionResponse createSession() {
@@ -39,6 +41,9 @@ public class OnboardingSessionService {
 		OnboardingSession session = onboardingSessionRepository.findById(request.onboardingSessionId())
 			.orElseThrow(() -> new OnboardingSessionNotFoundException(request.onboardingSessionId()));
 		OnboardingSession updatedSession = session.saveName(request.name());
+		phoneVerificationSessionRepository.deleteByOnboardingSessionId(
+			session.getOnboardingSessionId()
+		);
 		onboardingSessionRepository.save(updatedSession);
 
 		return new SaveOnboardingNameResponse(
