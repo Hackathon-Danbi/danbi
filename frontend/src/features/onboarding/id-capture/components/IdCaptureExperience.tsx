@@ -1,17 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View, Vibration } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  cancelAnimation,
-} from 'react-native-reanimated';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import type { CameraView } from 'expo-camera';
 
 import { AppText } from '@/components/ui/AppText';
 import { Sheet } from '@/components/ui/Sheet';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
+import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import {
   BottomActionArea,
   CertProgress,
@@ -19,23 +13,32 @@ import {
   PageTitle,
   StepBadge,
 } from '../../components/OnboardingComponents';
-import { CAPTURE_GUIDANCE } from '../constants';
-import type { IdCaptureObservation, IdCaptureStatus } from '../types';
-import { resolvePrimaryStatus } from '../utils';
-import { useCaptureGuidance } from '../hooks/useCaptureGuidance';
+import {
+  CameraPermissionGate,
+  LiveCameraPreview,
+  useCameraCapture,
+  useOnboardingCamera,
+} from '../../camera/LiveCameraPreview';
 
 type Phase = 'camera' | 'review';
 type HelpKind = 'fit' | 'blur' | 'glare' | 'full';
 type Coach = { kind: HelpKind; step: number } | null;
 
-const MOCK_STATUS_OPTIONS: { status: IdCaptureStatus; label: string }[] = [
-  { status: 'TOO_CLOSE', label: '가까움' },
-  { status: 'TOO_FAR', label: '멈' },
-  { status: 'CROPPED', label: '잘림' },
-  { status: 'BLURRY', label: '흐림' },
-  { status: 'GLARE', label: '반사' },
-  { status: 'GOOD_POSITION', label: '좋음' },
-];
+/** 주민등록증 비율에 가깝게, 버튼이 밀리지 않도록 남는 칸 안에 맞춘다. */
+const ID_ASPECT = 1.48;
+const ID_MAX_WIDTH = 360;
+const ID_FRAME_PAD = 14;
+
+function fitIdFrame(slotWidth: number, slotHeight: number) {
+  if (slotWidth <= 0 || slotHeight <= 0) return null;
+  let width = Math.min(slotWidth, ID_MAX_WIDTH);
+  let height = width / ID_ASPECT;
+  if (height > slotHeight) {
+    height = slotHeight;
+    width = Math.min(height * ID_ASPECT, slotWidth);
+  }
+  return { width: Math.round(width), height: Math.round(height) };
+}
 
 const COACH_STEPS: Record<HelpKind, string[]> = {
   fit: [
@@ -64,68 +67,6 @@ const COACH_STEPS: Record<HelpKind, string[]> = {
   ],
 };
 
-function arrowFor(observation: IdCaptureObservation, status: IdCaptureStatus) {
-  if (status === 'CROPPED') {
-    return { left: '←', right: '→', up: '↑', down: '↓' }[observation.cropDirection ?? 'right'];
-  }
-  if (status === 'GLARE') return observation.glareDirection === 'left' ? '←' : '→';
-  return '';
-}
-
-function MockIdCard() {
-  return (
-    <View style={s.mockCard} accessibilityLabel="촬영된 신분증 예시">
-      <AppText size={16} weight={900} color={INK}>
-        주민등록증
-      </AppText>
-      <View style={s.mockBody}>
-        <View style={s.mockPhoto} />
-        <View style={s.flex1}>
-          <AppText size={18} weight={800} color={INK}>
-            홍 길 동
-          </AppText>
-          <AppText size={13} color="#888" style={s.mt4}>
-            900101-1******
-          </AppText>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function PulseArrow({ char }: { char: string }) {
-  const t = useSharedValue(0);
-  useEffect(() => {
-    t.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }), -1, true);
-    return () => cancelAnimation(t);
-  }, [t]);
-  const style = useAnimatedStyle(() => ({
-    opacity: 0.72 + t.value * 0.28,
-    transform: [{ translateX: -4 + t.value * 8 }],
-  }));
-  return (
-    <Animated.View style={style} pointerEvents="none">
-      <AppText size={40} weight={900} color={YELLOW}>
-        {char}
-      </AppText>
-    </Animated.View>
-  );
-}
-
-function HoldIndicator() {
-  const t = useSharedValue(0);
-  useEffect(() => {
-    t.value = withTiming(1, { duration: 2100, easing: Easing.linear });
-    return () => cancelAnimation(t);
-  }, [t]);
-  const style = useAnimatedStyle(() => ({ transform: [{ scaleX: t.value }] }));
-  return (
-    <View style={s.holdTrack} pointerEvents="none">
-      <Animated.View style={[s.holdFill, style]} />
-    </View>
-  );
-}
-
 export function IdCaptureExperience({
   initiallyCaptured,
   onCaptured,
@@ -137,114 +78,93 @@ export function IdCaptureExperience({
   onAccepted: () => void;
   onRetake: () => void;
 }) {
+  const cameraRef = useRef<CameraView>(null);
+  const takePhoto = useCameraCapture(cameraRef);
+  const camera = useOnboardingCamera();
   const [phase, setPhase] = useState<Phase>(initiallyCaptured ? 'review' : 'camera');
-  const [observation, setObservation] = useState<IdCaptureObservation>({
-    issues: ['TOO_FAR'],
-    cropDirection: 'right',
-    glareDirection: 'right',
-  });
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showStuckHelp, setShowStuckHelp] = useState(false);
   const [coach, setCoach] = useState<Coach>(null);
-  const [mockOpen, setMockOpen] = useState(false);
-  const [mockManuallyChanged, setMockManuallyChanged] = useState(false);
-  const [issueCount, setIssueCount] = useState(0);
-  const previousIssueRef = useRef<IdCaptureStatus | null>(null);
+  const [slot, setSlot] = useState({ width: 0, height: 0 });
+  const frameBox = useMemo(() => fitIdFrame(slot.width, slot.height), [slot.height, slot.width]);
 
-  const captureFrame = useCallback(() => {
-    setPhase('review');
-    onCaptured();
-  }, [onCaptured]);
-
-  const { stableStatus, speak, stopSpeaking, resetCapture } = useCaptureGuidance({
-    active: phase === 'camera' && !showHelp && !showStuckHelp && !coach,
-    observation,
-    onAutoCapture: captureFrame,
-  });
-
-  const primaryStatus = stableStatus;
-  const primaryGuidance = CAPTURE_GUIDANCE[primaryStatus];
-  const directionArrow = arrowFor(observation, primaryStatus);
   const coachingText = coach ? COACH_STEPS[coach.kind][coach.step] : '';
-  const good = primaryStatus === 'GOOD_POSITION' || primaryStatus === 'CAPTURED';
+
+  const renderFrame = (inner: ReactNode) => (
+    <View
+      style={s.frameSlot}
+      onLayout={(event) => {
+        const { width, height } = event.nativeEvent.layout;
+        setSlot((current) =>
+          current.width === width && current.height === height ? current : { width, height },
+        );
+      }}
+    >
+      <View style={[s.frame, frameBox]} accessibilityLabel="신분증을 맞출 촬영 영역">
+        <View style={s.viewport}>{inner}</View>
+        <View pointerEvents="none" style={[s.corner, s.cornerTL]} />
+        <View pointerEvents="none" style={[s.corner, s.cornerTR]} />
+        <View pointerEvents="none" style={[s.corner, s.cornerBL]} />
+        <View pointerEvents="none" style={[s.corner, s.cornerBR]} />
+      </View>
+    </View>
+  );
 
   useEffect(() => {
-    if (phase !== 'camera' || mockManuallyChanged || coach) return;
-    const timer = setTimeout(() => setObservation({ issues: ['GOOD_POSITION'] }), 3200);
-    return () => clearTimeout(timer);
-  }, [coach, mockManuallyChanged, phase]);
-
-  useEffect(() => {
-    if (phase !== 'camera') return;
-    if (primaryStatus === 'GOOD_POSITION' || primaryStatus === 'CAPTURED') {
-      previousIssueRef.current = primaryStatus;
-      return;
-    }
-    if (previousIssueRef.current && previousIssueRef.current !== primaryStatus) {
-      setIssueCount((count) => count + 1);
-    }
-    previousIssueRef.current = primaryStatus;
-  }, [phase, primaryStatus]);
-
-  useEffect(() => {
-    if (phase !== 'camera' || showHelp || showStuckHelp || coach) return;
-    const timer = setTimeout(() => setShowStuckHelp(true), 20000);
-    return () => clearTimeout(timer);
-  }, [coach, phase, primaryStatus, showHelp, showStuckHelp]);
+    if (phase !== 'camera' || !camera.granted || coach) return;
+    ttsSpeak('신분증을 노란 네모 안에 맞춰주세요.');
+    return () => ttsStop();
+  }, [camera.granted, coach, phase]);
 
   useEffect(() => {
     if (!coach) return;
-    stopSpeaking();
+    ttsStop();
     const text = COACH_STEPS[coach.kind][coach.step];
-    const speakTimer = setTimeout(() => speak(text, true), 350);
+    const speakTimer = setTimeout(() => ttsSpeak(text), 350);
     const lastStep = COACH_STEPS[coach.kind].length - 1;
-    const nextTimer = setTimeout(
-      () => {
-        if (coach.step < lastStep) {
-          setCoach({ ...coach, step: coach.step + 1 });
-          return;
-        }
-        setObservation({ issues: ['GOOD_POSITION'] });
-        setCoach(null);
-      },
-      2000,
-    );
+    const nextTimer = setTimeout(() => {
+      if (coach.step < lastStep) {
+        setCoach({ ...coach, step: coach.step + 1 });
+        return;
+      }
+      setCoach(null);
+    }, 2000);
     return () => {
       clearTimeout(speakTimer);
       clearTimeout(nextTimer);
     };
-  }, [coach, speak, stopSpeaking]);
+  }, [coach]);
 
-  useEffect(() => {
-    if (primaryStatus === 'CAPTURED') Vibration.vibrate(55);
-  }, [primaryStatus]);
-
-  const chooseMockStatus = (status: IdCaptureStatus) => {
-    stopSpeaking();
-    resetCapture();
-    setMockManuallyChanged(true);
-    setObservation({
-      issues: [status],
-      cropDirection: status === 'CROPPED' ? 'right' : undefined,
-      glareDirection: status === 'GLARE' ? 'right' : undefined,
-    });
-  };
+  const captureFrame = useCallback(async () => {
+    ttsStop();
+    setCaptureError('');
+    setBusy(true);
+    const uri = await takePhoto();
+    setBusy(false);
+    if (!uri) {
+      setCaptureError('사진을 찍지 못했어요. 다시 눌러주세요.');
+      return;
+    }
+    setPhotoUri(uri);
+    setPhase('review');
+    onCaptured();
+  }, [onCaptured, takePhoto]);
 
   const startCoach = (kind: HelpKind) => {
     setShowHelp(false);
-    setShowStuckHelp(false);
-    setMockManuallyChanged(true);
-    stopSpeaking();
+    ttsStop();
     setCoach({ kind, step: 0 });
   };
 
   const retake = () => {
     onRetake();
-    resetCapture();
+    setPhotoUri(null);
+    setCaptureError('');
+    setCameraReady(false);
     setPhase('camera');
-    setObservation({ issues: ['TOO_FAR'] });
-    setMockManuallyChanged(false);
-    setIssueCount(0);
   };
 
   const heading = (
@@ -259,7 +179,7 @@ export function IdCaptureExperience({
           ? '글자와 사진이 선명하면 계속 진행해주세요.'
           : coach
             ? coachingText
-            : primaryGuidance.screen.replace('\n', ' ')}
+            : '빛이 너무 강하지 않은 곳에서 원본을 맞춰주세요.'}
       </GuideText>
     </>
   );
@@ -268,8 +188,16 @@ export function IdCaptureExperience({
     return (
       <View style={s.sheet}>
         <View style={s.sheetBody}>
-          {heading}
-          <View style={s.frame}>{<MockIdCard />}</View>
+          <View style={s.heading}>{heading}</View>
+          {renderFrame(
+            photoUri ? (
+              <Image source={{ uri: photoUri }} style={s.photo} accessibilityLabel="찍은 신분증 사진" />
+            ) : (
+              <AppText size={15} color="#888">
+                사진이 없어요. 다시 찍어주세요.
+              </AppText>
+            ),
+          )}
         </View>
         <BottomActionArea
           primary="네, 잘 보여요"
@@ -284,51 +212,43 @@ export function IdCaptureExperience({
   return (
     <View style={s.sheet}>
       <View style={s.sheetBody}>
-        {heading}
-        <View style={[s.frame, good && s.frameGood]} accessibilityLabel="신분증을 맞출 촬영 영역">
-          <View style={[s.corner, s.cornerTL, good && s.cornerGood]} />
-          <View style={[s.corner, s.cornerTR, good && s.cornerGood]} />
-          <View style={[s.corner, s.cornerBL, good && s.cornerGood]} />
-          <View style={[s.corner, s.cornerBR, good && s.cornerGood]} />
-          <MockIdCard />
-          {directionArrow ? (
-            <View style={s.arrow} pointerEvents="none">
-              <PulseArrow char={directionArrow} />
-            </View>
-          ) : null}
-          {primaryStatus === 'GOOD_POSITION' ? <HoldIndicator /> : null}
-        </View>
-        <Pressable accessibilityRole="button" onPress={() => setMockOpen((v) => !v)} style={s.mockToggle}>
-          <AppText size={12} color="#BBB">
-            프로토타입 상태 {mockOpen ? '닫기' : '열기'}
+        <View style={s.heading}>{heading}</View>
+        {captureError ? (
+          <AppText size={13} weight={700} color="#E05050" style={s.error}>
+            {captureError}
           </AppText>
-        </Pressable>
-        {mockOpen ? (
-          <View style={s.mockRow}>
-            {MOCK_STATUS_OPTIONS.map(({ status, label }) => (
-              <Pressable
-                key={status}
-                accessibilityRole="button"
-                onPress={() => chooseMockStatus(status)}
-                style={[s.mockBtn, resolvePrimaryStatus(observation.issues) === status && s.mockBtnOn]}
-              >
-                <AppText size={12} weight={700} color={INK}>
-                  {label}
-                </AppText>
-              </Pressable>
-            ))}
-          </View>
         ) : null}
+        {renderFrame(
+          camera.granted ? (
+            <LiveCameraPreview
+              facing="back"
+              cameraRef={cameraRef}
+              onReady={() => setCameraReady(true)}
+            />
+          ) : (
+            <CameraPermissionGate
+              granted={camera.granted}
+              loading={camera.loading}
+              canAskAgain={camera.canAskAgain}
+              onAsk={camera.requestPermission}
+              message="신분증을 찍으려면 카메라가 필요해요."
+            />
+          ),
+        )}
       </View>
       <BottomActionArea
-        primary="촬영하기"
+        primary={camera.granted ? (busy ? '찍고 있어요' : '촬영하기') : '카메라 허용하기'}
         onPrimary={() => {
-          stopSpeaking();
-          captureFrame();
+          if (!camera.granted) {
+            void camera.requestPermission();
+            return;
+          }
+          void captureFrame();
         }}
+        primaryDisabled={busy || (camera.granted && !cameraReady)}
         secondary="촬영이 어려우신가요?"
         onSecondary={() => {
-          stopSpeaking();
+          ttsStop();
           setShowHelp(true);
         }}
       />
@@ -355,106 +275,54 @@ export function IdCaptureExperience({
           </Pressable>
         ))}
       </Sheet>
-
-      <Sheet
-        visible={showStuckHelp || issueCount >= 3}
-        onClose={() => {
-          setIssueCount(0);
-          setShowStuckHelp(false);
-        }}
-        title="촬영이 계속 어려우신가요?"
-      >
-        <AppText size={14} lineHeight={21} color="#888" style={s.sheetGuide}>
-          단비가 처음부터 천천히 같이 해드릴게요.
-        </AppText>
-        <Pressable accessibilityRole="button" onPress={() => startCoach('full')} style={s.helpPrimary}>
-          <AppText size={17} weight={900} color={INK}>
-            처음부터 도움받기
-          </AppText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setIssueCount(0);
-            setShowStuckHelp(false);
-          }}
-          style={s.helpQuiet}
-        >
-          <AppText size={14} weight={700} color="#888">
-            다시 해볼게요
-          </AppText>
-        </Pressable>
-      </Sheet>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   flex1: { flex: 1 },
-  mt4: { marginTop: 4 },
-  sheet: { flex: 1, backgroundColor: '#fff' },
-  sheetBody: { flex: 1, paddingHorizontal: 18, paddingTop: 14 },
+  sheet: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
+  sheetBody: { flex: 1, minHeight: 0, paddingHorizontal: 18, paddingTop: 14 },
+  heading: { flexShrink: 0 },
   sheetGuide: { marginTop: 8, marginBottom: 12 },
-
-  frame: {
-    position: 'relative',
+  error: { marginTop: 8, flexShrink: 0 },
+  frameSlot: {
+    flex: 1,
+    minHeight: 0,
     marginTop: 16,
-    padding: 14,
-    aspectRatio: 1.48,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  frame: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: ID_MAX_WIDTH,
+    padding: ID_FRAME_PAD,
     borderRadius: 16,
     borderWidth: 1.8,
     borderColor: BORDER,
     backgroundColor: CREAM,
     overflow: 'hidden',
   },
-  frameGood: { borderColor: YELLOW },
+  viewport: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 12,
+    backgroundColor: '#111',
+  },
+  photo: { width: '100%', height: '100%' },
   corner: {
     position: 'absolute',
     width: 22,
     height: 22,
     borderColor: YELLOW,
+    zIndex: 2,
   },
-  cornerGood: { borderColor: '#2F8B5D' },
   cornerTL: { top: 8, left: 8, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 },
   cornerTR: { top: 8, right: 8, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 },
   cornerBL: { bottom: 8, left: 8, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 },
   cornerBR: { bottom: 8, right: 8, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
-  arrow: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
-  holdTrack: {
-    position: 'absolute',
-    left: 18,
-    right: 18,
-    bottom: 12,
-    height: 6,
-    overflow: 'hidden',
-    borderRadius: 99,
-    backgroundColor: '#F0E6C4',
-  },
-  holdFill: { height: '100%', borderRadius: 99, backgroundColor: YELLOW, transform: [{ scaleX: 0 }] },
-
-  mockCard: {
-    width: '100%',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-  },
-  mockBody: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
-  mockPhoto: { width: 48, height: 58, borderRadius: 8, backgroundColor: '#EEE8D8' },
-
-  mockToggle: { alignSelf: 'center', paddingVertical: 8 },
-  mockRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
-  mockBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    backgroundColor: '#fff',
-  },
-  mockBtnOn: { borderColor: YELLOW, backgroundColor: CREAM },
 
   helpRow: {
     flexDirection: 'row',
@@ -464,12 +332,4 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  helpPrimary: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    borderRadius: 16,
-    backgroundColor: YELLOW,
-  },
-  helpQuiet: { alignItems: 'center', paddingVertical: 12 },
 });

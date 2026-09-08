@@ -154,6 +154,13 @@ export function useOnboardingState() {
     }, 1500);
   };
 
+  const resetFaceCheck = () => {
+    if (faceTimer.current) clearTimeout(faceTimer.current);
+    faceTimer.current = null;
+    setFaceStatus('idle');
+    setFaceVerified(false);
+  };
+
   const resetAccountVerification = () => {
     setAccountNumber('');
     setAccountPassword('');
@@ -351,6 +358,7 @@ export function useOnboardingState() {
     faceStatus,
     faceVerified,
     startFaceCheck,
+    resetFaceCheck,
     bank,
     setBank,
     isKbAccount,

@@ -12,7 +12,6 @@ import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
 import { Toast } from '@/components/ui/Toast';
-import { ScanLine } from '@/components/anim/ScanLine';
 import { PinDots, PinKeypad } from '@/features/auth/components/PinPad';
 import { BankGrid } from '@/features/main/components/BankGrid';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
@@ -44,6 +43,7 @@ import {
   useOnboardingState,
 } from '../hooks/useOnboardingState';
 import { IdCaptureExperience } from '../id-capture/components/IdCaptureExperience';
+import { FaceCaptureExperience } from '../face-capture/FaceCaptureExperience';
 import { useScreenHelp } from '../help/useScreenHelp';
 import { ScreenHelpBar } from '../help/ScreenHelpBar';
 import { EscalationSheet } from '../help/EscalationSheet';
@@ -975,59 +975,25 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         const failed = state.faceStatus === 'failure';
         const success = state.faceStatus === 'success';
         return {
+          fullBleed: true,
           body: (
-            <>
-              <CertProgress current={2} />
-              <StepBadge icon="face">2/4 얼굴</StepBadge>
-              <PageTitle>
-                {checking
-                  ? '얼굴을 확인하고 있어요'
-                  : failed
-                    ? '얼굴이 잘 보이지 않았어요'
-                    : success
-                      ? '얼굴을 확인했어요'
-                      : '얼굴을 확인해볼게요'}
-              </PageTitle>
-              <GuideText>
-                {failed
-                  ? '밝은 곳에서 다시 맞춰주세요.'
-                  : success
-                    ? `${state.userName}님으로 확인했어요.`
-                    : '화면 안에 얼굴이 잘 보이게 해주세요.'}
-              </GuideText>
-              <View style={st.heroCard}>
-                <View style={st.heroMarkWrap}>
-                  <HeroMark icon={success ? 'check' : failed ? 'face' : 'face'} />
-                  {checking ? <ScanLine travel={28} inset={10} /> : null}
-                </View>
-                <AppText size={15} weight={800} color={INK} align="center" style={st.mt12}>
-                  {checking ? '움직이지 말고 기다려주세요' : failed ? '다시 확인할 수 있어요' : success ? '확인이 끝났어요' : '정면을 바라봐 주세요'}
-                </AppText>
-              </View>
-            </>
-          ),
-          actions: (
-            <BottomActionArea
-              primary={
-                success
-                  ? '계좌 확인으로 갈게요'
-                  : checking
-                    ? '확인하고 있어요'
-                    : failed
-                      ? '다시 확인할게요'
-                      : '얼굴 확인 시작'
-              }
-              onPrimary={
-                success
-                  ? next
-                  : () => {
-                      stopReading();
-                      state.startFaceCheck();
-                    }
-              }
-              primaryDisabled={checking}
+            <FaceCaptureExperience
+              checking={checking}
+              failed={failed}
+              success={success}
+              userName={state.userName}
+              onCaptured={() => {
+                stopReading();
+                state.startFaceCheck();
+              }}
+              onRetry={() => {
+                stopReading();
+                state.resetFaceCheck();
+              }}
+              onContinue={next}
             />
           ),
+          actions: null,
         };
       }
 

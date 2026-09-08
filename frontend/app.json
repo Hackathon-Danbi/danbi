@@ -50,8 +50,16 @@
         "expo-image-picker",
         {
           "photosPermission": "저장된 사진에서 계좌번호를 찾으려면 사진 접근이 필요합니다.",
-          "cameraPermission": "계좌번호가 보이는 사진을 촬영하려면 카메라 접근이 필요합니다.",
+          "cameraPermission": "신분증·얼굴 확인과 계좌 사진 촬영을 위해 카메라 접근이 필요합니다.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "신분증과 얼굴을 확인하려면 카메라가 필요해요.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ]
     ],
