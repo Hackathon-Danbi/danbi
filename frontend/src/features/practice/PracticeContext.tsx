@@ -4,18 +4,25 @@ import type {
   PracticeInitialState,
   PracticeScreen,
   PracticeStyle,
+  PracticeTarget,
   Praise,
   RecipientChoice,
   TransferMethod,
 } from './types';
 import { savedRecipients } from './data/recipients.mock';
 import { AMOUNT_MAX_DIGITS, appendDigits, formatWon } from './utils';
+import type { ReviewableTransferStep } from '@/features/missions/transferDifficulty';
+import { initialStateForReviewStep, screenForReviewStep } from './reviewMode';
 
 type GoOptions = { replace?: boolean; reset?: boolean };
+export type PracticeFlowMode = 'full' | 'review';
 
 interface PracticeContextValue {
   screen: PracticeScreen;
   practiceStyle: PracticeStyle;
+  practiceTarget: PracticeTarget;
+  mode: PracticeFlowMode;
+  reviewStep: ReviewableTransferStep | null;
   setPracticeStyle: (style: PracticeStyle) => void;
   practiceRecipient: string;
   setPracticeRecipient: (value: string) => void;
@@ -40,7 +47,11 @@ interface PracticeContextValue {
   back: () => void;
   /** 내부 history 스택에 돌아갈 화면이 남아 있는지 (Android hardware back 우선 처리용). */
   canGoBack: boolean;
-  guidedNext: (text: string, screen: PracticeScreen) => void;
+  guidedNext: (screen: PracticeScreen) => void;
+  completePracticeStep: (next: PracticeScreen) => void;
+  startReviewStep: () => void;
+  restartReview: () => void;
+  exitReview: () => void;
   choosePracticeStyle: (style: Exclude<PracticeStyle, null>) => void;
   beginPractice: (method: TransferMethod) => void;
 }
@@ -56,13 +67,19 @@ export function usePracticeApp() {
 export function PracticeProvider({
   children,
   onComplete,
+  onTransferAttempt,
   onExit,
   initialState,
+  mode = 'full',
+  reviewStep = null,
 }: {
   children: ReactNode;
   onComplete?: () => void;
+  onTransferAttempt?: () => void;
   onExit?: () => void;
   initialState?: PracticeInitialState;
+  mode?: PracticeFlowMode;
+  reviewStep?: ReviewableTransferStep | null;
 }) {
   const [history, setHistory] = useState<PracticeScreen[]>([initialState?.screen ?? 'practiceHub']);
   const screen = history[history.length - 1];
@@ -79,6 +96,11 @@ export function PracticeProvider({
   const [transferMethod, setTransferMethod] = useState<TransferMethod>(initialState?.transferMethod ?? 'voice');
   const [pin, setPin] = useState('');
   const [praise, setPraise] = useState<Praise | null>(null);
+  const practiceTarget = useMemo<PracticeTarget>(() => initialState?.target ?? ({
+    recipient: savedRecipients[0],
+    amount: '30000',
+    amountLabel: '30,000원',
+  }), [initialState?.target]);
 
   // useState 의 setter 는 참조가 고정이므로 아래 콜백들도 마운트 동안 안정적이다.
   const clearPracticeData = useCallback(() => {
@@ -90,6 +112,20 @@ export function PracticeProvider({
     setPin('');
     setPraise(null);
   }, []);
+
+  const resetReviewData = useCallback(() => {
+    if (!reviewStep) return;
+    const reviewState = initialStateForReviewStep(reviewStep);
+    setPracticeStyle(reviewState.practiceStyle);
+    setTransferMethod(reviewState.transferMethod);
+    setPracticeRecipient(reviewState.practiceRecipient ?? '');
+    setPracticeRecipientChoice(reviewState.practiceRecipientChoice ?? null);
+    setPracticeVoiceRecipientName(reviewState.practiceVoiceRecipientName ?? '');
+    setPracticeAmount(reviewState.practiceAmount ?? '');
+    setPracticeMistakeMessage('');
+    setPin('');
+    setPraise(null);
+  }, [reviewStep]);
 
   const go = useCallback((next: PracticeScreen, options?: GoOptions) => {
     setPracticeMistakeMessage('');
@@ -107,12 +143,13 @@ export function PracticeProvider({
 
   const back = useCallback(() => {
     setPracticeMistakeMessage('');
+    if (screen === 'practicePin') setPin('');
     if (history.length <= 1) {
       onExitRef.current?.();
       return;
     }
     setHistory((current) => current.slice(0, -1));
-  }, [history.length]);
+  }, [history.length, screen]);
 
   const choosePracticeStyle = useCallback((style: Exclude<PracticeStyle, null>) => {
     clearPracticeData();
@@ -131,7 +168,30 @@ export function PracticeProvider({
     });
   }, [clearPracticeData]);
 
-  const guidedNext = useCallback((_text: string, next: PracticeScreen) => go(next), [go]);
+  const guidedNext = useCallback((next: PracticeScreen) => go(next), [go]);
+
+  const completePracticeStep = useCallback((next: PracticeScreen) => {
+    // 맞춤 복습은 한 단계만 연습하므로 history 를 쌓지 않고 완료 화면으로 교체한다.
+    // (full 모드의 practiceComplete 진입과 동일하게 뒤로가기 스택을 남기지 않는다.)
+    if (mode === 'review') {
+      setHistory(['practiceReviewComplete']);
+      return;
+    }
+    go(next);
+  }, [go, mode]);
+
+  const startReviewStep = useCallback(() => {
+    if (!reviewStep) return;
+    go(screenForReviewStep(reviewStep));
+  }, [go, reviewStep]);
+
+  const restartReview = useCallback(() => {
+    if (!reviewStep) return;
+    resetReviewData();
+    setHistory(['practiceReviewIntro']);
+  }, [resetReviewData, reviewStep]);
+
+  const exitReview = useCallback(() => onExitRef.current?.(), []);
 
   const enterPracticeAmount = useCallback((value: string) => {
     setPracticeAmount((current) => appendDigits(current, value, {
@@ -146,9 +206,21 @@ export function PracticeProvider({
       : savedRecipients.find((recipient) => recipient.id === practiceRecipientChoice)?.name ?? ''
   );
 
+  const onTransferAttemptRef = useRef(onTransferAttempt);
+  useEffect(() => {
+    onTransferAttemptRef.current = onTransferAttempt;
+  });
+
   useEffect(() => {
     if (screen !== 'practicePin' || pin.length !== 4) return;
     const timer = setTimeout(() => {
+      if (mode === 'review') {
+        setHistory(['practiceReviewComplete']);
+        return;
+      } else if (onTransferAttemptRef.current) {
+        onTransferAttemptRef.current();
+        return;
+      }
       if (practiceStyle === 'guided') {
         setPraise({ text: '송금 연습을 모두 마쳤어요.', next: 'practiceComplete' });
       } else {
@@ -156,7 +228,7 @@ export function PracticeProvider({
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [pin, practiceStyle, screen]);
+  }, [mode, pin, practiceStyle, screen]);
 
   useEffect(() => {
     if (!praise) return;
@@ -173,12 +245,17 @@ export function PracticeProvider({
     onCompleteRef.current = onComplete;
   });
   useEffect(() => {
-    if (screen === 'practiceComplete') onCompleteRef.current?.();
+    if (screen === 'practiceComplete' || screen === 'practiceReviewComplete') {
+      onCompleteRef.current?.();
+    }
   }, [screen]);
 
   const value = useMemo<PracticeContextValue>(() => ({
     screen,
     practiceStyle,
+    practiceTarget,
+    mode,
+    reviewStep,
     setPracticeStyle,
     practiceRecipient,
     setPracticeRecipient,
@@ -203,13 +280,18 @@ export function PracticeProvider({
     back,
     canGoBack: history.length > 1,
     guidedNext,
+    completePracticeStep,
+    startReviewStep,
+    restartReview,
+    exitReview,
     choosePracticeStyle,
     beginPractice,
   }), [
-    screen, history.length, practiceStyle, practiceRecipient, practiceRecipientChoice,
+    screen, history.length, practiceStyle, practiceTarget, practiceRecipient, practiceRecipientChoice,
     practiceVoiceRecipientName, practiceRecipientName, practiceAmount,
     practiceMistakeMessage, transferMethod, pin, praise,
-    go, back, guidedNext, choosePracticeStyle, beginPractice, enterPracticeAmount,
+    mode, reviewStep, go, back, guidedNext, completePracticeStep, startReviewStep,
+    restartReview, exitReview, choosePracticeStyle, beginPractice, enterPracticeAmount,
   ]);
 
   return <PracticeContext.Provider value={value}>{children}</PracticeContext.Provider>;

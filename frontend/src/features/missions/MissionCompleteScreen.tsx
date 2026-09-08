@@ -10,7 +10,10 @@ type Props = {
   newScore: number;
   maxScore: number;
   onBack: () => void;
+  onRetry?: () => void;
+  onSoloRetry?: () => void;
   achieved?: boolean;
+  dailyMission?: boolean;
 };
 
 /** danbi_jj missions/MissionCompleteScreen.tsx 이식. */
@@ -20,9 +23,13 @@ export function MissionCompleteScreen({
   newScore,
   maxScore,
   onBack,
+  onRetry,
+  onSoloRetry,
   achieved,
+  dailyMission,
 }: Props) {
   const pct = Math.round((newScore / maxScore) * 100);
+  const repeated = earnedPoints === 0 && !achieved;
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -60,15 +67,25 @@ export function MissionCompleteScreen({
               ✓
             </AppText>
           </View>
-          <AppText size={30} weight={900} color={colors.ink} align="center" lineHeight={38} style={styles.heading}>
-            금융 독립 점수가{'\n'}
-            <AppText size={30} weight={900} color={colors.yellow}>
-              {earnedPoints}점
-            </AppText>{' '}
-            올랐어요!
-          </AppText>
+          {dailyMission ? (
+            <AppText size={30} weight={900} color={colors.ink} align="center" lineHeight={38} style={styles.heading}>
+              오늘의 미션 완료!
+            </AppText>
+          ) : repeated ? (
+            <AppText size={30} weight={900} color={colors.ink} align="center" lineHeight={38} style={styles.heading}>
+              오늘의 연습을{'\n'}다시 마쳤어요!
+            </AppText>
+          ) : (
+            <AppText size={30} weight={900} color={colors.ink} align="center" lineHeight={38} style={styles.heading}>
+              금융 독립 점수가{'\n'}
+              <AppText size={30} weight={900} color={colors.yellow}>
+                {earnedPoints}점
+              </AppText>{' '}
+              올랐어요!
+            </AppText>
+          )}
           <AppText size={15} color={colors.muted} align="center" lineHeight={23} style={styles.name}>
-            {missionTitle}
+            {dailyMission ? '오늘 새로운 금융 상황을 끝까지 연습했어요.' : missionTitle}
           </AppText>
         </>
       )}
@@ -95,11 +112,27 @@ export function MissionCompleteScreen({
         연습 진행도를 나타내는 점수이며 실제 신용점수가 아니에요.
       </AppText>
 
-      <Pressable accessibilityRole="button" onPress={onBack} style={styles.cta}>
-        <AppText size={18} weight={850} color="#241d08">
-          {achieved ? '금융 독립 화면으로 가기' : '점수판으로 돌아가기'}
-        </AppText>
-      </Pressable>
+      <View style={styles.actions}>
+        {onSoloRetry ? (
+          <Pressable accessibilityRole="button" onPress={onSoloRetry} style={styles.retry}>
+            <AppText size={18} weight={850} color={colors.accentText}>
+              혼자 해보기
+            </AppText>
+          </Pressable>
+        ) : null}
+        {onRetry ? (
+          <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retry}>
+            <AppText size={18} weight={850} color={colors.accentText}>
+              {onSoloRetry ? '한 번 더 따라하기' : '다시 연습하기'}
+            </AppText>
+          </Pressable>
+        ) : null}
+        <Pressable accessibilityRole="button" onPress={onBack} style={styles.cta}>
+          <AppText size={18} weight={850} color="#241d08">
+            {dailyMission ? '다른 연습도 보기' : achieved ? '금융 독립 화면으로 가기' : '점수판으로 돌아가기'}
+          </AppText>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -148,8 +181,18 @@ const styles = StyleSheet.create({
   },
   scoreValue: { flexDirection: 'row', alignItems: 'baseline' },
   disclaimer: { marginBottom: 24 },
+  actions: { marginTop: 'auto', width: '100%', gap: 10 },
+  retry: {
+    width: '100%',
+    minHeight: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: colors.accentBorder,
+    backgroundColor: colors.accentSurface,
+  },
   cta: {
-    marginTop: 'auto',
     width: '100%',
     minHeight: 60,
     alignItems: 'center',

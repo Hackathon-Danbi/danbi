@@ -6,9 +6,11 @@ import type { TxRecord } from '../../types';
 import { AccountCard } from '../../components/AccountCard';
 import { IconCalendar } from '../../components/icons';
 import { HomeBar } from '../../imports/_shared';
+import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 
 /** danbi_jj main/screens/history.tsx <TransactionsScreen> 이식. */
 export function TransactionsScreen({
+  reviewOnly,
   needCheckCount,
   unknownCount,
   transactions,
@@ -21,6 +23,7 @@ export function TransactionsScreen({
   onReviewUnknown,
   onHome,
 }: {
+  reviewOnly: boolean;
   needCheckCount: number;
   unknownCount: number;
   transactions: TxRecord[];
@@ -43,7 +46,7 @@ export function TransactionsScreen({
     <View style={styles.root}>
       <View style={styles.header}>
         <AppText size={26} weight={900} color={INK}>
-          거래내역
+          {reviewOnly ? '확인할 거래' : '거래내역'}
         </AppText>
       </View>
 
@@ -163,19 +166,19 @@ export function TransactionsScreen({
                 ))}
               </View>
             </View>
-          ))}
-          {dates.length === 0 ? (
-            <View style={styles.empty}>
-              <AppText size={16} weight={700} color="#888" align="center">
-                이 달에는 거래내역이 없어요.
-              </AppText>
-            </View>
-          ) : null}
-        </View>
+          </View>
+        ))}
+        {dates.length === 0 ? (
+          <View style={styles.empty}>
+            <AppText size={16} weight={700} color="#888" align="center">
+              {reviewOnly ? '확인할 거래가 없어요.' : '이 달에는 거래내역이 없어요.'}
+            </AppText>
+          </View>
+        ) : null}
         <View style={styles.spacer} />
       </ScrollView>
 
-      <HomeBar onHome={onHome} />
+      <FloatingHomeButton onGoHome={onHome} />
     </View>
   );
 }

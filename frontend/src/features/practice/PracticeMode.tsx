@@ -3,50 +3,68 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { ScreenIn } from '@/components/anim/ScreenIn';
-import { stop as ttsStop } from '@/lib/speech/tts';
+import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { P } from './theme';
 import { PracticeProvider, usePracticeApp } from './PracticeContext';
 import { GuidedPraiseOverlay } from './components/GuidedPraiseOverlay';
 import { PracticeHubScreen } from './screens/PracticeHubScreen';
 import { PracticeMethodScreen } from './screens/PracticeMethodScreen';
+import { PracticeMissionIntroScreen } from './screens/PracticeMissionIntroScreen';
 import { PracticeVoiceScreen } from './screens/PracticeVoiceScreen';
 import { PracticeRecipientScreen } from './screens/PracticeRecipientScreen';
 import { PracticeAmountScreen } from './screens/PracticeAmountScreen';
 import { PracticeReviewScreen } from './screens/PracticeReviewScreen';
 import { PracticePinScreen } from './screens/PracticePinScreen';
 import { PracticeCompleteScreen } from './screens/PracticeCompleteScreen';
+import { PracticeReviewIntroScreen } from './screens/PracticeReviewIntroScreen';
+import { PracticeReviewCompleteScreen } from './screens/PracticeReviewCompleteScreen';
 import type { MissionId } from '@/features/missions/data/missions';
 import { MISSION_PRACTICE_PRESETS } from './missionPresets';
+import { getPracticeStepGuidance } from './guidance';
+import type { PracticeInitialState } from './types';
+import type { TransferDifficultyStep } from '@/features/missions/transferDifficulty';
+import { isReviewableTransferStep } from '@/features/missions/transferDifficulty';
+import { initialStateForReviewStep } from './reviewMode';
+import type { PracticeFlowMode } from './PracticeContext';
 
 const SCREENS = {
   practiceHub: PracticeHubScreen,
   practiceMethod: PracticeMethodScreen,
+  practiceMissionIntro: PracticeMissionIntroScreen,
   practiceVoice: PracticeVoiceScreen,
   practiceRecipient: PracticeRecipientScreen,
   practiceAmount: PracticeAmountScreen,
   practiceReview: PracticeReviewScreen,
   practicePin: PracticePinScreen,
   practiceComplete: PracticeCompleteScreen,
+  practiceReviewIntro: PracticeReviewIntroScreen,
+  practiceReviewComplete: PracticeReviewCompleteScreen,
 } as const;
 
 function PracticeRouter({ onExit }: { onExit?: () => void }) {
-  const { screen, back, canGoBack } = usePracticeApp();
+  const { screen, practiceStyle, mode, reviewStep, back, canGoBack } = usePracticeApp();
   const Current = SCREENS[screen];
+  const accountReview = mode === 'review' && reviewStep === 'account';
 
-  // Android 하드웨어 back: PracticeProvider 의 history[] 스택을 가장 먼저 소비한다.
-  // 돌아갈 내부 화면이 없으면 false 를 반환해 상위(MissionMode)가 hub 로 복귀하게 한다.
+  // Android 하드웨어 back: PracticeProvider 의 history[] 스택을 먼저 소비한다.
+  // 미션에서 진입한 첫 화면이면 onExit으로 금융독립 허브에 복귀한다.
   useAndroidBack(() => {
-    if (canGoBack) {
+    if (canGoBack || onExit) {
       back();
       return true;
     }
     return false;
   });
 
-  // 언마운트 시 재생 중이던 안내 정리. STT 세션 abort 는 useSpeechRecognition 훅이,
-  // 진행 타이머 clear 는 PracticeContext 의 각 effect cleanup 이 담당한다.
-  useEffect(() => () => ttsStop(), []);
+  // guided만 현재 단계 안내를 한 번 재생한다. 화면이 바뀌거나 연습을 떠나면
+  // 이전 안내를 먼저 정리해 빠른 이동에서도 음성이 남지 않게 한다.
+  useEffect(() => {
+    const guidance = getPracticeStepGuidance(practiceStyle, screen, { accountReview });
+    ttsStop();
+    if (guidance) ttsSpeak(guidance);
+    return () => ttsStop();
+  }, [practiceStyle, screen, accountReview]);
 
   return (
     <View style={styles.root}>
@@ -68,16 +86,37 @@ function PracticeRouter({ onExit }: { onExit?: () => void }) {
 export interface PracticeModeProps {
   onExit?: () => void;
   onComplete?: () => void;
+  /** 위험 상황에서는 PIN 입력 뒤 실제 완료 대신 안전 개입 화면으로 전환한다. */
+  onTransferAttempt?: () => void;
   missionId?: MissionId;
+  initialState?: PracticeInitialState;
+  mode?: PracticeFlowMode;
+  startStep?: TransferDifficultyStep;
 }
 
 /** danbi_jj practice/PracticeMode.tsx 이식. <PracticeMode /> 하나만 렌더하면 된다. */
-export function PracticeMode({ onExit, onComplete, missionId }: PracticeModeProps) {
+export function PracticeMode({
+  onExit,
+  onComplete,
+  onTransferAttempt,
+  missionId,
+  initialState,
+  mode = 'full',
+  startStep = 'recipient',
+}: PracticeModeProps) {
+  const reviewStep = isReviewableTransferStep(startStep) ? startStep : 'recipient';
+  const resolvedInitialState = mode === 'review'
+    ? initialStateForReviewStep(reviewStep)
+    : initialState ?? (missionId ? MISSION_PRACTICE_PRESETS[missionId] : undefined);
+
   return (
     <PracticeProvider
       onComplete={onComplete}
+      onTransferAttempt={onTransferAttempt}
       onExit={onExit}
-      initialState={missionId ? MISSION_PRACTICE_PRESETS[missionId] : undefined}
+      initialState={resolvedInitialState}
+      mode={mode}
+      reviewStep={mode === 'review' ? reviewStep : null}
     >
       <PracticeRouter onExit={onExit} />
     </PracticeProvider>

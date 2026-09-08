@@ -4,12 +4,11 @@ import { AppText } from '@/components/ui/AppText';
 import { P } from '../theme';
 import { usePracticeApp } from '../PracticeContext';
 import { BackHeader } from '../components/BackHeader';
-import { practiceMission } from '../data/mission.mock';
 import { SafetyNote } from './shared';
 
 /** danbi_jj practice/screens/PracticeMethodScreen.tsx 이식. */
 export function PracticeMethodScreen() {
-  const { practiceStyle, beginPractice, back } = usePracticeApp();
+  const { practiceStyle, practiceTarget, beginPractice, back } = usePracticeApp();
   const solo = practiceStyle === 'solo';
 
   return (
@@ -21,7 +20,7 @@ export function PracticeMethodScreen() {
             {solo ? '오늘의 송금 미션' : '이번 연습 미션'}
           </AppText>
           <AppText size={18} weight={900} color={P.ink} style={styles.mt4}>
-            {practiceMission.recipient.name}님에게 {practiceMission.amountLabel} 보내기
+            {practiceTarget.recipient.name}님에게 {practiceTarget.amountLabel} 보내기
           </AppText>
         </View>
 
