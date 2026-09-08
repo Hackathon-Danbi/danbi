@@ -4,6 +4,7 @@ import com.danbi.domain.onboarding.controller.CertificateIssuanceController;
 import com.danbi.domain.onboarding.controller.AccountVerificationTargetController;
 import com.danbi.domain.onboarding.controller.FaceVerificationController;
 import com.danbi.domain.onboarding.controller.IdCardScanController;
+import com.danbi.domain.onboarding.controller.OnboardingCompletionController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
 import com.danbi.domain.onboarding.controller.OneWonVerificationController;
@@ -24,12 +25,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 	FaceVerificationController.class,
 	IdCardScanController.class,
 	OnboardingSessionController.class,
+	OnboardingCompletionController.class,
 	OnboardingNameController.class,
 	OneWonVerificationController.class,
 	PhoneVerificationController.class,
 	SimplePasswordController.class
 })
 public class OnboardingExceptionHandler {
+
+	@ExceptionHandler(OnboardingCompletionConflictException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleOnboardingCompletionConflict(
+		OnboardingCompletionConflictException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
 
 	@ExceptionHandler(OnboardingSessionNotFoundException.class)
 	public ResponseEntity<OnboardingErrorResponse> handleSessionNotFound(OnboardingSessionNotFoundException e) {
