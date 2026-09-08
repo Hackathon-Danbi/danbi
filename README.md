@@ -51,3 +51,10 @@ npx expo start
 ```
 
 백엔드 DB 계정은 `docker-compose.yml`과 동일합니다 (`danbi` / `danbi_local_pw`, DB `danbi`, 포트 3306).
+
+## AI Agent 개발
+
+API 키 발급, 대화 세션 토큰, OpenAI Responses·Embeddings·음성 API,
+프롬프트와 RAG, 패키지 구조 및 실행 예시는
+[Agent 구현 가이드](backend/AGENTS_IMPLEMENTATION.md)를 참고하세요.
+Agent API는 기본 비활성화이며, 활성화해도 모의 금융 데이터만 사용합니다.
