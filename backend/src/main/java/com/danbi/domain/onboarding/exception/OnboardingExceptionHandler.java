@@ -4,6 +4,7 @@ import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
 import com.danbi.domain.onboarding.dto.OnboardingErrorResponse;
+import com.danbi.domain.onboarding.dto.PhoneVerificationErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -49,6 +50,42 @@ public class OnboardingExceptionHandler {
 		PhoneVerificationSessionMismatchException e
 	) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(PhoneVerificationCodeMismatchException.class)
+	public ResponseEntity<PhoneVerificationErrorResponse> handleVerificationCodeMismatch(
+		PhoneVerificationCodeMismatchException e
+	) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+			.body(new PhoneVerificationErrorResponse(
+				e.getCode(),
+				e.getMessage(),
+				e.getRemainingAttemptCount()
+			));
+	}
+
+	@ExceptionHandler(PhoneVerificationAttemptLimitExceededException.class)
+	public ResponseEntity<PhoneVerificationErrorResponse> handleVerificationAttemptLimitExceeded(
+		PhoneVerificationAttemptLimitExceededException e
+	) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+			.body(new PhoneVerificationErrorResponse(e.getCode(), e.getMessage(), 0));
+	}
+
+	@ExceptionHandler(PhoneVerificationExpiredException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleVerificationExpired(
+		PhoneVerificationExpiredException e
+	) {
+		return ResponseEntity.status(HttpStatus.GONE)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(PhoneVerificationAlreadyCompletedException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleVerificationAlreadyCompleted(
+		PhoneVerificationAlreadyCompletedException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
 }

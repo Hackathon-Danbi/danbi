@@ -3,6 +3,8 @@ package com.danbi.domain.onboarding.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.danbi.domain.onboarding.dto.ConfirmPhoneVerificationRequest;
+import com.danbi.domain.onboarding.dto.ConfirmPhoneVerificationResponse;
 import com.danbi.domain.onboarding.dto.OnboardingStep;
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationRequest;
 import com.danbi.domain.onboarding.dto.RequestPhoneVerificationResponse;
@@ -12,10 +14,16 @@ import com.danbi.domain.onboarding.dto.SaveOnboardingNameRequest;
 import com.danbi.domain.onboarding.entity.PhoneCarrier;
 import com.danbi.domain.onboarding.entity.PhoneVerificationSession;
 import com.danbi.domain.onboarding.exception.InvalidOnboardingStepException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationAlreadyCompletedException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationAttemptLimitExceededException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationCodeMismatchException;
+import com.danbi.domain.onboarding.exception.PhoneVerificationExpiredException;
 import com.danbi.domain.onboarding.exception.PhoneVerificationRequestLimitExceededException;
 import com.danbi.domain.onboarding.exception.PhoneVerificationSessionMismatchException;
 import com.danbi.domain.onboarding.exception.PhoneVerificationSessionNotFoundException;
 import com.danbi.domain.onboarding.repository.PhoneVerificationSessionRepository;
+import java.time.Clock;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +43,9 @@ class PhoneVerificationServiceTest {
 
 	@Autowired
 	private PhoneVerificationService phoneVerificationService;
+
+	@Autowired
+	private Clock clock;
 
 	@Test
 	void createsVerificationSessionAndMovesOnboardingStep() {
@@ -154,6 +165,147 @@ class PhoneVerificationServiceTest {
 		)).isInstanceOf(PhoneVerificationSessionMismatchException.class);
 	}
 
+	@Test
+	void confirmsCodeAndMovesToCertificateIssuanceStep() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+
+		ConfirmPhoneVerificationResponse response = confirm(
+			onboardingSessionId,
+			requested.verificationSessionId(),
+			"381529"
+		);
+
+		assertThat(response.identityVerified()).isTrue();
+		assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.CERTIFICATE_ISSUANCE);
+		PhoneVerificationSession stored = verificationRepository
+			.findById(requested.verificationSessionId())
+			.orElseThrow();
+		assertThat(stored.getVerifiedAt()).isNotNull();
+		assertThat(stored.getVerificationAttemptCount()).isZero();
+	}
+
+	@Test
+	void returnsSuccessWhenAlreadyVerifiedRequestIsRepeated() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+		confirm(onboardingSessionId, requested.verificationSessionId(), "381529");
+
+		ConfirmPhoneVerificationResponse response = confirm(
+			onboardingSessionId,
+			requested.verificationSessionId(),
+			"381529"
+		);
+
+		assertThat(response.identityVerified()).isTrue();
+		assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.CERTIFICATE_ISSUANCE);
+	}
+
+	@Test
+	void recordsFailedVerificationAttempt() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+
+		assertThatThrownBy(() -> confirm(
+			onboardingSessionId,
+			requested.verificationSessionId(),
+			"654321"
+		))
+			.isInstanceOf(PhoneVerificationCodeMismatchException.class)
+			.hasMessage("인증번호가 일치하지 않습니다.");
+
+		PhoneVerificationSession stored = verificationRepository
+			.findById(requested.verificationSessionId())
+			.orElseThrow();
+		assertThat(stored.getVerificationAttemptCount()).isEqualTo(1);
+	}
+
+	@Test
+	void allowsFiveFailedAttemptsAndRejectsTheSixth() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+
+		for (int attemptCount = 1; attemptCount <= 5; attemptCount++) {
+			assertThatThrownBy(() -> confirm(
+				onboardingSessionId,
+				requested.verificationSessionId(),
+				"654321"
+			)).isInstanceOf(PhoneVerificationCodeMismatchException.class);
+		}
+
+		assertThatThrownBy(() -> confirm(
+			onboardingSessionId,
+			requested.verificationSessionId(),
+			"654321"
+		)).isInstanceOf(PhoneVerificationAttemptLimitExceededException.class);
+	}
+
+	@Test
+	void returnsOneRemainingAttemptAfterFourthFailure() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+
+		for (int attemptCount = 1; attemptCount <= 3; attemptCount++) {
+			assertThatThrownBy(() -> confirm(
+				onboardingSessionId,
+				requested.verificationSessionId(),
+				"654321"
+			)).isInstanceOf(PhoneVerificationCodeMismatchException.class);
+		}
+
+		assertThatThrownBy(() -> confirm(
+			onboardingSessionId,
+			requested.verificationSessionId(),
+			"654321"
+		))
+			.isInstanceOfSatisfying(
+				PhoneVerificationCodeMismatchException.class,
+				exception -> assertThat(exception.getRemainingAttemptCount()).isEqualTo(1)
+			);
+	}
+
+	@Test
+	void rejectsExpiredVerificationCodeWithoutIncreasingAttemptCount() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+		PhoneVerificationSession verificationSession = verificationRepository
+			.findById(requested.verificationSessionId())
+			.orElseThrow();
+		verificationSession.resend("381529", Instant.now(clock).minusSeconds(1));
+
+		assertThatThrownBy(() -> confirm(
+			onboardingSessionId,
+			requested.verificationSessionId(),
+			"381529"
+		)).isInstanceOf(PhoneVerificationExpiredException.class);
+		assertThat(verificationSession.getVerificationAttemptCount()).isZero();
+	}
+
+	@Test
+	void blocksNameChangeAfterVerificationIsCompleted() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+		confirm(onboardingSessionId, requested.verificationSessionId(), "381529");
+
+		assertThatThrownBy(() -> onboardingSessionService.saveName(
+			new SaveOnboardingNameRequest(onboardingSessionId, "김단비")
+		)).isInstanceOf(PhoneVerificationAlreadyCompletedException.class);
+	}
+
+	@Test
+	void blocksNewRequestAndResendAfterVerificationIsCompleted() {
+		String onboardingSessionId = createNamedSession();
+		RequestPhoneVerificationResponse requested = request(onboardingSessionId);
+		confirm(onboardingSessionId, requested.verificationSessionId(), "381529");
+
+		assertThatThrownBy(() -> request(onboardingSessionId))
+			.isInstanceOf(PhoneVerificationAlreadyCompletedException.class);
+		assertThatThrownBy(() -> resend(
+			onboardingSessionId,
+			requested.verificationSessionId()
+		)).isInstanceOf(PhoneVerificationAlreadyCompletedException.class);
+	}
+
 	private String createNamedSession() {
 		String onboardingSessionId = onboardingSessionService.createSession().onboardingSessionId();
 		onboardingSessionService.saveName(
@@ -180,6 +332,20 @@ class PhoneVerificationServiceTest {
 			new ResendPhoneVerificationRequest(
 				onboardingSessionId,
 				verificationSessionId
+			)
+		);
+	}
+
+	private ConfirmPhoneVerificationResponse confirm(
+		String onboardingSessionId,
+		String verificationSessionId,
+		String verificationCode
+	) {
+		return phoneVerificationService.confirmVerification(
+			new ConfirmPhoneVerificationRequest(
+				onboardingSessionId,
+				verificationSessionId,
+				verificationCode
 			)
 		);
 	}

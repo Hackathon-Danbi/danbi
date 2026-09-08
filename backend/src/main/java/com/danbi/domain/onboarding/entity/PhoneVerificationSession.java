@@ -40,6 +40,11 @@ public class PhoneVerificationSession {
 	@Column(name = "request_count", nullable = false)
 	private int requestCount;
 
+	@Column(name = "verification_attempt_count", nullable = false)
+	private int verificationAttemptCount;
+
+	@Column(name = "verified_at")
+	private Instant verifiedAt;
 	private PhoneVerificationSession(
 		String verificationSessionId,
 		String onboardingSessionId,
@@ -56,6 +61,8 @@ public class PhoneVerificationSession {
 		this.verificationCode = verificationCode;
 		this.expiresAt = expiresAt;
 		this.requestCount = requestCount;
+		this.verificationAttemptCount = 0;
+		this.verifiedAt = null;
 	}
 
 	public static PhoneVerificationSession start(
@@ -98,6 +105,28 @@ public class PhoneVerificationSession {
 		this.verificationCode = verificationCode;
 		this.expiresAt = expiresAt;
 		this.requestCount++;
+		return this;
+	}
+
+	public boolean isVerified() {
+		return verifiedAt != null;
+	}
+
+	public boolean isExpired(Instant now) {
+		return !now.isBefore(expiresAt);
+	}
+
+	public boolean matchesCode(String code) {
+		return verificationCode.equals(code);
+	}
+
+	public int recordFailedAttempt() {
+		verificationAttemptCount++;
+		return verificationAttemptCount;
+	}
+
+	public PhoneVerificationSession verify(Instant verifiedAt) {
+		this.verifiedAt = verifiedAt;
 		return this;
 	}
 }
