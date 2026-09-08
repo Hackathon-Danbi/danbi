@@ -27,6 +27,7 @@ import {
   resolveOnboardingResumeStep,
   sanitizeOnboardingDraft,
 } from '../src/features/onboarding/onboardingDraft';
+import { TERMS } from '../src/features/onboarding/terms';
 
 test('entry and onboarding destination routes remain distinct', () => {
   assert.equal(resolveEntryRoute(null, false), '/welcome');
@@ -162,29 +163,39 @@ test('scored transfer missions enter their required practice path', () => {
 });
 
 test('onboarding draft rejects unknown versions and strips invalid values', () => {
-  assert.equal(sanitizeOnboardingDraft({ version: 2, step: 10 }), null);
+  assert.equal(sanitizeOnboardingDraft({ version: 1, step: 10 }), null);
+  assert.equal(sanitizeOnboardingDraft({ version: 3, step: 10 }), null);
 
   const draft = sanitizeOnboardingDraft({
-    version: 1,
+    version: 2,
     step: 999,
-    termsStep: 7,
     carrier: 'invalid',
     idType: 'passport',
     requiredTerms: [true, 'yes'],
     certificateTerms: [true, true],
   });
 
-  assert.equal(draft?.step, 18);
-  assert.equal(draft?.termsStep, 0);
+  assert.equal(draft?.step, 20);
   assert.equal(draft?.carrier, null);
   assert.equal(draft?.idType, null);
-  assert.deepEqual(draft?.requiredTerms, [true, false]);
+  assert.deepEqual(draft?.requiredTerms, [false]);
+  assert.deepEqual(draft?.certificateTerms, [true]);
+  assert.equal(draft?.faceTermAccepted, false);
+  assert.deepEqual(
+    sanitizeOnboardingDraft({ version: 2, requiredTerms: [false, false, true] })?.requiredTerms,
+    [true],
+  );
+  assert.deepEqual(
+    sanitizeOnboardingDraft({ version: 2, requiredTerms: [true] })?.requiredTerms,
+    [true],
+  );
+  assert.equal(draft?.electronicDocTermAccepted, false);
 });
 
 test('onboarding resume never skips a sensitive verification boundary', () => {
   const base = sanitizeOnboardingDraft({
-    version: 1,
-    step: 17, // PIN
+    version: 2,
+    step: 19, // PIN
     phoneVerified: true,
     idType: '주민등록증',
     idScanCompleted: true,
@@ -193,9 +204,19 @@ test('onboarding resume never skips a sensitive verification boundary', () => {
     accountVerified: false,
   });
   assert.ok(base);
-  // 계좌 인증이 끝나지 않았다면 은행 선택(13)부터 다시 시작한다.
-  assert.equal(resolveOnboardingResumeStep(base), 13);
+  // 계좌 인증이 끝나지 않았다면 은행 선택(15)부터 다시 시작한다.
+  assert.equal(resolveOnboardingResumeStep(base), 15);
 
   const verified = { ...base, accountVerified: true };
-  assert.equal(resolveOnboardingResumeStep(verified), 17);
+  assert.equal(resolveOnboardingResumeStep(verified), 19);
+});
+
+test('onboarding terms include KB certificate, electronic document, phone, and face full text', () => {
+  assert.match(TERMS['kb-certificate'].body, /KB국민인증서 서비스/);
+  assert.match(TERMS['kb-certificate'].body, /제1조 \(목적\)/);
+  assert.match(TERMS['electronic-document'].body, /전자문서 중계서비스/);
+  assert.match(TERMS['phone-auth'].body, /고유식별정보 처리 동의/);
+  assert.match(TERMS['phone-auth'].body, /휴대폰본인확인/);
+  assert.match(TERMS['face-auth'].body, /얼굴확인\(인증거래용\)/);
+  assert.match(TERMS['face-auth'].body, /얼굴사진 특징정보/);
 });

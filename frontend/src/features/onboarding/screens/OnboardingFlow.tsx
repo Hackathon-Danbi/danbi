@@ -21,7 +21,6 @@ import { getJSON, setJSON, StorageKeys } from '@/lib/storage';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import type { OnboardingDestination } from '@/lib/navigation';
 import {
-  AgreementAllToggle,
   AgreementCard,
   AgreementDetail,
   BottomActionArea,
@@ -53,6 +52,7 @@ import {
   sanitizeOnboardingDraft,
   type OnboardingDraft,
 } from '../onboardingDraft';
+import type { TermId } from '../terms';
 
 export type { OnboardingDestination } from '@/lib/navigation';
 type Props = {
@@ -63,69 +63,79 @@ type Props = {
 
 const STEPS = {
   INTRO: 0,
-  NAME: 1,
-  PHONE_OWNERSHIP: 2,
-  CARRIER: 3,
-  PHONE_NUMBER: 4,
-  SIGNUP_TERMS: 5,
-  OTP: 6,
-  CERTIFICATE_INTRO: 7,
-  CERTIFICATE_TERMS: 8,
-  ID_SELECT: 9,
-  ID_SCAN: 10,
-  ID_CONFIRM: 11,
-  FACE_CHECK: 12,
-  ACCOUNT_BANK: 13,
-  ACCOUNT_NUMBER: 14,
-  ACCOUNT_PASSWORD: 15,
-  ACCOUNT_CODE: 16,
-  PIN: 17,
-  COMPLETE: 18,
+  PREPARE: 1,
+  CERTIFICATE_TERMS: 2,
+  PHONE_INTRO: 3,
+  PHONE_TERMS: 4,
+  NAME: 5,
+  PHONE_OWNERSHIP: 6,
+  CARRIER: 7,
+  PHONE_NUMBER: 8,
+  OTP: 9,
+  ID_SELECT: 10,
+  ID_SCAN: 11,
+  ID_CONFIRM: 12,
+  FACE_TERMS: 13,
+  FACE_CHECK: 14,
+  ACCOUNT_BANK: 15,
+  ACCOUNT_NUMBER: 16,
+  ACCOUNT_PASSWORD: 17,
+  ACCOUNT_CODE: 18,
+  PIN: 19,
+  COMPLETE: 20,
 } as const;
 
 type Step = (typeof STEPS)[keyof typeof STEPS];
 type PageMeta = readonly [title: string, progress: number];
 
 // 임시 정책: 가입 과정에서는 약관과 신분증 촬영 화면에 TTS를 제공한다.
-const TTS_ENABLED_STEPS: readonly Step[] = [STEPS.SIGNUP_TERMS, STEPS.CERTIFICATE_TERMS];
+const TTS_ENABLED_STEPS: readonly Step[] = [
+  STEPS.CERTIFICATE_TERMS,
+  STEPS.PHONE_TERMS,
+  STEPS.FACE_TERMS,
+];
 
 const REENTER_PIN_NOTICE = '이제 방금 정한 번호를 한 번 더 입력해주세요.';
 
 const pageMeta: Record<Step, PageMeta> = {
   [STEPS.INTRO]: ['가입 안내', 0],
-  [STEPS.NAME]: ['가입 준비', 8],
-  [STEPS.PHONE_OWNERSHIP]: ['가입 준비', 14],
-  [STEPS.CARRIER]: ['본인 확인', 22],
-  [STEPS.PHONE_NUMBER]: ['본인 확인', 30],
-  [STEPS.SIGNUP_TERMS]: ['본인 확인', 36],
-  [STEPS.OTP]: ['본인 확인', 44],
-  [STEPS.CERTIFICATE_INTRO]: ['국민인증서', 50],
-  [STEPS.CERTIFICATE_TERMS]: ['국민인증서', 55],
-  [STEPS.ID_SELECT]: ['국민인증서', 60],
-  [STEPS.ID_SCAN]: ['국민인증서', 66],
-  [STEPS.ID_CONFIRM]: ['국민인증서', 72],
-  [STEPS.FACE_CHECK]: ['국민인증서', 78],
-  [STEPS.ACCOUNT_BANK]: ['국민인증서', 82],
-  [STEPS.ACCOUNT_NUMBER]: ['국민인증서', 86],
-  [STEPS.ACCOUNT_PASSWORD]: ['국민인증서', 90],
-  [STEPS.ACCOUNT_CODE]: ['국민인증서', 90],
-  [STEPS.PIN]: ['국민인증서', 96],
+  [STEPS.PREPARE]: ['가입 준비', 8],
+  [STEPS.CERTIFICATE_TERMS]: ['가입 준비', 16],
+  [STEPS.PHONE_INTRO]: ['본인 확인', 24],
+  [STEPS.PHONE_TERMS]: ['본인 확인', 30],
+  [STEPS.NAME]: ['본인 확인', 36],
+  [STEPS.PHONE_OWNERSHIP]: ['본인 확인', 42],
+  [STEPS.CARRIER]: ['본인 확인', 48],
+  [STEPS.PHONE_NUMBER]: ['본인 확인', 54],
+  [STEPS.OTP]: ['본인 확인', 60],
+  [STEPS.ID_SELECT]: ['국민인증서', 66],
+  [STEPS.ID_SCAN]: ['국민인증서', 70],
+  [STEPS.ID_CONFIRM]: ['국민인증서', 74],
+  [STEPS.FACE_TERMS]: ['국민인증서', 78],
+  [STEPS.FACE_CHECK]: ['국민인증서', 82],
+  [STEPS.ACCOUNT_BANK]: ['국민인증서', 86],
+  [STEPS.ACCOUNT_NUMBER]: ['국민인증서', 90],
+  [STEPS.ACCOUNT_PASSWORD]: ['국민인증서', 93],
+  [STEPS.ACCOUNT_CODE]: ['국민인증서', 93],
+  [STEPS.PIN]: ['국민인증서', 97],
   [STEPS.COMPLETE]: ['가입 완료', 100],
 };
 
 const voiceGuides: Record<Step, string> = {
-  [STEPS.INTRO]: '가입은 가입 준비, 본인 확인, 국민인증서 만들기의 세 단계로 진행돼요.',
+  [STEPS.INTRO]: '가입은 준비, 본인 확인, 국민인증서 만들기의 세 단계로 진행돼요.',
+  [STEPS.PREPARE]: '휴대폰, 신분증, 본인 계좌를 미리 준비해주세요.',
+  [STEPS.CERTIFICATE_TERMS]: '국민인증서 약관을 확인하고 필수 항목에 동의해주세요.',
+  [STEPS.PHONE_INTRO]: '이제 문자로 본인인지 확인할게요. 본인 명의 휴대폰이 필요해요.',
+  [STEPS.PHONE_TERMS]: '핸드폰 인증 약관을 확인하고 동의해주세요.',
   [STEPS.NAME]: '가입에 사용할 본인 이름을 입력해주세요.',
   [STEPS.PHONE_OWNERSHIP]: '지금 사용 중인 휴대폰이 고객님 명의인지 확인해주세요.',
   [STEPS.CARRIER]: '현재 이용하고 있는 통신사를 선택해주세요.',
   [STEPS.PHONE_NUMBER]: '본인 명의 휴대폰 번호 열한 자리를 입력해주세요.',
-  [STEPS.SIGNUP_TERMS]: '가입에 필요한 약관을 확인하고 필수 항목에 동의해주세요.',
   [STEPS.OTP]: '문자로 받은 숫자 여섯 자리를 입력해주세요.',
-  [STEPS.CERTIFICATE_INTRO]: '국민인증서는 신분증, 얼굴, 계좌, 비밀번호 순서로 확인해요.',
-  [STEPS.CERTIFICATE_TERMS]: '국민인증서 발급에 필요한 약관을 확인해주세요.',
   [STEPS.ID_SELECT]: '사용할 신분증을 골라주세요.',
   [STEPS.ID_SCAN]: '신분증 전체가 화면 안에 들어오도록 놓아주세요.',
   [STEPS.ID_CONFIRM]: '신분증에서 읽은 이름, 주민등록번호, 발급일자가 맞는지 확인해주세요.',
+  [STEPS.FACE_TERMS]: '얼굴 인증 약관을 확인하고 동의해주세요.',
   [STEPS.FACE_CHECK]: '휴대폰을 눈높이에 들고 화면을 바라봐주세요.',
   [STEPS.ACCOUNT_BANK]: '가입에 사용할 계좌의 은행을 선택해주세요.',
   [STEPS.ACCOUNT_NUMBER]: '계좌번호를 천천히 입력해주세요.',
@@ -143,9 +153,8 @@ function formatPhoneNumber(value: string) {
 
 export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   const [step, setStep] = useState<Step>(STEPS.INTRO);
-  const [termsStep, setTermsStep] = useState<0 | 1>(0);
   const [notice, setNotice] = useState('');
-  const [agreementDetail, setAgreementDetail] = useState('');
+  const [agreementDetail, setAgreementDetail] = useState<TermId | ''>('');
   const [showExit, setShowExit] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
@@ -174,7 +183,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
       if (stored) {
         state.restoreDraft(stored);
         setStep(resolveOnboardingResumeStep(stored) as Step);
-        setTermsStep(stored.termsStep);
       }
       setDraftReady(true);
     })();
@@ -188,15 +196,16 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   useEffect(() => {
     if (!draftReady) return;
     const draft: OnboardingDraft = {
-      version: 1,
+      version: 2,
       step,
-      termsStep,
       phoneOwnership: state.phoneOwnership,
       carrier: state.carrier,
-      requiredTerms: [state.requiredTerms[0], state.requiredTerms[1]],
+      requiredTerms: [Boolean(state.requiredTerms[0])],
       marketingTermAccepted: state.marketingTermAccepted,
       phoneVerified: state.otpVerified,
-      certificateTerms: [state.certificateTerms[0], state.certificateTerms[1]],
+      certificateTerms: [Boolean(state.certificateTerms[0])],
+      electronicDocTermAccepted: state.electronicDocTermAccepted,
+      faceTermAccepted: state.faceTermAccepted,
       idType: state.idType,
       idScanCompleted: state.idScanStatus === 'success',
       idInformationConfirmed: state.idInformationConfirmed,
@@ -215,12 +224,13 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     state.idScanStatus,
     state.idType,
     state.marketingTermAccepted,
+    state.electronicDocTermAccepted,
+    state.faceTermAccepted,
     state.otpVerified,
     state.phoneOwnership,
     state.requiredTerms,
     state.carrier,
     step,
-    termsStep,
   ]);
 
   const stopReading = () => {
@@ -233,13 +243,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   };
   const back = () => {
     stopReading();
-    if (step === STEPS.SIGNUP_TERMS && termsStep === 1) {
-      setTermsStep(0);
-      return;
-    }
     if (step === STEPS.OTP) {
-      setTermsStep(1);
-      setStep(STEPS.SIGNUP_TERMS);
+      setStep(STEPS.PHONE_NUMBER);
       return;
     }
     // 계좌 확인은 은행에 따라 두 갈래(계좌 비밀번호 / 1원 인증)로 나뉘므로,
@@ -295,13 +300,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   }, [step, state.pinPhase]);
 
   const activeVoiceGuide = useMemo(() => {
-    if (step === STEPS.SIGNUP_TERMS) {
-      return termsStep === 0
-        ? '가입에 꼭 필요한 내용을 확인해주세요. 필수 항목에 모두 동의해주세요.'
-        : '선택해서 동의할 수 있는 내용을 확인해주세요. 동의하지 않아도 가입할 수 있어요.';
-    }
     if (step === STEPS.OTP && state.otpVerified) {
-      return '본인 확인이 끝났어요. 이제 국민인증서를 만들게요.';
+      return '본인 확인이 끝났어요. 이제 신분증을 확인할게요.';
     }
     if (step === STEPS.ID_SCAN) {
       if (state.idScanStatus === 'capturing' || state.idScanStatus === 'checking') {
@@ -323,7 +323,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
       return '사용할 간편 비밀번호를 입력해주세요.';
     }
     return voiceGuides[step];
-  }, [step, termsStep, state.otpVerified, state.idScanStatus, state.faceStatus, state.pinPhase, state.pinError]);
+  }, [step, state.otpVerified, state.idScanStatus, state.faceStatus, state.pinPhase, state.pinError]);
 
   const speakGuide = () => {
     if (!isTtsEnabled) return;
@@ -480,7 +480,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
       <Toast message={notice} onDismiss={() => setNotice('')} />
       <AgreementDetail
         visible={!!agreementDetail}
-        title={agreementDetail}
+        termId={agreementDetail}
         onClose={() => setAgreementDetail('')}
       />
 
@@ -518,10 +518,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
             <>
               <StepBadge icon="shield">가입 안내 · 약 15분</StepBadge>
               <PageTitle>{'가입은 세 단계로\n천천히 진행해요'}</PageTitle>
-              <GuideText>신분증을 준비해주세요. 필요한 확인은 단비가 차례로 안내할게요.</GuideText>
+              <GuideText>휴대폰, 신분증, 계좌를 준비해주세요. 단비가 차례로 안내할게요.</GuideText>
               <StepList
                 rows={[
-                  ['가입 준비', '필요한 것을 함께 확인해요'],
+                  ['가입 준비', '준비물과 인증서 약관을 확인해요'],
                   ['휴대폰 본인 확인', '문자로 본인임을 확인해요'],
                   ['국민인증서 만들기', '신분증·얼굴·계좌를 확인해요'],
                 ]}
@@ -536,6 +536,118 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
             </>
           ),
           actions: <BottomActionArea primary="가입 시작하기" onPrimary={next} />,
+        };
+
+      case STEPS.PREPARE:
+        return {
+          body: (
+            <>
+              <StepBadge icon="sparkle">가입 준비</StepBadge>
+              <PageTitle>{'이 세 가지를\n준비해주세요'}</PageTitle>
+              <GuideText>준비되면 다음으로 갈 수 있어요.</GuideText>
+              <StepList
+                rows={[
+                  ['본인 명의 휴대폰', '문자로 인증번호를 받을 수 있어야 해요'],
+                  ['신분증', '주민등록증 또는 운전면허증 원본'],
+                  ['본인 계좌', '통장이나 카드에서 번호를 확인할 수 있으면 돼요'],
+                ]}
+              />
+            </>
+          ),
+          actions: <BottomActionArea primary="준비됐어요" onPrimary={next} />,
+        };
+
+      case STEPS.CERTIFICATE_TERMS:
+        return {
+          body: (
+            <>
+              <StepBadge icon="shield">국민인증서 약관</StepBadge>
+              <PageTitle>{'인증서 약관을\n확인해주세요'}</PageTitle>
+              <GuideText>필수 약관에 동의해야 다음으로 갈 수 있어요. 전자문서는 선택이에요.</GuideText>
+              <View style={st.agreeList}>
+                <AgreementCard
+                  title="KB국민인증서 약관 [필수]"
+                  description="인증서 발급과 사용"
+                  checked={state.certificateTerms[0]}
+                  onToggle={() => state.toggleCertificateTerm(0)}
+                  onDetail={() => setAgreementDetail('kb-certificate')}
+                />
+                <AgreementCard
+                  title="전자문서 전체 약관동의 [선택]"
+                  description="전자고지·문서를 받아보기"
+                  checked={state.electronicDocTermAccepted}
+                  onToggle={() => state.setElectronicDocTermAccepted(!state.electronicDocTermAccepted)}
+                  onDetail={() => setAgreementDetail('electronic-document')}
+                />
+              </View>
+              {!certificateTermsComplete ? (
+                <InlineError text="KB국민인증서 약관에 동의해주세요." />
+              ) : null}
+            </>
+          ),
+          actions: (
+            <BottomActionArea
+              primary="동의하고 계속하기"
+              onPrimary={next}
+              primaryDisabled={!certificateTermsComplete}
+            />
+          ),
+        };
+
+      case STEPS.PHONE_INTRO:
+        return {
+          body: (
+            <>
+              <StepBadge icon="phone">휴대폰 본인 확인</StepBadge>
+              <PageTitle>{'문자로 본인인지\n확인할게요'}</PageTitle>
+              <GuideText>본인 명의 휴대폰이 필요해요.</GuideText>
+              <StepList
+                rows={[
+                  ['약관 동의', '핸드폰 인증 약관을 확인해요'],
+                  ['번호 확인', '통신사와 휴대폰 번호를 확인해요'],
+                  ['문자 확인', '받은 숫자 6자리를 입력해요'],
+                ]}
+              />
+            </>
+          ),
+          actions: <BottomActionArea primary="본인 확인 시작하기" onPrimary={next} />,
+        };
+
+      case STEPS.PHONE_TERMS:
+        return {
+          body: (
+            <>
+              <StepBadge icon="shield">핸드폰 인증 약관</StepBadge>
+              <PageTitle>{'인증 약관을\n확인해주세요'}</PageTitle>
+              <GuideText>휴대폰 본인 확인을 위해 꼭 동의가 필요해요.</GuideText>
+              <View style={st.agreeList}>
+                <AgreementCard
+                  title="핸드폰 인증 약관 [필수]"
+                  description="휴대폰 본인 확인"
+                  checked={state.requiredTerms[0]}
+                  onToggle={() => state.toggleRequiredTerm(0)}
+                  onDetail={() => setAgreementDetail('phone-auth')}
+                />
+                <AgreementCard
+                  title="혜택 및 이벤트 안내 [선택]"
+                  description="새로운 혜택과 서비스 소식"
+                  checked={state.marketingTermAccepted}
+                  onToggle={() => state.setMarketingTermAccepted(!state.marketingTermAccepted)}
+                  onDetail={() => setAgreementDetail('marketing')}
+                />
+              </View>
+              {!requiredTermsComplete ? (
+                <InlineError text="핸드폰 인증 약관에 동의해주세요." />
+              ) : null}
+            </>
+          ),
+          actions: (
+            <BottomActionArea
+              primary="동의하고 계속하기"
+              onPrimary={next}
+              primaryDisabled={!requiredTermsComplete}
+            />
+          ),
         };
 
       case STEPS.NAME:
@@ -682,97 +794,15 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           ),
           actions: (
             <BottomActionArea
-              primary="약관 확인하기"
+              primary="인증번호 받기"
               onPrimary={() => {
-                setTermsStep(0);
+                state.sendOtp();
                 next();
               }}
               primaryDisabled={state.phoneNumber.length !== 11}
             />
           ),
         };
-
-      case STEPS.SIGNUP_TERMS: {
-        if (termsStep === 0) {
-          return {
-            body: (
-              <>
-                <StepBadge icon="shield">약관 1/2 · 꼭 필요한 동의</StepBadge>
-                <PageTitle>{'꼭 필요한 약관을\n확인해주세요'}</PageTitle>
-                <GuideText>가입을 위해 꼭 필요한 내용이에요.</GuideText>
-                <AgreementAllToggle
-                  label="필수 약관 모두 동의"
-                  checked={requiredTermsComplete}
-                  onToggle={() => state.setAllRequiredTerms(!requiredTermsComplete)}
-                />
-                <View style={st.agreeList}>
-                  <AgreementCard
-                    title="전자금융거래 기본약관"
-                    description="가입·송금 등 서비스 이용"
-                    checked={state.requiredTerms[0]}
-                    onToggle={() => state.toggleRequiredTerm(0)}
-                    onDetail={() => setAgreementDetail('전자금융거래 기본약관')}
-                  />
-                  <AgreementCard
-                    title="개인정보 수집·이용"
-                    description="본인 확인과 고객 등록"
-                    checked={state.requiredTerms[1]}
-                    onToggle={() => state.toggleRequiredTerm(1)}
-                    onDetail={() => setAgreementDetail('개인정보 수집·이용')}
-                  />
-                </View>
-                {!requiredTermsComplete ? (
-                  <InlineError text="필수 약관 두 개에 모두 동의해주세요." />
-                ) : null}
-              </>
-            ),
-            actions: (
-              <BottomActionArea
-                primary="필수 약관 확인했어요"
-                onPrimary={() => {
-                  stopReading();
-                  setTermsStep(1);
-                }}
-                primaryDisabled={!requiredTermsComplete}
-              />
-            ),
-          };
-        }
-        return {
-          body: (
-            <>
-              <StepBadge icon="sparkle">약관 2/2 · 선택 동의</StepBadge>
-              <PageTitle>{'선택 약관도\n확인해볼까요?'}</PageTitle>
-              <GuideText>동의하지 않아도 가입할 수 있어요.</GuideText>
-              <View style={st.agreeList}>
-                <AgreementCard
-                  title="혜택 및 이벤트 안내"
-                  description="새로운 혜택과 서비스 소식"
-                  checked={state.marketingTermAccepted}
-                  onToggle={() => state.setMarketingTermAccepted(!state.marketingTermAccepted)}
-                  onDetail={() => setAgreementDetail('혜택 및 이벤트 안내')}
-                />
-              </View>
-            </>
-          ),
-          actions: (
-            <BottomActionArea
-              primary="선택 약관도 동의할게요"
-              onPrimary={() => {
-                state.setMarketingTermAccepted(true);
-                state.sendOtp();
-                next();
-              }}
-              secondary="동의하지 않고 계속할게요"
-              onSecondary={() => {
-                state.setMarketingTermAccepted(false);
-                state.sendOtp();
-                next();
-              }}
-            />
-          ),
-        };
-      }
 
       case STEPS.OTP:
         return state.otpVerified
@@ -781,7 +811,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 <>
                   <StepBadge icon="check">2단계 · 본인 확인 완료</StepBadge>
                   <PageTitle>{'휴대폰 본인 확인이\n끝났어요'}</PageTitle>
-                  <GuideText>이제 국민인증서를 만들게요.</GuideText>
+                  <GuideText>이제 신분증을 확인할게요.</GuideText>
                   <View style={st.centerBlock}>
                     <SuccessMark />
                     <AppText size={15} weight={800} color={INK} align="center">
@@ -790,7 +820,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                   </View>
                 </>
               ),
-              actions: <BottomActionArea primary="국민인증서 만들기" onPrimary={next} />,
+              actions: <BottomActionArea primary="신분증 확인하기" onPrimary={next} />,
             }
           : {
               body: (
@@ -826,67 +856,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 />
               ),
             };
-
-      case STEPS.CERTIFICATE_INTRO:
-        return {
-          body: (
-            <>
-              <CertProgress current={0} />
-              <StepBadge icon="shield">인증서 만들기</StepBadge>
-              <PageTitle>{'국민인증서를\n만들게요'}</PageTitle>
-              <GuideText>신분증, 얼굴, 계좌, 비밀번호를 차례로 확인해요.</GuideText>
-              <StepList
-                rows={[
-                  ['신분증 확인', '신분증을 촬영해 정보를 확인해요'],
-                  ['얼굴 확인', '신분증 사진과 비교해요'],
-                  ['계좌 확인', '내 계좌인지 확인해요'],
-                  ['비밀번호 설정', '나만의 번호를 만들어요'],
-                ]}
-              />
-            </>
-          ),
-          actions: <BottomActionArea primary="인증서 발급하기" onPrimary={next} />,
-        };
-
-      case STEPS.CERTIFICATE_TERMS:
-        return {
-          body: (
-            <>
-              <CertProgress current={0} />
-              <StepBadge icon="shield">약관 확인</StepBadge>
-              <PageTitle>{'발급 약관을\n확인해주세요'}</PageTitle>
-              <GuideText>두 항목을 확인하고 선택해주세요.</GuideText>
-              <AgreementAllToggle
-                label="필수 약관 모두 동의"
-                checked={certificateTermsComplete}
-                onToggle={() => state.setAllCertificateTerms(!certificateTermsComplete)}
-              />
-              <View style={st.agreeList}>
-                <AgreementCard
-                  title="국민인증서 이용약관"
-                  description="인증서 발급과 사용"
-                  checked={state.certificateTerms[0]}
-                  onToggle={() => state.toggleCertificateTerm(0)}
-                  onDetail={() => setAgreementDetail('국민인증서 이용약관')}
-                />
-                <AgreementCard
-                  title="개인정보 수집·이용"
-                  description="본인 확인과 부정 사용 방지"
-                  checked={state.certificateTerms[1]}
-                  onToggle={() => state.toggleCertificateTerm(1)}
-                  onDetail={() => setAgreementDetail('인증서 개인정보 수집·이용')}
-                />
-              </View>
-            </>
-          ),
-          actions: (
-            <BottomActionArea
-              primary="동의하고 계속하기"
-              onPrimary={next}
-              primaryDisabled={!certificateTermsComplete}
-            />
-          ),
-        };
 
       case STEPS.ID_SELECT:
         return {
@@ -966,6 +935,37 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 state.resetIdVerification();
                 setStep(STEPS.ID_SCAN);
               }}
+            />
+          ),
+        };
+
+      case STEPS.FACE_TERMS:
+        return {
+          body: (
+            <>
+              <CertProgress current={2} />
+              <StepBadge icon="face">2/4 얼굴 약관</StepBadge>
+              <PageTitle>{'얼굴 인증 약관을\n확인해주세요'}</PageTitle>
+              <GuideText>신분증 사진과 얼굴을 비교하기 위해 동의가 필요해요.</GuideText>
+              <View style={st.agreeList}>
+                <AgreementCard
+                  title="얼굴인증 약관 [필수]"
+                  description="신분증과 얼굴 비교"
+                  checked={state.faceTermAccepted}
+                  onToggle={() => state.setFaceTermAccepted(!state.faceTermAccepted)}
+                  onDetail={() => setAgreementDetail('face-auth')}
+                />
+              </View>
+              {!state.faceTermAccepted ? (
+                <InlineError text="얼굴인증 약관에 동의해주세요." />
+              ) : null}
+            </>
+          ),
+          actions: (
+            <BottomActionArea
+              primary="동의하고 얼굴 확인하기"
+              onPrimary={next}
+              primaryDisabled={!state.faceTermAccepted}
             />
           ),
         };
