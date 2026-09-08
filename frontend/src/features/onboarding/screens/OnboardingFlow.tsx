@@ -25,16 +25,16 @@ import {
   AgreementCard,
   AgreementDetail,
   BottomActionArea,
+  CertProgress,
   GuideBox,
   GuideText,
+  HeroMark,
   LargeSelectionCard,
   OnboardingHeader,
-  OnboardingIcon,
   OnboardingInfoCard,
   PageTitle,
   SeniorTextInput,
   StepBadge,
-  VoiceGuideButton,
 } from '../components/OnboardingComponents';
 import {
   MOCK_ACCOUNT_CODE,
@@ -101,15 +101,15 @@ const pageMeta: Record<Step, PageMeta> = {
   [STEPS.OTP]: ['본인 확인', 44],
   [STEPS.CERTIFICATE_INTRO]: ['국민인증서', 50],
   [STEPS.CERTIFICATE_TERMS]: ['국민인증서', 55],
-  [STEPS.ID_SELECT]: ['신분증 확인', 60],
-  [STEPS.ID_SCAN]: ['신분증 확인', 66],
-  [STEPS.ID_CONFIRM]: ['신분증 확인', 72],
-  [STEPS.FACE_CHECK]: ['얼굴 확인', 78],
-  [STEPS.ACCOUNT_BANK]: ['계좌 확인', 82],
-  [STEPS.ACCOUNT_NUMBER]: ['계좌 확인', 86],
-  [STEPS.ACCOUNT_PASSWORD]: ['계좌 확인', 92],
-  [STEPS.ACCOUNT_CODE]: ['계좌 확인', 92],
-  [STEPS.PIN]: ['간편 비밀번호', 96],
+  [STEPS.ID_SELECT]: ['국민인증서', 60],
+  [STEPS.ID_SCAN]: ['국민인증서', 66],
+  [STEPS.ID_CONFIRM]: ['국민인증서', 72],
+  [STEPS.FACE_CHECK]: ['국민인증서', 78],
+  [STEPS.ACCOUNT_BANK]: ['국민인증서', 82],
+  [STEPS.ACCOUNT_NUMBER]: ['국민인증서', 86],
+  [STEPS.ACCOUNT_PASSWORD]: ['국민인증서', 90],
+  [STEPS.ACCOUNT_CODE]: ['국민인증서', 90],
+  [STEPS.PIN]: ['국민인증서', 96],
   [STEPS.COMPLETE]: ['가입 완료', 100],
 };
 
@@ -452,6 +452,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         onBack={back}
         onExit={() => setShowExit(true)}
         showBack={step !== STEPS.INTRO && step !== STEPS.COMPLETE}
+        onVoice={isTtsEnabled ? speakGuide : undefined}
+        isReading={isReading}
       />
 
       {page.fullBleed ? (
@@ -466,7 +468,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={st.page}>
-            {isTtsEnabled ? <VoiceGuideButton onClick={speakGuide} isReading={isReading} /> : null}
             {page.body}
           </View>
           {page.actions}
@@ -830,8 +831,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="shield">3단계 · 인증서 만들기</StepBadge>
+              <CertProgress current={0} />
+              <StepBadge icon="shield">인증서 만들기</StepBadge>
               <PageTitle>{'국민인증서를\n만들게요'}</PageTitle>
+              <GuideText>신분증, 얼굴, 계좌, 비밀번호를 차례로 확인해요.</GuideText>
               <StepList
                 rows={[
                   ['신분증 확인', '신분증을 촬영해 정보를 확인해요'],
@@ -849,9 +852,15 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="shield">3단계 · 인증서 약관</StepBadge>
+              <CertProgress current={0} />
+              <StepBadge icon="shield">약관 확인</StepBadge>
               <PageTitle>{'발급 약관을\n확인해주세요'}</PageTitle>
-              <GuideText>두 항목을 천천히 확인하고 선택해주세요.</GuideText>
+              <GuideText>두 항목을 확인하고 선택해주세요.</GuideText>
+              <AgreementAllToggle
+                label="필수 약관 모두 동의"
+                checked={certificateTermsComplete}
+                onToggle={() => state.setAllCertificateTerms(!certificateTermsComplete)}
+              />
               <View style={st.agreeList}>
                 <AgreementCard
                   title="국민인증서 이용약관"
@@ -868,9 +877,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                   onDetail={() => setAgreementDetail('인증서 개인정보 수집·이용')}
                 />
               </View>
-              {!certificateTermsComplete ? (
-                <InlineError text="약관 두 개를 모두 선택해주세요." />
-              ) : null}
             </>
           ),
           actions: (
@@ -886,9 +892,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="id">3단계 · 신분증 확인</StepBadge>
+              <CertProgress current={1} />
+              <StepBadge icon="id">1/4 신분증</StepBadge>
               <PageTitle>{'사용할 신분증을\n선택해주세요'}</PageTitle>
-              <GuideText>빛이 잘 드는 곳에서 원본 신분증을 준비해주세요.</GuideText>
+              <GuideText>빛이 잘 드는 곳에서 원본을 준비해주세요.</GuideText>
               <View style={st.list}>
                 <LargeSelectionCard
                   icon="id"
@@ -932,7 +939,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="user">3단계 · 신분증 정보 확인</StepBadge>
+              <CertProgress current={1} />
+              <StepBadge icon="id">1/4 신분증</StepBadge>
               <PageTitle>{'읽은 정보가\n맞나요?'}</PageTitle>
               <GuideText>다르면 아래에서 다시 촬영할 수 있어요.</GuideText>
               <ReadResult
@@ -969,7 +977,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="face">3단계 · 얼굴 확인</StepBadge>
+              <CertProgress current={2} />
+              <StepBadge icon="face">2/4 얼굴</StepBadge>
               <PageTitle>
                 {checking
                   ? '얼굴을 확인하고 있어요'
@@ -979,19 +988,22 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                       ? '얼굴을 확인했어요'
                       : '얼굴을 확인해볼게요'}
               </PageTitle>
-              <ScreenHelpBar {...helpBarProps} />
-              <FaceCheckCircle status={state.faceStatus} />
-              {checking ? (
-                <AppText size={15} weight={800} color={INK} align="center" style={st.mt16}>
-                  움직이지 말고 잠시 기다려주세요.
+              <GuideText>
+                {failed
+                  ? '밝은 곳에서 다시 맞춰주세요.'
+                  : success
+                    ? `${state.userName}님으로 확인했어요.`
+                    : '화면 안에 얼굴이 잘 보이게 해주세요.'}
+              </GuideText>
+              <View style={st.heroCard}>
+                <View style={st.heroMarkWrap}>
+                  <HeroMark icon={success ? 'check' : failed ? 'face' : 'face'} />
+                  {checking ? <ScanLine travel={28} inset={10} /> : null}
+                </View>
+                <AppText size={15} weight={800} color={INK} align="center" style={st.mt12}>
+                  {checking ? '움직이지 말고 기다려주세요' : failed ? '다시 확인할 수 있어요' : success ? '확인이 끝났어요' : '정면을 바라봐 주세요'}
                 </AppText>
-              ) : null}
-              {failed ? (
-                <GuideBox tone="error" title="괜찮아요. 밝은 곳에서 다시 해볼게요." />
-              ) : null}
-              {success ? (
-                <GuideBox tone="success" title={`${state.userName}님으로 확인했어요.`} />
-              ) : null}
+              </View>
             </>
           ),
           actions: (
@@ -1023,7 +1035,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="bank">3단계 · 계좌 확인</StepBadge>
+              <CertProgress current={3} />
+              <StepBadge icon="bank">3/4 계좌</StepBadge>
               <PageTitle>{'계좌가 있는\n은행을 선택해주세요'}</PageTitle>
               <GuideText>가입에 사용할 계좌의 은행을 하나 선택해주세요.</GuideText>
               <View style={st.bankGrid}>
@@ -1045,20 +1058,17 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="bank">3단계 · 계좌번호 입력</StepBadge>
+              <CertProgress current={3} />
+              <StepBadge icon="bank">3/4 계좌</StepBadge>
               <PageTitle>{'계좌번호를\n입력해주세요'}</PageTitle>
               <GuideText>{`${state.bank} 계좌번호를 통장이나 카드에서 확인해주세요.`}</GuideText>
-              <ScreenHelpBar {...helpBarProps} />
               <SeniorTextInput
                 label="계좌번호"
                 value={state.accountNumber}
                 onChangeText={(t) => state.setAccountNumber(t.replace(/\D/g, '').slice(0, 14))}
                 placeholder="숫자만 입력해주세요"
                 inputMode="numeric"
-                support="계좌번호 숫자만 순서대로 입력해주세요."
-              />
-              <GuideBox
-                title={
+                support={
                   state.isKbAccount
                     ? '국민은행 계좌는 계좌 비밀번호로 바로 확인해요.'
                     : '다른 은행 계좌는 1원을 보내 입금자명으로 확인해요.'
@@ -1088,10 +1098,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="lock">3단계 · 계좌 비밀번호</StepBadge>
+              <CertProgress current={3} />
+              <StepBadge icon="lock">3/4 계좌</StepBadge>
               <PageTitle>{'계좌 비밀번호\n4자리를 입력해주세요'}</PageTitle>
               <GuideText>{`${state.bank} ${state.accountNumber} 계좌의 비밀번호예요.`}</GuideText>
-              <ScreenHelpBar {...helpBarProps} />
               <SeniorTextInput
                 label="계좌 비밀번호"
                 value={state.accountPassword}
@@ -1099,9 +1109,8 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 placeholder="숫자 4자리"
                 inputMode="numeric"
                 maxLength={4}
-                support="계좌를 만들 때 정한 비밀번호 4자리를 입력해주세요."
+                support="프로토타입에서는 숫자 4자리를 입력하면 확인이 끝나요."
               />
-              <GuideBox title="프로토타입에서는 숫자 4자리를 입력하면 확인이 끝나요." />
             </>
           ),
           actions: (
@@ -1121,9 +1130,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
-              <StepBadge icon="bank">3단계 · 1원 인증</StepBadge>
+              <CertProgress current={3} />
+              <StepBadge icon="bank">3/4 계좌</StepBadge>
               <PageTitle>{'입금자명 숫자\n4자리를 입력해주세요'}</PageTitle>
-              <ScreenHelpBar {...helpBarProps} />
+              <GuideText>{`${state.bank} 통장 입금 내역에서 'KB' 뒤의 숫자를 확인해주세요.`}</GuideText>
               <SeniorTextInput
                 label="숫자 4자리"
                 value={state.accountCode}
@@ -1135,7 +1145,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 support={
                   state.accountVerificationSent
                     ? `1원을 보냈어요. 프로토타입 입금자명은 KB ${MOCK_ACCOUNT_CODE}예요.`
-                    : `${state.bank} 통장 입금 내역에서 'KB' 뒤의 숫자를 확인해주세요.`
+                    : '입금자명에 표시된 숫자만 입력해주세요.'
                 }
               />
             </>
@@ -1159,23 +1169,24 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <>
+              <CertProgress current={4} />
+              <StepBadge icon="lock">4/4 비밀번호</StepBadge>
               <PageTitle>
                 {success
                   ? '비밀번호를 설정했어요'
                   : confirming
                     ? '한 번 더 입력해주세요'
-                    : '앞으로 쓸 숫자 6자리를\n정해주세요'}
+                    : '숫자 6자리를 정해주세요'}
               </PageTitle>
-              <GuideText>
-                {success
-                  ? '두 번 입력한 번호가 같아요. 로그인할 때 이 번호를 사용해요.'
-                  : confirming
-                    ? '처음 정한 번호를 그대로 입력해주세요.'
-                    : '생일이나 전화번호처럼 알기 쉬운 번호는 피해주세요.'}
-              </GuideText>
               {success ? (
-                <View style={st.centerBlock}>
-                  <SuccessMark />
+                <GuideText>로그인할 때 이 번호를 사용해요.</GuideText>
+              ) : null}
+              {success ? (
+                <View style={st.heroCard}>
+                  <HeroMark icon="check" />
+                  <AppText size={15} weight={800} color={INK} style={st.mt12}>
+                    두 번 입력한 번호가 같아요
+                  </AppText>
                 </View>
               ) : (
                 <View style={st.pinArea}>
@@ -1221,7 +1232,9 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
         return {
           body: (
             <View style={st.complete}>
-              <SuccessMark />
+              <View style={st.mb18}>
+                <SuccessMark />
+              </View>
               <AppText size={24} weight={900} color={INK} align="center" lineHeight={33}>
                 가입이 끝났어요!
               </AppText>
@@ -1294,31 +1307,8 @@ function ReadResult({ idType, rows }: { idType: string; rows: [string, string][]
   );
 }
 
-function FaceCheckCircle({ status }: { status: string }) {
-  const success = status === 'success';
-  const checking = status === 'checking';
-  const failure = status === 'failure';
-  return (
-    <View
-      style={[
-        st.faceCircle,
-        checking && st.faceCircleActive,
-        success && st.faceCircleSuccess,
-        failure && st.faceCircleFailure,
-      ]}
-    >
-      <OnboardingIcon name={success ? 'check' : 'user'} size={34} color={INK} />
-      {checking ? <ScanLine travel={44} inset={20} /> : null}
-    </View>
-  );
-}
-
 function SuccessMark() {
-  return (
-    <View style={st.successMark}>
-      <OnboardingIcon name="check" size={34} color={INK} />
-    </View>
-  );
+  return <HeroMark icon="check" />;
 }
 
 function InlineError({ text }: { text: string }) {
@@ -1333,7 +1323,8 @@ const st = StyleSheet.create({
   flex1: { flex: 1 },
   mt2: { marginTop: 2 },
   mt8: { marginTop: 8 },
-  mt16: { marginTop: 16 },
+  mt12: { marginTop: 12 },
+  mb18: { marginBottom: 18 },
   underline: { textDecorationLine: 'underline' },
 
   page: {
@@ -1411,40 +1402,30 @@ const st = StyleSheet.create({
   },
   readRowBorder: { borderTopWidth: 1, borderTopColor: '#F0E6C4' },
   readLabel: { width: 92 },
-
-  faceCircle: {
-    width: 150,
-    height: 150,
-    alignSelf: 'center',
+  pinArea: { alignItems: 'center', marginTop: 12 },
+  pinDotsBox: { marginBottom: 16 },
+  pinHint: { marginTop: 10 },
+  centerBlock: { alignItems: 'center', marginTop: 24 },
+  heroCard: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
-    overflow: 'hidden',
-    borderWidth: 2.5,
-    borderColor: '#EBEBEB',
-    borderRadius: 75,
-    backgroundColor: '#FAFAFA',
+    marginTop: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderWidth: 1.8,
+    borderColor: BORDER,
+    backgroundColor: CREAM,
   },
-  faceCircleActive: { borderColor: YELLOW },
-  faceCircleSuccess: { borderColor: '#A8DCC0', backgroundColor: '#EFF9F3' },
-  faceCircleFailure: { borderColor: '#F0B4AC', backgroundColor: '#FDF0EE' },
-
-  pinArea: { alignItems: 'center', marginTop: 18 },
-  pinDotsBox: { marginBottom: 22 },
-  pinHint: { marginTop: 12 },
-  centerBlock: { alignItems: 'center', marginTop: 24 },
-
-  complete: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  successMark: {
+  heroMarkWrap: {
     width: 68,
     height: 68,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
+    overflow: 'hidden',
     borderRadius: 18,
-    backgroundColor: YELLOW,
   },
+
+  complete: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   exitBody: { marginTop: 10, marginBottom: 14 },
   exitPrimary: {
