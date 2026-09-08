@@ -4,28 +4,34 @@ import { AppText } from '@/components/ui/AppText';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import { AccountCard } from '../../components/AccountCard';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
-import { HomeHeader } from '../../components/HomeHeader';
 import { MicButton } from '../../components/MicButton';
+import { IconCard } from '../../components/icons';
 
 /** danbi_jj main/screens/transfer.tsx <TransferScreen> (송금 진입 화면) 이식. */
 export function TransferIntroScreen({
   onMic,
   onGoHome,
   onDirect,
-  onHistory,
-  needCheckCount,
-  unknownCount,
+  onSavedAccounts,
 }: {
   onMic: () => void;
   onGoHome: () => void;
   onDirect: () => void;
-  onHistory: () => void;
-  needCheckCount: number;
-  unknownCount: number;
+  onSavedAccounts: () => void;
 }) {
   return (
     <View style={styles.root}>
-      <HomeHeader onHistory={onHistory} needCheckCount={needCheckCount} unknownCount={unknownCount} />
+      <View style={styles.header}>
+        <AppText size={16} weight={800} color={INK}>
+          안녕하세요, 박옥순님
+        </AppText>
+        <Pressable accessibilityRole="button" onPress={onSavedAccounts} style={styles.savedButton}>
+          <IconCard />
+          <AppText size={12} weight={800} color={INK}>
+            저장된 계좌 ›
+          </AppText>
+        </Pressable>
+      </View>
       <AccountCard />
 
       <View style={styles.center}>
@@ -63,6 +69,26 @@ export function TransferIntroScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+  },
+  savedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingLeft: 9,
+    paddingRight: 11,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    borderRadius: 20,
+    backgroundColor: CREAM,
+  },
   center: {
     flex: 1,
     alignItems: 'center',

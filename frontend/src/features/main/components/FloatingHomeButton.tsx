@@ -15,7 +15,6 @@ export function FloatingHomeButton({ onGoHome, bg = '#fff' }: { onGoHome: () => 
           홈
         </AppText>
       </Pressable>
-      <View style={styles.handle} />
     </View>
   );
 }
@@ -32,13 +31,5 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingTop: 12,
     paddingBottom: 6,
-  },
-  handle: {
-    height: 4,
-    width: 100,
-    alignSelf: 'center',
-    marginBottom: 6,
-    borderRadius: 2,
-    backgroundColor: 'rgba(23,23,23,0.16)',
   },
 });

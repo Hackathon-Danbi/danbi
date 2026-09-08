@@ -2,24 +2,26 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
-import { CONTACTS } from '../../data';
+import { bankOf } from '../../data';
+import { recipientDisplayName } from '../../savedRecipients';
+import type { SavedRecipient } from '../../types';
 import { INK } from '../../theme';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 import { NavBar } from '../../components/NavBar';
 import { IconChevronRight } from '../../components/icons';
 
-type Contact = (typeof CONTACTS)[number];
-
 /** danbi_jj main/screens/transfer.tsx <RecipientScreen> 이식. */
 export function RecipientScreen({
+  recipients,
   onBack,
   onSelectContact,
   onNewAccount,
   helpTarget,
   onActivity,
 }: {
+  recipients: SavedRecipient[];
   onBack: () => void;
-  onSelectContact: (c: Contact) => void;
+  onSelectContact: (recipient: SavedRecipient) => void;
   onNewAccount: () => void;
   helpTarget: string;
   onActivity: () => void;
@@ -32,34 +34,38 @@ export function RecipientScreen({
           {'누구에게\n보낼까요?'}
         </AppText>
         <AppText size={14} color="#888" style={styles.mb28}>
-          최근에 보낸 계좌를 고르거나 새 계좌를 입력하세요.
+          저장된 계좌를 고르거나 새 계좌를 입력하세요.
         </AppText>
 
         <PulseHighlight active={helpTarget === 'contactList'} borderRadius={18}>
           <View style={styles.list}>
-            {CONTACTS.map((c) => (
-              <Pressable
-                key={c.savedRecipientId}
-                accessibilityRole="button"
-                onPress={() => onSelectContact(c)}
-                style={styles.item}
-              >
-                <View style={[styles.avatar, { backgroundColor: c.bg }]}>
-                  <AppText size={18} weight={900} color={c.fg}>
-                    {c.initial}
-                  </AppText>
-                </View>
-                <View style={styles.flex1}>
-                  <AppText size={16} weight={900} color={INK} style={styles.mb3}>
-                    {c.recipientName}
-                  </AppText>
-                  <AppText size={13} color="#999">
-                    {c.recipientBankName} · {c.recipientAccountNumber}
-                  </AppText>
-                </View>
-                <IconChevronRight />
-              </Pressable>
-            ))}
+            {recipients.map((recipient) => {
+              const bank = bankOf(recipient.recipientBankName);
+              const displayName = recipientDisplayName(recipient);
+              return (
+                <Pressable
+                  key={recipient.savedRecipientId}
+                  accessibilityRole="button"
+                  onPress={() => onSelectContact(recipient)}
+                  style={styles.item}
+                >
+                  <View style={[styles.avatar, { backgroundColor: bank.bg }]}>
+                    <AppText size={18} weight={900} color={bank.fg}>
+                      {displayName.slice(0, 1)}
+                    </AppText>
+                  </View>
+                  <View style={styles.flex1}>
+                    <AppText size={16} weight={900} color={INK} style={styles.mb3}>
+                      {displayName}
+                    </AppText>
+                    <AppText size={13} color="#999">
+                      {recipient.recipientBankName} · {recipient.recipientAccountNumber}
+                    </AppText>
+                  </View>
+                  <IconChevronRight />
+                </Pressable>
+              );
+            })}
 
             <Pressable
               accessibilityRole="button"

@@ -1,4 +1,4 @@
-import type { TxRecord } from './types';
+import type { RecentRecipientCandidate, SavedRecipient, TxRecord } from './types';
 
 /** danbi_jj app/features/main/data.ts 이식. */
 
@@ -47,16 +47,14 @@ export const BANKS = [
   },
 ];
 
-export const CONTACTS = [
+export const CONTACTS: SavedRecipient[] = [
   {
     savedRecipientId: 7,
     recipientName: '김민수',
     recipientBankCode: '004',
     recipientBankName: 'KB국민은행',
     recipientAccountNumber: '123-456-789012',
-    initial: '김',
-    bg: '#F5C100',
-    fg: '#111',
+    nickname: null,
   },
   {
     savedRecipientId: 8,
@@ -64,9 +62,27 @@ export const CONTACTS = [
     recipientBankCode: '088',
     recipientBankName: '신한은행',
     recipientAccountNumber: '110-234-567890',
-    initial: '이',
-    bg: '#E85C2A',
-    fg: '#fff',
+    nickname: '영희',
+  },
+];
+
+/** 실제 연동 전, 최근 송금 이력을 계좌별로 집계한 추천 목데이터. */
+export const RECENT_RECIPIENT_CANDIDATES: RecentRecipientCandidate[] = [
+  {
+    recipientName: '박수진',
+    recipientBankCode: '020',
+    recipientBankName: '우리은행',
+    recipientAccountNumber: '1002-456-789012',
+    recentTransferCount: 5,
+    lastTransferredAt: '8월 27일',
+  },
+  {
+    recipientName: '최영호',
+    recipientBankCode: '081',
+    recipientBankName: '하나은행',
+    recipientAccountNumber: '357-910-246813',
+    recentTransferCount: 3,
+    lastTransferredAt: '8월 24일',
   },
 ];
 

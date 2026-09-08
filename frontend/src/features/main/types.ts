@@ -4,6 +4,7 @@ export type Screen =
   | 'home'
   | 'listening'
   | 'transfer'
+  | 'savedaccounts'
   | 'recipient'
   | 'bankselect'
   | 'accountinput'
@@ -34,6 +35,23 @@ export interface TransferDraft {
   transferMethod: 'DIRECT' | 'VOICE';
   isInCall: boolean;
   riskAcknowledged: boolean;
+}
+
+export interface SavedRecipient {
+  savedRecipientId: number;
+  recipientBankCode: string;
+  recipientBankName: string;
+  recipientAccountNumber: string;
+  recipientName: string;
+  nickname: string | null;
+}
+
+export interface RecentRecipientCandidate extends Omit<
+  SavedRecipient,
+  'savedRecipientId' | 'nickname'
+> {
+  recentTransferCount: number;
+  lastTransferredAt: string;
 }
 
 export type TransactionReviewStatus = 'UNREAD' | 'KNOWN' | 'UNKNOWN';

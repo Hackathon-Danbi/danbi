@@ -20,6 +20,7 @@ export const StorageKeys = {
   experiencedScenarios: 'danbi.scenarios.experienced',
   quizRecord: 'danbi.quiz.record',
   transactionReviews: 'danbi.transactions.reviews',
+  savedRecipients: 'danbi.transfer.saved-recipients',
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];
