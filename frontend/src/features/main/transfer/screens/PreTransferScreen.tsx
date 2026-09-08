@@ -40,7 +40,7 @@ export function PreTransferScreen({
     <View style={styles.root} onTouchStart={onActivity}>
       <NavBar title="송금 전 확인" onBack={onBack} />
       <View style={styles.body}>
-        <AppText size={28} weight={900} color={INK} lineHeight={35}>
+        <AppText size={24} weight={900} color={INK} lineHeight={31}>
           {'보내기 전에\n확인해 주세요'}
         </AppText>
 
@@ -51,7 +51,7 @@ export function PreTransferScreen({
                 받는 사람
               </AppText>
               <View style={styles.rowBetween}>
-                <AppText size={28} weight={900} color={INK}>
+                <AppText size={24} weight={900} color={INK}>
                   {txInfo.recipient || '수취인'}
                 </AppText>
                 {reviewCount >= 1 ? <AppText size={18} color="#4CAF50">✓</AppText> : null}
@@ -85,7 +85,7 @@ export function PreTransferScreen({
               </AppText>
               <View style={styles.rowBetweenTop}>
                 <View>
-                  <AppText size={32} weight={900} color={INK} style={styles.mb6}>
+                  <AppText size={28} weight={900} color={INK} style={styles.mb6}>
                     {fmt(txInfo.amount)}원
                   </AppText>
                   <AppText size={13} weight={700} color="#E05050">
@@ -120,12 +120,14 @@ export function PreTransferScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
+  root: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
   body: {
     flex: 1,
-    paddingVertical: 22,
+    minHeight: 0,
+    overflow: 'hidden',
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    gap: 18,
+    gap: 14,
   },
   mb4: { marginBottom: 4 },
   mb6: { marginBottom: 6 },
@@ -137,9 +139,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#fff',
   },
-  sectionTop: { paddingTop: 20, paddingBottom: 18, paddingHorizontal: 22 },
-  sectionMid: { paddingVertical: 18, paddingHorizontal: 22 },
-  sectionBot: { paddingTop: 18, paddingBottom: 22, paddingHorizontal: 22 },
+  sectionTop: { paddingTop: 16, paddingBottom: 14, paddingHorizontal: 22 },
+  sectionMid: { paddingVertical: 14, paddingHorizontal: 22 },
+  sectionBot: { paddingTop: 14, paddingBottom: 16, paddingHorizontal: 22 },
   divider: { height: 1, backgroundColor: '#F0F0F0' },
   rowBetween: {
     flexDirection: 'row',
@@ -152,6 +154,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   footer: {
+    flexShrink: 0,
     paddingHorizontal: 20,
     paddingBottom: 16,
     gap: 10,

@@ -9,16 +9,20 @@ export type DraftBank =
   | '카카오뱅크'
   | null;
 
+/** 온보딩 마지막 단계(가입 완료). */
+export const ONBOARDING_LAST_STEP = 20;
+
 export type OnboardingDraft = {
-  version: 1;
+  version: 2;
   step: number;
-  termsStep: 0 | 1;
   phoneOwnership: boolean | null;
   carrier: DraftCarrier;
-  requiredTerms: [boolean, boolean];
+  requiredTerms: [boolean];
   marketingTermAccepted: boolean;
   phoneVerified: boolean;
-  certificateTerms: [boolean, boolean];
+  certificateTerms: [boolean];
+  electronicDocTermAccepted: boolean;
+  faceTermAccepted: boolean;
   idType: DraftIdType;
   idScanCompleted: boolean;
   idInformationConfirmed: boolean;
@@ -38,17 +42,22 @@ const BANK_NAMES = new Set<Exclude<DraftBank, null>>([
   '카카오뱅크',
 ]);
 
-function booleanPair(value: unknown): [boolean, boolean] {
-  return Array.isArray(value) && value.length === 2
-    ? [value[0] === true, value[1] === true]
-    : [false, false];
+function booleanFlag(value: unknown): [boolean] {
+  if (!Array.isArray(value)) return [false];
+  if (value.length >= 3) return [value[2] === true];
+  if (value.length === 1) return [value[0] === true];
+  return [false];
+}
+
+function firstFlag(value: unknown): [boolean] {
+  return Array.isArray(value) ? [value[0] === true] : [false];
 }
 
 /** AsyncStorage의 손상되거나 이전 버전인 값을 앱 상태에 넣지 않는다. */
 export function sanitizeOnboardingDraft(value: unknown): OnboardingDraft | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  if (record.version !== 1) return null;
+  if (record.version !== 2) return null;
 
   const rawStep = typeof record.step === 'number' && Number.isFinite(record.step)
     ? Math.trunc(record.step)
@@ -64,15 +73,16 @@ export function sanitizeOnboardingDraft(value: unknown): OnboardingDraft | null 
     : null;
 
   return {
-    version: 1,
-    step: Math.max(0, Math.min(18, rawStep)),
-    termsStep: record.termsStep === 1 ? 1 : 0,
+    version: 2,
+    step: Math.max(0, Math.min(ONBOARDING_LAST_STEP, rawStep)),
     phoneOwnership: typeof record.phoneOwnership === 'boolean' ? record.phoneOwnership : null,
     carrier,
-    requiredTerms: booleanPair(record.requiredTerms),
+    requiredTerms: booleanFlag(record.requiredTerms),
     marketingTermAccepted: record.marketingTermAccepted === true,
     phoneVerified: record.phoneVerified === true,
-    certificateTerms: booleanPair(record.certificateTerms),
+    certificateTerms: firstFlag(record.certificateTerms),
+    electronicDocTermAccepted: record.electronicDocTermAccepted === true,
+    faceTermAccepted: record.faceTermAccepted === true,
     idType,
     idScanCompleted: record.idScanCompleted === true,
     idInformationConfirmed: record.idInformationConfirmed === true,
@@ -85,14 +95,18 @@ export function sanitizeOnboardingDraft(value: unknown): OnboardingDraft | null 
 /** 민감 입력이 필요한 경계를 건너뛰지 않도록 재개 위치를 뒤로 조정한다. */
 export function resolveOnboardingResumeStep(draft: OnboardingDraft): number {
   if (draft.step === 0) return 0;
-  if (draft.step <= 6 || !draft.phoneVerified) return 1;
-  if (draft.step <= 9) return draft.step;
-  if (!draft.idType) return 9;
-  if (draft.step === 10 || !draft.idScanCompleted) return 10;
-  if (draft.step === 11 || !draft.idInformationConfirmed) return 11;
-  if (draft.step === 12 || !draft.faceVerified) return 12;
-  // 13(은행 선택)~16(1원 인증/계좌 비밀번호) 사이는 계좌번호·비밀번호를 다시 입력받도록
-  // 항상 은행 선택부터 되돌린다.
-  if (draft.step <= 16 || !draft.accountVerified) return 13;
+  // 0 안내 · 1 준비 · 2 인증서 약관
+  if (draft.step <= 2) return draft.step;
+  // 3~9 휴대폰 본인확인. 끝나지 않았으면 안내부터 다시.
+  if (draft.step <= 9 || !draft.phoneVerified) return 3;
+  // 10~12 신분증
+  if (draft.step <= 10) return draft.step;
+  if (!draft.idType) return 10;
+  if (draft.step === 11 || !draft.idScanCompleted) return 11;
+  if (draft.step === 12 || !draft.idInformationConfirmed) return 12;
+  // 13 얼굴 약관 · 14 얼굴 확인
+  if (draft.step <= 14 || !draft.faceVerified) return 13;
+  // 15~18 계좌. 번호·비밀번호를 다시 받도록 은행 선택부터.
+  if (draft.step <= 18 || !draft.accountVerified) return 15;
   return draft.step;
 }

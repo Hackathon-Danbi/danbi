@@ -21,24 +21,26 @@ export function TransferIntroScreen({
 }) {
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <AppText size={16} weight={800} color={INK}>
-          안녕하세요, 박옥순님
-        </AppText>
-        <Pressable accessibilityRole="button" onPress={onSavedAccounts} style={styles.savedButton}>
-          <IconCard />
-          <AppText size={12} weight={800} color={INK}>
-            저장된 계좌 ›
+      <View style={styles.top}>
+        <View style={styles.header}>
+          <AppText size={16} weight={800} color={INK}>
+            안녕하세요, 박옥순님
           </AppText>
-        </Pressable>
+          <Pressable accessibilityRole="button" onPress={onSavedAccounts} style={styles.savedButton}>
+            <IconCard />
+            <AppText size={12} weight={800} color={INK}>
+              저장된 계좌 ›
+            </AppText>
+          </Pressable>
+        </View>
+        <AccountCard />
       </View>
-      <AccountCard />
 
       <View style={styles.center}>
-        <AppText size={26} weight={900} color={INK} align="center" lineHeight={33} style={styles.title}>
+        <AppText size={24} weight={900} color={INK} align="center" lineHeight={31} style={styles.title}>
           {'누구에게 얼마를\n보내시겠어요?'}
         </AppText>
-        <MicButton onClick={onMic} size={96} />
+        <MicButton onClick={onMic} size={88} />
         <AppText size={14} weight={800} color={INK} style={styles.mt16}>
           마이크를 눌러 말씀해주세요
         </AppText>
@@ -68,7 +70,8 @@ export function TransferIntroScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
+  root: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
+  top: { flexShrink: 0 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -91,19 +94,22 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 22,
   },
-  title: { marginBottom: 24 },
-  mt16: { marginTop: 16 },
+  title: { marginBottom: 16 },
+  mt16: { marginTop: 12 },
   examples: {
+    flexShrink: 0,
     paddingHorizontal: 18,
-    paddingBottom: 12,
-    gap: 8,
+    paddingBottom: 8,
+    gap: 6,
   },
   example: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 14,
     borderWidth: 1.5,
@@ -111,8 +117,9 @@ const styles = StyleSheet.create({
     backgroundColor: CREAM,
   },
   directWrap: {
+    flexShrink: 0,
     paddingHorizontal: 18,
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
   direct: {
     width: '100%',

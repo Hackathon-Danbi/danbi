@@ -62,10 +62,10 @@ export function AccountInputScreen({
           </Pressable>
         </View>
 
-        <AppText size={24} weight={900} color={INK} lineHeight={31} style={styles.mb16}>
+        <AppText size={22} weight={900} color={INK} lineHeight={29} style={styles.mb10}>
           {'계좌번호를\n입력해주세요'}
         </AppText>
-        <AppText size={14} color="#777" lineHeight={21} style={styles.guide}>
+        <AppText size={14} color="#777" lineHeight={20} style={styles.guide}>
           직접 입력하거나 사진에서 계좌번호를 찾을 수 있어요.
         </AppText>
 
@@ -118,20 +118,20 @@ export function AccountInputScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
-  body: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-  mb16: { marginBottom: 16 },
+  root: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
+  body: { flex: 1, minHeight: 0, paddingHorizontal: 20, paddingTop: 16 },
+  mb10: { marginBottom: 10 },
   bankRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: CREAM,
     borderWidth: 1.8,
     borderColor: BORDER,
     borderRadius: 14,
-    marginBottom: 22,
+    marginBottom: 14,
   },
   bankLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bankChip: {
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  guide: { marginTop: -10, marginBottom: 14 },
+  guide: { marginTop: -4, marginBottom: 10 },
   reselect: {
     backgroundColor: '#fff',
     borderWidth: 1.5,
@@ -157,11 +157,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: YELLOW,
     marginBottom: 10,
-    minHeight: 56,
+    minHeight: 52,
     justifyContent: 'center',
   },
   photoButton: {
-    minHeight: 58,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     backgroundColor: CREAM,
   },
-  hint: { marginBottom: 14 },
-  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 },
+  hint: { marginBottom: 8 },
+  footer: { flexShrink: 0, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 },
   next: {
     width: '100%',
     paddingVertical: 18,

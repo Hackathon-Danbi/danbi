@@ -35,14 +35,16 @@ export function useOnboardingState() {
   const [userName, setUserName] = useState('');
   const [carrier, setCarrier] = useState<Carrier>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [requiredTerms, setRequiredTerms] = useState<boolean[]>([false, false]);
+  const [requiredTerms, setRequiredTerms] = useState<boolean[]>([false]);
   const [marketingTermAccepted, setMarketingTermAccepted] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpSendCount, setOtpSendCount] = useState(0);
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
-  const [certificateTerms, setCertificateTerms] = useState<boolean[]>([false, false]);
+  const [certificateTerms, setCertificateTerms] = useState<boolean[]>([false]);
+  const [electronicDocTermAccepted, setElectronicDocTermAccepted] = useState(false);
+  const [faceTermAccepted, setFaceTermAccepted] = useState(false);
   const [faceStatus, setFaceStatus] = useState<FaceStatus>('idle');
   const [faceVerified, setFaceVerified] = useState(false);
   const [bank, setBankState] = useState<string | null>(null);
@@ -285,6 +287,8 @@ export function useOnboardingState() {
     setCarrier(draft.carrier);
     setRequiredTerms(draft.requiredTerms);
     setMarketingTermAccepted(draft.marketingTermAccepted);
+    setElectronicDocTermAccepted(draft.electronicDocTermAccepted);
+    setFaceTermAccepted(draft.faceTermAccepted);
     setOtpSent(false);
     setOtp('');
     setOtpError('');
@@ -304,7 +308,7 @@ export function useOnboardingState() {
     setAccountError('');
     setAccountVerified(draft.accountVerified);
     resetPin();
-    setOnboardingCompleted(draft.step === 18);
+    setOnboardingCompleted(draft.step === 20);
   };
 
   return {
@@ -340,6 +344,10 @@ export function useOnboardingState() {
     certificateTerms,
     toggleCertificateTerm,
     setAllCertificateTerms,
+    electronicDocTermAccepted,
+    setElectronicDocTermAccepted,
+    faceTermAccepted,
+    setFaceTermAccepted,
     faceStatus,
     faceVerified,
     startFaceCheck,

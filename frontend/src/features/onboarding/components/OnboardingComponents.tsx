@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import {
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -11,6 +13,7 @@ import Svg, { Circle, Path, Polyline, Rect } from 'react-native-svg';
 import { AppText } from '@/components/ui/AppText';
 import { Sheet } from '@/components/ui/Sheet';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
+import { getTerm, type TermId } from '../terms';
 
 /**
  * 가입·인증 화면의 공통 부품. 크기/색/간격은 메인(홈) 화면 규격을 그대로 따른다:
@@ -556,30 +559,42 @@ export function BottomActionArea({
 }
 
 export function AgreementDetail({
-  title,
+  termId,
   visible,
   onClose,
 }: {
-  title: string;
+  termId: TermId | '';
   visible: boolean;
   onClose: () => void;
 }) {
+  const term = termId ? getTerm(termId) : null;
+  const title = term?.title ?? '';
   return (
-    <Sheet visible={visible} onClose={onClose} title={title} a11yLabel={`${title} 상세 내용`}>
-      <AppText size={14} lineHeight={21} color="#888" style={s.detailBody}>
-        서비스 가입과 안전한 본인 확인을 위해 필요한 내용을 안내해요. 입력한 정보는 정해진 목적에만
-        사용하고 안전하게 보호합니다.
-      </AppText>
-      <View style={[s.notice, s.noticeNeutral, s.mb16]}>
-        <AppText size={13} lineHeight={19} color="#7A6000">
-          동의하기 전에 내용을 천천히 읽어보세요. 궁금한 점은 직원에게 물어볼 수 있어요.
+    <Sheet visible={visible} onClose={onClose} title={title} a11yLabel={`${title} 상세 내용`} tall>
+      <ScrollView
+        style={[s.detailScroll, Platform.OS === 'web' ? s.detailScrollWeb : null]}
+        contentContainerStyle={s.detailScrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+        bounces
+      >
+        <AppText size={15} lineHeight={24} color={INK}>
+          {term?.body ?? ''}
         </AppText>
+      </ScrollView>
+      <View style={s.detailFooter}>
+        <View style={[s.notice, s.noticeNeutral, s.mb16, s.mt3]}>
+          <AppText size={13} lineHeight={19} color="#7A6000">
+            동의하기 전에 내용을 천천히 읽어보세요. 궁금한 점은 직원에게 물어볼 수 있어요.
+          </AppText>
+        </View>
+        <Pressable accessibilityRole="button" onPress={onClose} style={s.primaryBtn}>
+          <AppText size={17} weight={900} color={INK}>
+            확인했어요
+          </AppText>
+        </Pressable>
       </View>
-      <Pressable accessibilityRole="button" onPress={onClose} style={s.primaryBtn}>
-        <AppText size={17} weight={900} color={INK}>
-          확인했어요
-        </AppText>
-      </Pressable>
     </Sheet>
   );
 }
@@ -821,5 +836,8 @@ const s = StyleSheet.create({
   quietBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
   pressed: { opacity: 0.85 },
 
-  detailBody: { marginTop: 10, marginBottom: 4 },
+  detailScroll: { flex: 1, minHeight: 0, marginTop: 10, marginBottom: 8 },
+  detailScrollWeb: { height: 0, flexGrow: 1 },
+  detailScrollContent: { paddingBottom: 16, flexGrow: 0 },
+  detailFooter: { flexShrink: 0 },
 });

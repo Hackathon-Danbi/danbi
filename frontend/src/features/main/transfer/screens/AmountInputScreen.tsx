@@ -36,10 +36,10 @@ export function AmountInputScreen({
     <View style={styles.root} onTouchStart={onActivity}>
       <NavBar title="보낼 금액 입력" onBack={onBack} />
       <View style={styles.body}>
-        <AppText size={28} weight={900} color={INK} lineHeight={35} style={styles.mb8}>
+        <AppText size={24} weight={900} color={INK} lineHeight={31} style={styles.mb8}>
           {'얼마를\n보낼까요?'}
         </AppText>
-        <AppText size={14} color="#888" style={styles.mb20}>
+        <AppText size={14} color="#888" style={styles.mb12}>
           보낼 금액을 숫자로 입력해 주세요.
         </AppText>
 
@@ -86,25 +86,25 @@ export function AmountInputScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
-  body: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
+  root: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
+  body: { flex: 1, minHeight: 0, paddingHorizontal: 20, paddingTop: 20 },
   mb8: { marginBottom: 8 },
-  mb20: { marginBottom: 20 },
+  mb12: { marginBottom: 12 },
   field: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 14,
     borderWidth: 2,
     borderColor: YELLOW,
-    marginBottom: 12,
-    minHeight: 60,
+    marginBottom: 10,
+    minHeight: 52,
     justifyContent: 'center',
     alignItems: 'flex-end',
   },
   quick: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   quickBtn: {
     flex: 1,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     borderRadius: 12,
   },
-  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 },
+  footer: { flexShrink: 0, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 },
   next: {
     width: '100%',
     paddingVertical: 18,
