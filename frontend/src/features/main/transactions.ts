@@ -3,6 +3,10 @@ import type { TransactionReviewStatus, TxRecord } from './types';
 export type StoredTransactionReview = Exclude<TransactionReviewStatus, 'pending'>;
 export type TransactionReviewRecord = Record<string, StoredTransactionReview>;
 
+export function formatTxOccurredAt(tx: Pick<TxRecord, 'date' | 'time'>): string {
+  return `${tx.date} ${tx.time}`;
+}
+
 export function yearMonthOf(occurredAt: string): number {
   const date = new Date(occurredAt);
   return date.getFullYear() * 12 + date.getMonth();

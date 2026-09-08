@@ -67,7 +67,6 @@ export function HistoryFlow() {
           onSelectTx={(tx) => setSelectedTx(tx)}
           onReview={() => openTransaction(visiblePending[0])}
           onReviewUnknown={() => openTransaction(visibleUnknown[0])}
-          onTransfer={() => router.replace('/(app)/transfer')}
           onHome={goHome}
         />
       </ScreenIn>

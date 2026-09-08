@@ -90,6 +90,20 @@ export function IconCard({ color = INK }: { color?: string }) {
   );
 }
 
+/** 거래내역 월 이동에 쓰는 달력. 홈 타일 아이콘과 같은 노란 머리 + 검은 테두리. */
+export function IconCalendar({ size = 22 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={5} width={18} height={16} rx={3} fill="#fff" stroke={INK} strokeWidth={2} />
+      <Path d="M3 9V8c0-1.7 1.3-3 3-3h12c1.7 0 3 1.3 3 3v1H3Z" fill={YELLOW} stroke={INK} strokeWidth={2} />
+      <Line x1={8} y1={3} x2={8} y2={7.5} stroke={INK} strokeWidth={2.2} strokeLinecap="round" />
+      <Line x1={16} y1={3} x2={16} y2={7.5} stroke={INK} strokeWidth={2.2} strokeLinecap="round" />
+      <Rect x={7} y={13} width={4} height={4} rx={1} fill={YELLOW} />
+      <Rect x={13} y={13} width={4} height={4} rx={1} fill={INK} opacity={0.12} />
+    </Svg>
+  );
+}
+
 export function IconChevronRight({ size = 18, color = '#CCC' }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
