@@ -15,11 +15,6 @@ export function DepositOverviewCard() {
             KB 국민수퍼정기예금
           </AppText>
         </View>
-        <View style={styles.badge}>
-          <AppText size={12} weight={700} color="#66625b">
-            정기예금
-          </AppText>
-        </View>
       </View>
 
       <AppText size={20} color="#77736c" style={styles.mt16}>
@@ -63,12 +58,6 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  badge: {
-    backgroundColor: '#F1EFE9',
-    borderRadius: 8,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
   amount: { marginTop: 4, marginBottom: 16 },
   row: { flexDirection: 'row', gap: 10 },
   stat: {

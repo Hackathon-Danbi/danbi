@@ -15,34 +15,29 @@ export function SavingsOverviewCard() {
             KB 국민행복적금
           </AppText>
         </View>
-        <View style={styles.badge}>
-          <AppText size={13} weight={700} color="#66625b">
-            자유적금
-          </AppText>
-        </View>
       </View>
 
-      <AppText size={15} color="#77736c" style={styles.mt16}>
+      <AppText size={20} color="#77736c" style={styles.mt16}>
         현재 모은 금액
       </AppText>
-      <AppText size={36} weight={900} color={INK} letterSpacing={-1} style={styles.amount}>
+      <AppText size={34} weight={900} color={INK} letterSpacing={-1} style={styles.amount}>
         3,600,000원
       </AppText>
 
       <View style={styles.row}>
         <View style={[styles.stat, styles.statGreen]}>
-          <AppText size={13} color="#77736c" style={styles.mb4}>
+          <AppText size={16} color="#77736c" style={styles.mb4}>
             이번 달 납입
           </AppText>
-          <AppText size={16} weight={900} color="#13855f">
+          <AppText size={20} weight={900} color="#13855f">
             ✓ 30만원 완료
           </AppText>
         </View>
         <View style={styles.stat}>
-          <AppText size={13} color="#77736c" style={styles.mb4}>
+          <AppText size={16} color="#77736c" style={styles.mb4}>
             만기까지
           </AppText>
-          <AppText size={18} weight={900} color={INK}>
+          <AppText size={20} weight={900} color={INK}>
             약 11개월
           </AppText>
         </View>
@@ -63,12 +58,6 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  badge: {
-    backgroundColor: '#F1EFE9',
-    borderRadius: 8,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
   amount: { marginTop: 4, marginBottom: 16 },
   row: { flexDirection: 'row', gap: 10 },
   stat: {
