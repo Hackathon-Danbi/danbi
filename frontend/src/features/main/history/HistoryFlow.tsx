@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Screen } from '@/components/ui/Screen';
 import { ScreenIn } from '@/components/anim/ScreenIn';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
 import { useTransactions } from '../TransactionContext';
-import { filterTransactionsByMonth, yearMonthOf } from '../transactions';
+import {
+  filterReviewTransactions,
+  filterTransactionsByMonth,
+  yearMonthOf,
+} from '../transactions';
 import type { TxRecord } from '../types';
 import { TransactionsScreen } from './screens/TransactionsScreen';
 import { TxDetailPopup } from './screens/TxDetailPopup';
@@ -19,8 +23,10 @@ const MONTH_NAMES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '1
  */
 export function HistoryFlow() {
   const router = useRouter();
+  const { view } = useLocalSearchParams<{ view?: string }>();
   const { transactions, reviewTransaction } = useTransactions();
   const [selectedTx, setSelectedTx] = useState<TxRecord | null>(null);
+  const reviewOnly = view === 'review';
 
   // 월 이동: 원본은 라벨만 바꿨지만, 미래 월로는 이동할 수 없게 현재 날짜 기준으로 제어한다.
   const now = new Date();
@@ -32,7 +38,10 @@ export function HistoryFlow() {
   const monthLabel = `${year}년 ${MONTH_NAMES[viewYm % 12]}월`;
   const canGoNext = viewYm < currentYm;
 
-  const visibleTransactions = filterTransactionsByMonth(transactions, viewYm);
+  const monthlyTransactions = filterTransactionsByMonth(transactions, viewYm);
+  const visibleTransactions = reviewOnly
+    ? filterReviewTransactions(monthlyTransactions)
+    : monthlyTransactions;
   // 확인 안내 배지와 '확인하기' 동작은 현재 보고 있는 달 기준으로만 처리한다.
   // (다른 달 거래로 목록이 갑자기 넘어가지 않도록)
   const visiblePending = visibleTransactions.filter((tx) => tx.reviewStatus === 'pending');
@@ -57,6 +66,7 @@ export function HistoryFlow() {
     <Screen background="#fff" edges={['top', 'bottom']}>
       <ScreenIn>
         <TransactionsScreen
+          reviewOnly={reviewOnly}
           transactions={visibleTransactions}
           needCheckCount={visiblePending.length}
           unknownCount={visibleUnknown.length}
@@ -67,7 +77,6 @@ export function HistoryFlow() {
           onSelectTx={(tx) => setSelectedTx(tx)}
           onReview={() => openTransaction(visiblePending[0])}
           onReviewUnknown={() => openTransaction(visibleUnknown[0])}
-          onTransfer={() => router.replace('/(app)/transfer')}
           onHome={goHome}
         />
       </ScreenIn>

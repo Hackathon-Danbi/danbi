@@ -88,7 +88,3 @@ export const MISSIONS: Mission[] = [
 export const MISSION_GROUPS = [...new Set(MISSIONS.map((m) => m.group))];
 
 export const MAX_SCORE = MISSIONS.reduce((sum, m) => sum + m.points, 0);
-
-export function calcScore(completedIds: Set<MissionId>): number {
-  return MISSIONS.filter((m) => completedIds.has(m.id)).reduce((sum, m) => sum + m.points, 0);
-}

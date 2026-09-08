@@ -1,29 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { recognitionEngine } from '@/lib/speech/recognition';
+import { recognitionEngine } from './recognition';
 
 export type SpeechRecognitionStatus = 'idle' | 'listening' | 'recognized' | 'error';
+export type SpeechRecognitionResultSource = 'recognition' | 'fallback';
+
+export interface SpeechRecognitionResultMeta {
+  source: SpeechRecognitionResultSource;
+}
+
+export const SPEECH_RECOGNITION_TIMEOUT_MS = 8_000;
 
 interface UseSpeechRecognitionOptions {
-  onResult?: (transcript: string) => void;
+  onResult?: (transcript: string, meta: SpeechRecognitionResultMeta) => void;
   onError?: (message: string) => void;
   /** 연습 모드 전용: 엔진 미지원/인식 실패 시 이 문장으로 진행할 수 있다. */
   fallbackTranscript?: string;
 }
 
 /**
- * danbi_jj practice/hooks/useSpeechRecognition.ts 이식.
- * 브라우저 SpeechRecognition 을 lib/speech/recognition 엔진 레이어로 대체.
+ * 브라우저/네이티브별 STT 엔진을 공통 React 상태로 노출한다.
  * - 웹: 실제 Web Speech API
- * - 네이티브: expo-speech-recognition으로 실제 인식, 실패 시 연습 모드만 예시 문장 사용
+ * - 네이티브: expo-speech-recognition
+ * - fallbackTranscript는 연습 화면에서만 선택적으로 사용한다.
  */
 export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
   const [status, setStatus] = useState<SpeechRecognitionStatus>('idle');
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
+  const [resultSource, setResultSource] = useState<SpeechRecognitionResultSource | null>(null);
 
   const sessionRef = useRef<{ start: () => void; abort: () => void } | null>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listeningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestRef = useRef('');
   const handledRef = useRef(false);
 
@@ -37,7 +46,10 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   }, [options.fallbackTranscript, options.onError, options.onResult]);
 
   const fail = useCallback((message: string) => {
+    if (listeningTimerRef.current) clearTimeout(listeningTimerRef.current);
+    listeningTimerRef.current = null;
     handledRef.current = true;
+    setResultSource(null);
     setError(message);
     setStatus('error');
     onErrorRef.current?.(message);
@@ -45,19 +57,24 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
 
   const stop = useCallback(() => {
     if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+    if (listeningTimerRef.current) clearTimeout(listeningTimerRef.current);
     fallbackTimerRef.current = null;
+    listeningTimerRef.current = null;
     sessionRef.current?.abort();
     sessionRef.current = null;
   }, []);
 
-  const finish = useCallback((heard: string) => {
+  const finish = useCallback((heard: string, source: SpeechRecognitionResultSource = 'recognition') => {
     const normalized = heard.trim();
     if (!normalized || handledRef.current) return;
+    if (listeningTimerRef.current) clearTimeout(listeningTimerRef.current);
+    listeningTimerRef.current = null;
     handledRef.current = true;
     latestRef.current = normalized;
     setTranscript(normalized);
+    setResultSource(source);
     setStatus('recognized');
-    onResultRef.current?.(normalized);
+    onResultRef.current?.(normalized, { source });
   }, []);
 
   const reset = useCallback(() => {
@@ -66,6 +83,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     latestRef.current = '';
     setTranscript('');
     setError('');
+    setResultSource(null);
     setStatus('idle');
   }, [stop]);
 
@@ -75,12 +93,17 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     latestRef.current = '';
     setTranscript('');
     setError('');
+    setResultSource(null);
     setStatus('listening');
 
     const startFallback = () => {
+      if (fallbackTimerRef.current || handledRef.current) return;
       const fb = fallbackRef.current;
       if (fb) {
-        fallbackTimerRef.current = setTimeout(() => finish(fb), 1200);
+        fallbackTimerRef.current = setTimeout(() => {
+          fallbackTimerRef.current = null;
+          finish(fb, 'fallback');
+        }, 1200);
       } else {
         fail('이 기기에서는 음성 인식을 사용할 수 없어요. 예시 문장을 누르거나 다시 시도해주세요.');
       }
@@ -123,9 +146,28 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     }
     sessionRef.current = session;
     session.start();
+    if (!handledRef.current && !fallbackTimerRef.current) {
+      listeningTimerRef.current = setTimeout(() => {
+        listeningTimerRef.current = null;
+        sessionRef.current?.abort();
+        sessionRef.current = null;
+        if (fallbackRef.current) startFallback();
+        else fail('말씀을 듣지 못했어요. 다시 천천히 말씀해주세요.');
+      }, SPEECH_RECOGNITION_TIMEOUT_MS);
+    }
   }, [fail, finish, stop]);
 
   useEffect(() => stop, [stop]);
 
-  return { status, transcript, error, start, stop, reset, finish };
+  return {
+    status,
+    transcript,
+    error,
+    resultSource,
+    usedFallback: resultSource === 'fallback',
+    start,
+    stop,
+    reset,
+    finish,
+  };
 }

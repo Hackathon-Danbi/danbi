@@ -5,7 +5,7 @@
  *  - index.web.ts    : Web Speech API (`window.SpeechRecognition`) — 실제 인식
  *  - engine.native.ts: expo-speech-recognition 기반 실제 인식
  *
- * 상위 훅(features/practice/hooks/useSpeechRecognition)이 `supported` / `create()` 결과를
+ * 상위 훅(lib/speech/useSpeechRecognition)이 `supported` / `create()` 결과를
  * 보고 fallback(예시 문장) 처리 여부를 결정한다.
  */
 

@@ -18,9 +18,12 @@ export const StorageKeys = {
   authPin: 'danbi.auth.pin',
   missionsCompleted: 'danbi.missions.completed',
   dailyPractice: 'danbi.daily.practice',
+  dailyMissionRecords: 'danbi.daily.mission.records',
+  experiencedScenarios: 'danbi.scenarios.experienced',
   quizRecord: 'danbi.quiz.record',
   transactionReviews: 'danbi.transactions.reviews',
   savedRecipients: 'danbi.transfer.saved-recipients',
+  transferDifficulties: 'danbi.transfer.difficulties',
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

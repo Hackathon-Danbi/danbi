@@ -10,77 +10,123 @@ import { PracticeMistakeFeedback } from '../components/PracticeMistakeFeedback';
 import { PracticeProgress } from '../components/PracticeProgress';
 import { RecipientAccountList } from '../components/RecipientAccountList';
 import { SoloHelp } from '../components/SoloHelp';
-import { practiceMission } from '../data/mission.mock';
 import { savedRecipients } from '../data/recipients.mock';
 import type { SavedRecipient } from '../types';
-import { ACCOUNT_NUMBER_MAX_DIGITS, appendDigits, removeLastDigit } from '../utils';
+import {
+  ACCOUNT_NUMBER_MAX_DIGITS,
+  appendDigits,
+  isValidPracticeRecipient,
+  removeLastDigit,
+} from '../utils';
 
 /** danbi_jj practice/screens/PracticeRecipientScreen.tsx 이식. */
 export function PracticeRecipientScreen() {
   const {
     practiceStyle,
+    practiceTarget,
     practiceRecipient,
     setPracticeRecipient,
     practiceRecipientChoice,
     setPracticeRecipientChoice,
+    setPracticeVoiceRecipientName,
     practiceMistakeMessage,
     reportPracticeMistake,
     clearPracticeMistake,
+    mode,
+    reviewStep,
     back,
     guidedNext,
+    completePracticeStep,
   } = usePracticeApp();
   const guided = practiceStyle === 'guided';
+  const accountReview = mode === 'review' && reviewStep === 'account';
+  const recipientReview = mode === 'review' && reviewStep === 'recipient';
+  const newRecipientValid = accountReview
+    ? practiceRecipient === practiceTarget.recipient.account
+    : isValidPracticeRecipient(practiceRecipientChoice, practiceRecipient);
 
   const selectSavedRecipient = (recipient: SavedRecipient) => {
-    if (guided && recipient.id !== practiceMission.recipient.id) {
-      reportPracticeMistake(`잘못 눌렀어요.\n아래 ‘${practiceMission.recipient.name}’ 버튼을 눌러주세요.`);
+    if (guided && recipient.id !== practiceTarget.recipient.id) {
+      reportPracticeMistake(
+        recipientReview
+          ? `‘${practiceTarget.recipient.name}’님을 찾아 다시 눌러보세요.`
+          : `잘못 눌렀어요.\n아래 ‘${practiceTarget.recipient.name}’ 버튼을 눌러주세요.`,
+      );
       return;
     }
     clearPracticeMistake();
+    setPracticeVoiceRecipientName('');
     setPracticeRecipientChoice(recipient.id);
     setPracticeRecipient(recipient.account);
-    guidedNext(
-      guided ? '맞아요. 다음으로 넘어갈게요.' : '이제 보낼 금액을 입력해볼게요.',
-      'practiceAmount',
-    );
+    if (recipientReview) completePracticeStep('practiceAmount');
+    else guidedNext('practiceAmount');
   };
 
   const selectNewRecipient = () => {
     if (guided) {
-      reportPracticeMistake(`잘못 눌렀어요.\n아래 ‘${practiceMission.recipient.name}’ 버튼을 눌러주세요.`);
+      reportPracticeMistake(
+        recipientReview
+          ? `‘${practiceTarget.recipient.name}’님을 찾아 다시 눌러보세요.`
+          : `잘못 눌렀어요.\n아래 ‘${practiceTarget.recipient.name}’ 버튼을 눌러주세요.`,
+      );
       return;
     }
+    setPracticeVoiceRecipientName('');
     setPracticeRecipientChoice('new');
     setPracticeRecipient('');
   };
 
   return (
     <View style={styles.root}>
-      <BackHeader title="받는 사람 선택" onBack={back} />
+      <BackHeader title={accountReview ? '계좌번호 입력' : '받는 사람 선택'} onBack={back} />
       <ScrollView contentContainerStyle={styles.body}>
-        <PracticeProgress current={1} label="받는 사람 입력" />
+        <PracticeProgress current={1} label={accountReview ? '계좌번호 입력' : '받는 사람 입력'} />
         <View style={styles.titleWrap}>
           <AppText size={13} weight={700} color={P.accentText}>
-            받는 사람 입력
+            {accountReview ? '계좌번호 입력' : '받는 사람 입력'}
           </AppText>
           <AppText size={30} weight={900} color={P.ink} lineHeight={38}>
-            {'누구에게\n보낼까요?'}
+            {accountReview ? '계좌번호를\n입력해보세요' : '누구에게\n보낼까요?'}
           </AppText>
         </View>
-        {guided && !practiceMistakeMessage ? (
+        {accountReview && !practiceMistakeMessage ? (
+          <View style={styles.requestCard}>
+            <AppText size={13} weight={700} color={P.accentText}>연습할 계좌번호</AppText>
+            <AppText size={20} weight={900} color={P.ink} style={styles.mt4}>
+              {practiceTarget.recipient.account}
+            </AppText>
+          </View>
+        ) : guided && !practiceMistakeMessage ? (
           <AppText size={17} weight={600} color={P.accentText}>
-            {practiceMission.recipient.name}님을 눌러보세요.
+            {practiceTarget.recipient.name}님을 눌러보세요.
           </AppText>
         ) : null}
         {guided ? <PracticeMistakeFeedback message={practiceMistakeMessage} /> : null}
 
-        <RecipientAccountList
-          recipients={savedRecipients}
-          selectedChoice={practiceRecipientChoice}
-          onSelectRecipient={selectSavedRecipient}
-          onSelectNewRecipient={selectNewRecipient}
-          accountBadge="연습용 계좌"
-        />
+        {!accountReview ? (
+          <RecipientAccountList
+            recipients={savedRecipients}
+            selectedChoice={practiceRecipientChoice}
+            onSelectRecipient={selectSavedRecipient}
+            onSelectNewRecipient={selectNewRecipient}
+            accountBadge="연습용 계좌"
+          />
+        ) : null}
+
+        {!guided ? (
+          <View style={styles.requestCard}>
+            <AppText size={13} weight={700} color={P.accentText}>오늘 연습에서 받은 정보</AppText>
+            <AppText size={17} weight={900} color={P.ink} style={styles.mt4}>
+              {practiceTarget.recipient.name} · {practiceTarget.recipient.bank}
+            </AppText>
+            <AppText size={16} weight={700} color={P.ink} style={styles.mt4}>
+              {practiceTarget.recipient.account}
+            </AppText>
+            <AppText size={16} weight={800} color={P.ink} style={styles.mt4}>
+              {practiceTarget.amountLabel}
+            </AppText>
+          </View>
+        ) : null}
 
         {practiceRecipientChoice === 'new' ? (
           <AccountNumberEntry value={practiceRecipient} accountLabel="연습용 계좌번호" bankDescription="연습용 은행" />
@@ -98,7 +144,7 @@ export function PracticeRecipientScreen() {
         ) : null}
       </ScrollView>
 
-      {!guided && practiceRecipientChoice === 'new' ? (
+      {(!guided || accountReview) && practiceRecipientChoice === 'new' ? (
         <View style={styles.pad}>
           <CompactNumberPad
             mode="account"
@@ -112,11 +158,17 @@ export function PracticeRecipientScreen() {
           />
           <Pressable
             accessibilityRole="button"
-            disabled={practiceRecipient.length < 8}
-            onPress={() => guidedNext('이제 보낼 금액을 입력해볼게요.', 'practiceAmount')}
-            style={[styles.next, practiceRecipient.length < 8 && styles.nextOff]}
+            disabled={!newRecipientValid}
+            onPress={() => {
+              if (accountReview && practiceRecipient !== practiceTarget.recipient.account) {
+                reportPracticeMistake('안내된 계좌번호와 같은지 한 번 더 확인해보세요.');
+                return;
+              }
+              completePracticeStep('practiceAmount');
+            }}
+            style={[styles.next, !newRecipientValid && styles.nextOff]}
           >
-            <AppText size={18} weight={850} color={practiceRecipient.length < 8 ? '#8a857a' : '#fff'}>
+            <AppText size={18} weight={850} color={!newRecipientValid ? '#8a857a' : '#fff'}>
               다음
             </AppText>
           </Pressable>
@@ -130,6 +182,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: P.paper },
   body: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 24, gap: 14 },
   titleWrap: { gap: 6 },
+  mt4: { marginTop: 4 },
+  requestCard: {
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: P.accentBorder,
+    backgroundColor: P.accentSurface,
+  },
   pad: {
     paddingHorizontal: 20,
     paddingTop: 12,

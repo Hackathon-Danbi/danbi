@@ -9,13 +9,13 @@ import type { NumericKey } from '../components/NumericKeypad';
 import { PracticeMistakeFeedback } from '../components/PracticeMistakeFeedback';
 import { PracticeProgress } from '../components/PracticeProgress';
 import { SoloHelp } from '../components/SoloHelp';
-import { practiceMission } from '../data/mission.mock';
-import { AMOUNT_MAX_DIGITS, appendDigits, removeLastDigit } from '../utils';
+import { AMOUNT_MAX_DIGITS, appendDigits, isValidPracticeAmount, removeLastDigit } from '../utils';
 
 /** danbi_jj practice/screens/PracticeAmountScreen.tsx 이식. */
 export function PracticeAmountScreen() {
   const {
     practiceStyle,
+    practiceTarget,
     practiceAmount,
     setPracticeAmount,
     formattedPracticeAmount,
@@ -23,21 +23,27 @@ export function PracticeAmountScreen() {
     practiceMistakeMessage,
     reportPracticeMistake,
     clearPracticeMistake,
+    mode,
     back,
-    guidedNext,
+    completePracticeStep,
   } = usePracticeApp();
   const guided = practiceStyle === 'guided';
-  const targetSelected = practiceAmount === practiceMission.amount;
+  const targetSelected = practiceAmount === practiceTarget.amount;
+  const amountValid = isValidPracticeAmount(practiceAmount);
 
   const reportAmountMistake = () =>
     reportPracticeMistake(
-      targetSelected
+      mode === 'review'
+        ? targetSelected
+          ? '아래 ‘다음’ 버튼을 눌러 연습을 마쳐보세요.'
+          : `안내된 ${practiceTarget.amountLabel}과 같은지 한 번 더 확인해보세요.`
+        : targetSelected
         ? '잘못 눌렀어요.\n아래 ‘다음’ 버튼을 눌러주세요.'
         : '잘못 눌렀어요.\n아래 ‘3만원’ 버튼을 눌러주세요.',
     );
 
   const chooseQuickAmount = (amount: string) => {
-    if (guided && amount !== practiceMission.amount) {
+    if (guided && amount !== practiceTarget.amount) {
       reportAmountMistake();
       return;
     }
@@ -60,7 +66,7 @@ export function PracticeAmountScreen() {
       return;
     }
     const nextAmount = appendDigits(practiceAmount, key, { maxLength: AMOUNT_MAX_DIGITS, trimLeadingZeros: true });
-    if (!practiceMission.amount.startsWith(nextAmount)) {
+    if (!practiceTarget.amount.startsWith(nextAmount)) {
       reportAmountMistake();
       return;
     }
@@ -78,19 +84,24 @@ export function PracticeAmountScreen() {
         highlighted={guided}
         quickAmounts={[
           { value: '10000', label: '1만원' },
-          { value: practiceMission.amount, label: '3만원', suggested: guided },
+          {
+            value: practiceTarget.amount,
+            label: practiceTarget.amountLabel,
+            suggested: guided,
+          },
           { value: '50000', label: '5만원' },
         ]}
         onSelectQuickAmount={chooseQuickAmount}
         onKey={enterAmount}
-        submitDisabled={!guided && (!practiceAmount || Number(practiceAmount) === 0)}
+        submitDisabled={!guided && !amountValid}
         submitUnavailable={guided && !targetSelected}
         onSubmit={() => {
           if (guided && !targetSelected) {
             reportAmountMistake();
             return;
           }
-          guidedNext('맞아요. 받는 사람과 금액을 확인해볼게요.', 'practiceReview');
+          if (!guided && !amountValid) return;
+          completePracticeStep('practiceReview');
         }}
         afterQuickAmounts={
           !guided ? (
@@ -108,7 +119,7 @@ export function PracticeAmountScreen() {
           </AppText>
           {guided && !practiceMistakeMessage ? (
             <AppText size={17} weight={600} color={P.accentText}>
-              {practiceMission.amountLabel}을 입력해보세요.
+              {practiceTarget.amountLabel}을 입력해보세요.
             </AppText>
           ) : null}
           {guided ? <PracticeMistakeFeedback message={practiceMistakeMessage} /> : null}

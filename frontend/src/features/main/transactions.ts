@@ -12,6 +12,13 @@ export function filterTransactionsByMonth(records: TxRecord[], yearMonth: number
   return records.filter((record) => yearMonthOf(record.occurredAt) === yearMonth);
 }
 
+/** 홈의 '확인할 거래'에서 보여줄 미확인·신고 확인 대상만 남긴다. */
+export function filterReviewTransactions(records: TxRecord[]): TxRecord[] {
+  return records.filter(
+    (record) => record.reviewStatus === 'pending' || record.reviewStatus === 'unknown',
+  );
+}
+
 export function applyTransactionReviews(
   records: TxRecord[],
   reviews: TransactionReviewRecord,

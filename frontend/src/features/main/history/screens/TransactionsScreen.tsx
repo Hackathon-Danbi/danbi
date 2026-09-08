@@ -5,10 +5,11 @@ import { AppText } from '@/components/ui/AppText';
 import { INK, YELLOW } from '../../theme';
 import type { TxRecord } from '../../types';
 import { AccountCard } from '../../components/AccountCard';
-import { BottomTabBar } from '../../components/BottomTabBar';
+import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 
 /** danbi_jj main/screens/history.tsx <TransactionsScreen> 이식. */
 export function TransactionsScreen({
+  reviewOnly,
   needCheckCount,
   unknownCount,
   transactions,
@@ -19,9 +20,9 @@ export function TransactionsScreen({
   onSelectTx,
   onReview,
   onReviewUnknown,
-  onTransfer,
   onHome,
 }: {
+  reviewOnly: boolean;
   needCheckCount: number;
   unknownCount: number;
   transactions: TxRecord[];
@@ -32,7 +33,6 @@ export function TransactionsScreen({
   onSelectTx: (tx: TxRecord) => void;
   onReview: () => void;
   onReviewUnknown: () => void;
-  onTransfer: () => void;
   onHome: () => void;
 }) {
   const grouped: Record<string, TxRecord[]> = {};
@@ -45,7 +45,7 @@ export function TransactionsScreen({
     <View style={styles.root}>
       <View style={styles.header}>
         <AppText size={26} weight={900} color={INK}>
-          거래내역
+          {reviewOnly ? '확인할 거래' : '거래내역'}
         </AppText>
       </View>
 
@@ -173,14 +173,14 @@ export function TransactionsScreen({
         {dates.length === 0 ? (
           <View style={styles.empty}>
             <AppText size={16} weight={700} color="#888" align="center">
-              이 달에는 거래내역이 없어요.
+              {reviewOnly ? '확인할 거래가 없어요.' : '이 달에는 거래내역이 없어요.'}
             </AppText>
           </View>
         ) : null}
         <View style={styles.spacer} />
       </ScrollView>
 
-      <BottomTabBar active="transactions" onTransfer={onTransfer} onHome={onHome} onTransactions={() => {}} />
+      <FloatingHomeButton onGoHome={onHome} />
     </View>
   );
 }
