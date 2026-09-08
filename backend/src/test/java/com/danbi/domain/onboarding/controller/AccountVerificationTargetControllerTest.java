@@ -13,6 +13,7 @@ import com.danbi.domain.onboarding.entity.AccountVerificationMethod;
 import com.danbi.domain.onboarding.exception.AccountVerificationConflictException;
 import com.danbi.domain.onboarding.exception.OnboardingExceptionHandler;
 import com.danbi.domain.onboarding.exception.UnsupportedBankException;
+import com.danbi.domain.onboarding.service.AccountPasswordVerificationService;
 import com.danbi.domain.onboarding.service.AccountVerificationTargetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,12 +28,15 @@ class AccountVerificationTargetControllerTest {
 
 	private MockMvc mockMvc;
 	private AccountVerificationTargetService accountVerificationTargetService;
+	private AccountPasswordVerificationService accountPasswordVerificationService;
 
 	@BeforeEach
 	void setUp() {
 		accountVerificationTargetService = mock(AccountVerificationTargetService.class);
+		accountPasswordVerificationService = mock(AccountPasswordVerificationService.class);
 		AccountVerificationTargetController controller = new AccountVerificationTargetController(
-			accountVerificationTargetService
+			accountVerificationTargetService,
+			accountPasswordVerificationService
 		);
 		mockMvc = MockMvcBuilders.standaloneSetup(controller)
 			.setControllerAdvice(new OnboardingExceptionHandler())

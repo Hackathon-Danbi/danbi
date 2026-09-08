@@ -94,6 +94,10 @@ public class AccountVerificationTarget {
 		return verificationStatus == AccountVerificationStatus.VERIFIED;
 	}
 
+	public boolean belongsTo(String issuanceId) {
+		return this.issuanceId.equals(issuanceId);
+	}
+
 	public AccountVerificationTarget replace(
 		String bankCode,
 		String maskedAccountNumber,

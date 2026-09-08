@@ -7,6 +7,7 @@ import com.danbi.domain.onboarding.controller.IdCardScanController;
 import com.danbi.domain.onboarding.controller.OnboardingNameController;
 import com.danbi.domain.onboarding.controller.OnboardingSessionController;
 import com.danbi.domain.onboarding.controller.PhoneVerificationController;
+import com.danbi.domain.onboarding.dto.AccountPasswordVerificationErrorResponse;
 import com.danbi.domain.onboarding.dto.OnboardingErrorResponse;
 import com.danbi.domain.onboarding.dto.PhoneVerificationErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -191,5 +192,26 @@ public class OnboardingExceptionHandler {
 	) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(AccountVerificationTargetNotFoundException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleAccountVerificationTargetNotFound(
+		AccountVerificationTargetNotFoundException e
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(AccountPasswordVerificationLockedException.class)
+	public ResponseEntity<AccountPasswordVerificationErrorResponse> handleAccountPasswordVerificationLocked(
+		AccountPasswordVerificationLockedException e
+	) {
+		return ResponseEntity.status(HttpStatus.LOCKED)
+			.body(new AccountPasswordVerificationErrorResponse(
+				e.getCode(),
+				e.getMessage(),
+				e.getFailureCount(),
+				0
+			));
 	}
 }
