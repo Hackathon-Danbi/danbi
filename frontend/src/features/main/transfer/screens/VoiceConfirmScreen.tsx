@@ -3,17 +3,17 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { fmt } from '../../data';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
-import type { TxInfo } from '../../types';
+import type { TransferDraft } from '../../types';
 import { NavBar } from '../../components/NavBar';
 import { WarningBar } from '../../components/WarningBar';
 
 /** danbi_jj main/screens/transfer.tsx <VoiceConfirmScreen> 이식. */
 export function VoiceConfirmScreen({
-  txInfo,
+  transferDraft,
   onBack,
   onConfirm,
 }: {
-  txInfo: TxInfo;
+  transferDraft: TransferDraft;
   onBack: () => void;
   onConfirm: () => void;
 }) {
@@ -26,7 +26,7 @@ export function VoiceConfirmScreen({
             음성으로 인식한 내용
           </AppText>
           <AppText size={30} weight={900} color={INK} align="center" lineHeight={41}>
-            {`${txInfo.recipient}에게\n${fmt(txInfo.amount)}원 보내기`}
+            {`${transferDraft.recipientName}에게\n${fmt(transferDraft.amount)}원 보내기`}
           </AppText>
         </View>
 
@@ -38,12 +38,20 @@ export function VoiceConfirmScreen({
       </View>
 
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" onPress={onBack} style={[styles.btn, styles.secondary]}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onBack}
+          style={[styles.btn, styles.secondary]}
+        >
           <AppText size={15} weight={700} color="#555" align="center" lineHeight={21}>
             {'아니요,\n다시 말하기'}
           </AppText>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={onConfirm} style={[styles.btn, styles.primary]}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onConfirm}
+          style={[styles.btn, styles.primary]}
+        >
           <AppText size={16} weight={900} color={INK} align="center">
             송금하기
           </AppText>

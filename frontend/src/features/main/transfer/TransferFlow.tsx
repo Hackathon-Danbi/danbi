@@ -13,7 +13,7 @@ import { useTransactions } from '@/features/main/TransactionContext';
 
 import { CONTACTS } from '../data';
 import { CREAM, INK, LARGE_AMOUNT_THRESHOLD, YELLOW } from '../theme';
-import type { ListeningPhase, TxInfo } from '../types';
+import type { ListeningPhase, TransferDraft } from '../types';
 import {
   HELP_IDLE,
   REENTRY_HINTS,
@@ -51,7 +51,18 @@ type FlowScreen =
 const STT_FAIL_MESSAGE = '음성을 잘 듣지 못했어요. 다시 말씀해주세요.';
 const STT_PERMISSION_MESSAGE = '마이크 사용 권한을 켠 뒤 다시 시도하거나, 직접 입력으로 진행해주세요.';
 const STT_UNAVAILABLE_MESSAGE = '이 기기에서는 음성 송금을 사용할 수 없어요. 직접 입력으로 진행해주세요.';
-const EMPTY_TX: TxInfo = { recipient: '', bank: '', account: '', amount: '' };
+const EMPTY_TRANSFER_DRAFT: TransferDraft = {
+  accountId: 10,
+  savedRecipientId: null,
+  recipientName: '',
+  bankCode: '',
+  bankName: '',
+  accountNumber: '',
+  amount: '',
+  transferMethod: 'DIRECT',
+  isInCall: false,
+  riskAcknowledged: false,
+};
 
 /**
  * 메인 송금 STT: 사용자가 실제로 말한 값만 사용한다. 파싱에 실패하면 자동으로 채우지 않고
@@ -59,12 +70,14 @@ const EMPTY_TX: TxInfo = { recipient: '', bank: '', account: '', amount: '' };
  */
 function parseSpokenTransfer(
   transcript: string,
-): { txInfo: TxInfo } | null {
+): { transferDraft: TransferDraft } | null {
   const compact = transcript.replace(/\s/g, '');
   const nameMatch = compact.match(/^(.+?)(?:님)?(?:에게|한테|에게로|한테로)/);
   const name = nameMatch?.[1]?.replace(/님$/, '') ?? '';
   const contact = name
-    ? CONTACTS.find((c) => c.name === name || c.name.slice(1) === name)
+    ? CONTACTS.find((contact) => (
+        contact.recipientName === name || contact.recipientName.slice(1) === name
+      ))
     : undefined;
 
   let amount = '';
@@ -77,7 +90,18 @@ function parseSpokenTransfer(
 
   if (!contact || !amount) return null;
   return {
-    txInfo: { recipient: contact.name, bank: contact.bank, account: contact.account, amount },
+    transferDraft: {
+      accountId: 10,
+      savedRecipientId: contact.savedRecipientId,
+      recipientName: contact.recipientName,
+      bankCode: contact.recipientBankCode,
+      bankName: contact.recipientBankName,
+      accountNumber: contact.recipientAccountNumber,
+      amount,
+      transferMethod: 'VOICE',
+      isInCall: false,
+      riskAcknowledged: false,
+    },
   };
 }
 
@@ -94,10 +118,10 @@ export function TransferFlow() {
   const [transcript, setTranscript] = useState('');
   const [sttError, setSttError] = useState('');
   const [sttNonce, setSttNonce] = useState(0);
-  const [txInfo, setTxInfo] = useState<TxInfo>(EMPTY_TX);
+  const [transferDraft, setTransferDraft] = useState<TransferDraft>(EMPTY_TRANSFER_DRAFT);
   const [isNewAccount, setIsNew] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [pinValue, setPinValue] = useState('');
+  const [transferPassword, setTransferPassword] = useState('');
 
   // ── Proactive help ─────────────────────────────────────
   const [helpState, setHelpState] = useState<HelpState>(HELP_IDLE);
@@ -282,16 +306,16 @@ export function TransferFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
-  // ── 비밀번호 4자리 → 완료 ────────────────────────────────
+  // ── 송금 비밀번호 4자리 → 완료 ────────────────────────────
   useEffect(() => {
-    if (screen === 'password' && pinValue.length === 4) {
+    if (screen === 'password' && transferPassword.length === 4) {
       const t = setTimeout(() => {
-        setPinValue('');
+        setTransferPassword('');
         setScreen('transferdone');
       }, 400);
       return () => clearTimeout(t);
     }
-  }, [pinValue, screen]);
+  }, [screen, transferPassword]);
 
   // ── 메인 송금 STT (엔진 레이어) ──────────────────────────
   useEffect(() => {
@@ -377,7 +401,7 @@ export function TransferFlow() {
     abortStt();
     const parsed = parseSpokenTransfer(transcript);
     if (parsed) {
-      setTxInfo(parsed.txInfo);
+      setTransferDraft(parsed.transferDraft);
       setIsNew(false);
       setScreen('voiceconfirm');
     } else {
@@ -393,16 +417,16 @@ export function TransferFlow() {
   };
 
   const initiateTransfer = () => {
-    const amt = parseInt(txInfo.amount || '0', 10);
+    const amt = parseInt(transferDraft.amount || '0', 10);
     if (isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
       setShowPopup(true);
     } else {
-      setPinValue('');
+      setTransferPassword('');
       setScreen('password');
     }
   };
 
-  const isLargeAmount = parseInt(txInfo.amount || '0', 10) >= LARGE_AMOUNT_THRESHOLD;
+  const isLargeAmount = parseInt(transferDraft.amount || '0', 10) >= LARGE_AMOUNT_THRESHOLD;
   const helpTarget = helpState.step === 'highlight' ? helpState.target : '';
 
   // ── Android 하드웨어 back: 내부 이전 단계 우선 ────────────
@@ -430,7 +454,7 @@ export function TransferFlow() {
         setScreen('bankselect');
         return true;
       case 'amountinput':
-        setScreen(txInfo.account ? 'accountinput' : 'recipient');
+        setScreen(transferDraft.accountNumber ? 'accountinput' : 'recipient');
         return true;
       case 'pretransfer':
         setScreen('amountinput');
@@ -479,13 +503,20 @@ export function TransferFlow() {
             onBack={() => setScreen('transfer')}
             onSelectContact={(c) => {
               doResolveHelp();
-              setTxInfo({ recipient: c.name, bank: c.bank, account: c.account, amount: '' });
+              setTransferDraft({
+                ...EMPTY_TRANSFER_DRAFT,
+                savedRecipientId: c.savedRecipientId,
+                recipientName: c.recipientName,
+                bankCode: c.recipientBankCode,
+                bankName: c.recipientBankName,
+                accountNumber: c.recipientAccountNumber,
+              });
               setIsNew(false);
               setScreen('amountinput');
             }}
             onNewAccount={() => {
               doResolveHelp();
-              setTxInfo(EMPTY_TX);
+              setTransferDraft(EMPTY_TRANSFER_DRAFT);
               setIsNew(true);
               setScreen('bankselect');
             }}
@@ -499,7 +530,12 @@ export function TransferFlow() {
             onBack={() => setScreen('recipient')}
             onSelect={(bank) => {
               doResolveHelp();
-              setTxInfo((p) => ({ ...p, bank, account: '' }));
+              setTransferDraft((current) => ({
+                ...current,
+                bankCode: bank.bankCode,
+                bankName: bank.bankName,
+                accountNumber: '',
+              }));
               setScreen('accountinput');
             }}
             helpTarget={helpTarget}
@@ -509,10 +545,10 @@ export function TransferFlow() {
 
         {screen === 'accountinput' && (
           <AccountInputScreen
-            bank={txInfo.bank}
-            value={txInfo.account}
+            bank={transferDraft.bankName}
+            value={transferDraft.accountNumber}
             onChange={(v) => {
-              setTxInfo((p) => ({ ...p, account: v }));
+              setTransferDraft((current) => ({ ...current, accountNumber: v }));
               doResolveHelp();
               doActivity();
             }}
@@ -520,9 +556,10 @@ export function TransferFlow() {
             onReselect={() => setScreen('bankselect')}
             onNext={() => {
               doResolveHelp();
-              setTxInfo((p) => ({
-                ...p,
-                recipient: p.recipient || `${p.bank} 계좌 ${p.account.slice(-4)}`,
+              setTransferDraft((current) => ({
+                ...current,
+                recipientName: current.recipientName
+                  || `${current.bankName} 계좌 ${current.accountNumber.slice(-4)}`,
               }));
               setScreen('amountinput');
             }}
@@ -534,13 +571,13 @@ export function TransferFlow() {
 
         {screen === 'amountinput' && (
           <AmountInputScreen
-            value={txInfo.amount}
+            value={transferDraft.amount}
             onChange={(v) => {
-              setTxInfo((p) => ({ ...p, amount: v }));
+              setTransferDraft((current) => ({ ...current, amount: v }));
               doResolveHelp();
               doActivity();
             }}
-            onBack={() => setScreen(txInfo.account ? 'accountinput' : 'recipient')}
+            onBack={() => setScreen(transferDraft.accountNumber ? 'accountinput' : 'recipient')}
             onNext={() => {
               doResolveHelp();
               goPretransfer();
@@ -553,7 +590,7 @@ export function TransferFlow() {
 
         {screen === 'voiceconfirm' && (
           <VoiceConfirmScreen
-            txInfo={txInfo}
+            transferDraft={transferDraft}
             onBack={() => setScreen('transfer')}
             onConfirm={goPretransfer}
           />
@@ -561,7 +598,7 @@ export function TransferFlow() {
 
         {screen === 'pretransfer' && (
           <PreTransferScreen
-            txInfo={txInfo}
+            transferDraft={transferDraft}
             onBack={() => setScreen('amountinput')}
             onTransfer={() => {
               doResolveHelp();
@@ -578,20 +615,27 @@ export function TransferFlow() {
         )}
 
         {screen === 'password' && (
-          <PasswordScreen value={pinValue} onChange={setPinValue} onCancel={goPretransfer} />
+          <PasswordScreen
+            value={transferPassword}
+            onChange={setTransferPassword}
+            onCancel={goPretransfer}
+          />
         )}
 
-        {screen === 'transferdone' && <TransferDoneScreen txInfo={txInfo} onHome={goHome} />}
+        {screen === 'transferdone' && (
+          <TransferDoneScreen transferDraft={transferDraft} onHome={goHome} />
+        )}
       </ScreenIn>
 
       <ConfirmPopup
         visible={showPopup}
-        txInfo={txInfo}
+        transferDraft={transferDraft}
         isNewAccount={isNewAccount}
         isLargeAmount={isLargeAmount}
         onConfirm={() => {
           setShowPopup(false);
-          setPinValue('');
+          setTransferDraft((current) => ({ ...current, riskAcknowledged: true }));
+          setTransferPassword('');
           setScreen('password');
         }}
         onCancel={() => setShowPopup(false)}

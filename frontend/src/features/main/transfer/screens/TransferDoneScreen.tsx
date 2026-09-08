@@ -4,13 +4,19 @@ import Svg, { Polyline } from 'react-native-svg';
 import { AppText } from '@/components/ui/AppText';
 import { fmt } from '../../data';
 import { INK, YELLOW } from '../../theme';
-import type { TxInfo } from '../../types';
+import type { TransferDraft } from '../../types';
 
 /** danbi_jj main/screens/transfer.tsx <TransferDoneScreen> 이식. */
-export function TransferDoneScreen({ txInfo, onHome }: { txInfo: TxInfo; onHome: () => void }) {
+export function TransferDoneScreen({
+  transferDraft,
+  onHome,
+}: {
+  transferDraft: TransferDraft;
+  onHome: () => void;
+}) {
   const rows = [
-    { label: '받는 분', value: txInfo.recipient },
-    { label: '보낸 금액', value: `${fmt(txInfo.amount)}원` },
+    { label: '받는 분', value: transferDraft.recipientName },
+    { label: '보낸 금액', value: `${fmt(transferDraft.amount)}원` },
   ];
 
   return (
@@ -27,16 +33,23 @@ export function TransferDoneScreen({ txInfo, onHome }: { txInfo: TxInfo; onHome:
             />
           </Svg>
         </View>
-        <AppText size={32} weight={900} color={INK} align="center" lineHeight={39} style={styles.mb10}>
+        <AppText
+          size={32}
+          weight={900}
+          color={INK}
+          align="center"
+          lineHeight={39}
+          style={styles.mb10}
+        >
           {'송금이\n완료되었습니다'}
         </AppText>
         <AppText size={16} color="#666" align="center" style={styles.mb36}>
           <AppText size={16} weight={900} color={INK}>
-            {txInfo.recipient}님
+            {transferDraft.recipientName}님
           </AppText>
           에게{' '}
           <AppText size={16} weight={900} color={INK}>
-            {fmt(txInfo.amount)}원
+            {fmt(transferDraft.amount)}원
           </AppText>
           을 보냈어요.
         </AppText>

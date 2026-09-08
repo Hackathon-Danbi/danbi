@@ -1,3 +1,5 @@
+import { getLocalCalendarDayIndex, getLocalDateKey } from '../state';
+
 export interface QuizQuestion {
   id: number;
   type: 'ox' | 'choice';
@@ -39,15 +41,26 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   { id: 21, type: 'choice', question: '지출 한도를 스스로 관리하려면\n어떤 카드가 더 적합할까요?', choices: ['신용카드', '체크카드'], correctIndex: 1, explanation: '정답은 "체크카드"예요. 잔액 이상 쓸 수 없어서 과소비를 예방할 수 있어요.', category: '카드 결제' },
 ];
 
-export function getTodayString(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export function getTodayString(date: Date = new Date()): string {
+  return getLocalDateKey(date);
 }
 
-export function getTodayQuestion(): QuizQuestion {
-  const epoch = new Date('2024-01-01').getTime();
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const dayIndex = Math.floor((now.getTime() - epoch) / (1000 * 60 * 60 * 24));
-  return QUIZ_QUESTIONS[Math.abs(dayIndex) % QUIZ_QUESTIONS.length];
+export function getQuizQuestionIndex(date: Date = new Date()): number {
+  const dayIndex = getLocalCalendarDayIndex(date);
+  return Math.abs(dayIndex) % QUIZ_QUESTIONS.length;
+}
+
+export function getTodayQuestion(date: Date = new Date()): QuizQuestion {
+  return QUIZ_QUESTIONS[getQuizQuestionIndex(date)];
+}
+
+export function getQuizQuestionById(id: number): QuizQuestion | undefined {
+  return QUIZ_QUESTIONS.find((question) => question.id === id);
+}
+
+export function isQuizAnswerCorrect(
+  question: QuizQuestion,
+  answeredIndex: number,
+): boolean {
+  return answeredIndex === question.correctIndex;
 }

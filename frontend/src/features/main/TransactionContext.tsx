@@ -58,8 +58,12 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     const transactions = applyTransactionReviews(TX_RECORDS, reviews);
     return {
       transactions,
-      pendingTransactions: transactions.filter((tx) => tx.reviewStatus === 'pending'),
-      unknownTransactions: transactions.filter((tx) => tx.reviewStatus === 'unknown'),
+      pendingTransactions: transactions.filter(
+        (transaction) => transaction.reviewStatus === 'UNREAD',
+      ),
+      unknownTransactions: transactions.filter(
+        (transaction) => transaction.reviewStatus === 'UNKNOWN',
+      ),
       reviewTransaction,
     };
   }, [reviewTransaction, reviews]);

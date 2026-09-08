@@ -5,13 +5,13 @@ import { AppText } from '@/components/ui/AppText';
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { fmt } from '../../data';
 import { INK, YELLOW } from '../../theme';
-import type { TxInfo } from '../../types';
+import type { TransferDraft } from '../../types';
 import { NavBar } from '../../components/NavBar';
 import { WarningBar } from '../../components/WarningBar';
 
 /** danbi_jj main/screens/transfer.tsx <PreTransferScreen> (3구획 확인) 이식. */
 export function PreTransferScreen({
-  txInfo,
+  transferDraft,
   onBack,
   onTransfer,
   onRecheck,
@@ -19,7 +19,7 @@ export function PreTransferScreen({
   onActivity,
   onSectionReview,
 }: {
-  txInfo: TxInfo;
+  transferDraft: TransferDraft;
   onBack: () => void;
   onTransfer: () => void;
   onRecheck: () => void;
@@ -52,9 +52,13 @@ export function PreTransferScreen({
               </AppText>
               <View style={styles.rowBetween}>
                 <AppText size={28} weight={900} color={INK}>
-                  {txInfo.recipient || '수취인'}
+                  {transferDraft.recipientName || '수취인'}
                 </AppText>
-                {reviewCount >= 1 ? <AppText size={18} color="#4CAF50">✓</AppText> : null}
+                {reviewCount >= 1 ? (
+                  <AppText size={18} color="#4CAF50">
+                    ✓
+                  </AppText>
+                ) : null}
               </View>
             </Pressable>
 
@@ -67,13 +71,17 @@ export function PreTransferScreen({
               <View style={styles.rowBetweenTop}>
                 <View>
                   <AppText size={20} weight={900} color={INK} style={styles.mb4}>
-                    {txInfo.bank || '—'}
+                    {transferDraft.bankName || '—'}
                   </AppText>
                   <AppText size={16} weight={700} color="#555">
-                    {txInfo.account || '—'}
+                    {transferDraft.accountNumber || '—'}
                   </AppText>
                 </View>
-                {reviewCount >= 2 ? <AppText size={18} color="#4CAF50">✓</AppText> : null}
+                {reviewCount >= 2 ? (
+                  <AppText size={18} color="#4CAF50">
+                    ✓
+                  </AppText>
+                ) : null}
               </View>
             </Pressable>
 
@@ -86,13 +94,17 @@ export function PreTransferScreen({
               <View style={styles.rowBetweenTop}>
                 <View>
                   <AppText size={32} weight={900} color={INK} style={styles.mb6}>
-                    {fmt(txInfo.amount)}원
+                    {fmt(transferDraft.amount)}원
                   </AppText>
                   <AppText size={13} weight={700} color="#E05050">
                     실제 출금 금액
                   </AppText>
                 </View>
-                {reviewCount >= 3 ? <AppText size={18} color="#4CAF50">✓</AppText> : null}
+                {reviewCount >= 3 ? (
+                  <AppText size={18} color="#4CAF50">
+                    ✓
+                  </AppText>
+                ) : null}
               </View>
             </Pressable>
           </View>

@@ -9,7 +9,7 @@ import { ListeningScreen } from '@/features/main/transfer/screens/ListeningScree
 import { ResultScreen } from '@/features/main/transfer/screens/ResultScreen';
 import { UnconfirmedScreen } from '@/features/main/history/screens/UnconfirmedScreen';
 import { useTransactions } from '@/features/main/TransactionContext';
-import { useSpeechRecognition } from '@/features/practice/hooks/useSpeechRecognition';
+import { useSpeechRecognition } from '@/lib/speech/useSpeechRecognition';
 import type { ListeningPhase } from '@/features/main/types';
 
 type View = 'unconfirmed' | 'home' | 'listening' | 'result';

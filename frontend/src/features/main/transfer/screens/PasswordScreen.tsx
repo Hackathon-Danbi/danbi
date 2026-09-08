@@ -7,7 +7,7 @@ import { NavBar } from '../../components/NavBar';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '취소', '0', '지우기'];
 
-/** danbi_jj main/screens/transfer.tsx <PasswordScreen> 이식. 4자리 커스텀 키패드. */
+/** 4자리 송금 비밀번호 커스텀 키패드. */
 export function PasswordScreen({
   value,
   onChange,

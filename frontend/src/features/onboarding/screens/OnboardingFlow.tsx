@@ -1026,7 +1026,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               <ScreenHelpBar {...helpBarProps} />
               <AccountCard
                 badge="KB"
-                title={`${state.selectedAccount.bank} ${state.selectedAccount.number}`}
+                title={`${state.selectedAccount.bankName} ${state.selectedAccount.maskedAccountNumber}`}
                 subtitle={`${state.selectedAccount.productName} · ${state.userName}님`}
               />
               <GuideBox

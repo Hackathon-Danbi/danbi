@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { fmt } from '../../data';
 import { INK, YELLOW } from '../../theme';
-import type { TxInfo } from '../../types';
+import type { TransferDraft } from '../../types';
 
 /**
  * danbi_jj main/screens/transfer.tsx <ConfirmPopup> 이식.
@@ -11,14 +11,14 @@ import type { TxInfo } from '../../types';
  */
 export function ConfirmPopup({
   visible,
-  txInfo,
+  transferDraft,
   isNewAccount,
   isLargeAmount,
   onConfirm,
   onCancel,
 }: {
   visible: boolean;
-  txInfo: TxInfo;
+  transferDraft: TransferDraft;
   isNewAccount: boolean;
   isLargeAmount: boolean;
   onConfirm: () => void;
@@ -38,7 +38,14 @@ export function ConfirmPopup({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          <AppText size={22} weight={900} color={INK} align="center" lineHeight={30} style={styles.mb8}>
+          <AppText
+            size={22}
+            weight={900}
+            color={INK}
+            align="center"
+            lineHeight={30}
+            style={styles.mb8}
+          >
             {title}
           </AppText>
           <AppText size={14} color="#888" align="center" lineHeight={21} style={styles.mb22}>
@@ -50,21 +57,28 @@ export function ConfirmPopup({
               받는 사람
             </AppText>
             <AppText size={22} weight={900} color={INK} style={styles.mb4}>
-              {txInfo.recipient || '수취인'}
+              {transferDraft.recipientName || '수취인'}
             </AppText>
             <AppText size={14} color="#999" style={styles.mb16}>
-              {txInfo.bank}
+              {transferDraft.bankName}
             </AppText>
             <AppText size={13} weight={700} color="#AAA" style={styles.mb4}>
               보낼 금액
             </AppText>
             <AppText size={28} weight={900} color={INK}>
-              {fmt(txInfo.amount)}원
+              {fmt(transferDraft.amount)}원
             </AppText>
           </View>
 
           {isLargeAmount ? (
-            <AppText size={15} weight={800} color="#D94040" align="center" lineHeight={24} style={styles.mb18}>
+            <AppText
+              size={15}
+              weight={800}
+              color="#D94040"
+              align="center"
+              lineHeight={24}
+              style={styles.mb18}
+            >
               {'평소보다 큰 금액이에요.\n금액도 꼭 확인해주세요.'}
             </AppText>
           ) : null}

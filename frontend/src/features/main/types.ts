@@ -23,22 +23,30 @@ export type Screen =
 export type ListeningPhase = 'idle' | 'heard' | 'confirmed';
 export type ListenTarget = 'balance' | 'transfer';
 
-export interface TxInfo {
-  recipient: string;
-  bank: string;
-  account: string;
+export interface TransferDraft {
+  accountId: number;
+  savedRecipientId: number | null;
+  recipientName: string;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
   amount: string;
+  transferMethod: 'DIRECT' | 'VOICE';
+  isInCall: boolean;
+  riskAcknowledged: boolean;
 }
 
-export type TransactionReviewStatus = 'pending' | 'known' | 'unknown';
+export type TransactionReviewStatus = 'UNREAD' | 'KNOWN' | 'UNKNOWN';
 
 export interface TxRecord {
-  id: number;
+  transactionId: number;
+  accountId: number;
   occurredAt: string; // ISO 8601, 월 필터/정렬 기준
   date: string; // "8월 29일"
   time: string; // "오후 2:10"
-  type: string; // "체크카드"
-  name: string;
+  transactionType: string; // "체크카드"
+  description: string;
   amount: number; // negative = outgoing
   reviewStatus: TransactionReviewStatus;
+  reviewedAt: string | null;
 }

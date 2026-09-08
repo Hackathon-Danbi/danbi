@@ -11,10 +11,12 @@ export const MOCK_ID_ISSUED_DATE = '2020년 3월 12일';
 const MOCK_FACE_FAILURE = false;
 
 export const MOCK_ACCOUNT = {
-  id: 'kb-1234',
-  bank: 'KB국민',
-  number: '1234',
+  accountId: 10,
+  bankCode: '004',
+  bankName: 'KB국민',
+  maskedAccountNumber: '****1234',
   productName: '입출금 통장',
+  verificationMethod: 'ACCOUNT_PASSWORD',
 } as const;
 
 export type IdType = '주민등록증' | '운전면허증' | null;

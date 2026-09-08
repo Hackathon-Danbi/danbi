@@ -1,6 +1,6 @@
 import type { TransactionReviewStatus, TxRecord } from './types';
 
-export type StoredTransactionReview = Exclude<TransactionReviewStatus, 'pending'>;
+export type StoredTransactionReview = Exclude<TransactionReviewStatus, 'UNREAD'>;
 export type TransactionReviewRecord = Record<string, StoredTransactionReview>;
 
 export function yearMonthOf(occurredAt: string): number {
@@ -18,15 +18,18 @@ export function applyTransactionReviews(
 ): TxRecord[] {
   return records.map((record) => ({
     ...record,
-    reviewStatus: reviews[String(record.id)] ?? record.reviewStatus,
+    reviewStatus: reviews[String(record.transactionId)] ?? record.reviewStatus,
   }));
 }
 
 export function sanitizeTransactionReviews(value: unknown): TransactionReviewRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value).filter((entry): entry is [string, StoredTransactionReview] => (
-      entry[1] === 'known' || entry[1] === 'unknown'
-    )),
+  return Object.entries(value).reduce<TransactionReviewRecord>(
+    (reviews, [transactionId, status]) => {
+      if (status === 'KNOWN' || status === 'known') reviews[transactionId] = 'KNOWN';
+      if (status === 'UNKNOWN' || status === 'unknown') reviews[transactionId] = 'UNKNOWN';
+      return reviews;
+    },
+    {},
   );
 }
