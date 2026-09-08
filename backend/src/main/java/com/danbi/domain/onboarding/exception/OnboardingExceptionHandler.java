@@ -132,4 +132,20 @@ public class OnboardingExceptionHandler {
 		return ResponseEntity.unprocessableContent()
 			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
 	}
+
+	@ExceptionHandler(IdCardScanNotFoundException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleIdCardScanNotFound(
+		IdCardScanNotFoundException e
+	) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
+
+	@ExceptionHandler(IdCardConfirmationConflictException.class)
+	public ResponseEntity<OnboardingErrorResponse> handleIdCardConfirmationConflict(
+		IdCardConfirmationConflictException e
+	) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new OnboardingErrorResponse(e.getCode(), e.getMessage()));
+	}
 }

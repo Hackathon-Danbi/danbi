@@ -38,6 +38,13 @@ public class IdCardScan {
 	@Column(name = "issue_date", nullable = false, updatable = false)
 	private LocalDate issueDate;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "confirmation_status", length = 10, nullable = false)
+	private IdCardConfirmationStatus confirmationStatus;
+
+	@Column(name = "confirmation_decided_at")
+	private Instant confirmationDecidedAt;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -48,6 +55,8 @@ public class IdCardScan {
 		String recognizedName,
 		String maskedIdNumber,
 		LocalDate issueDate,
+		IdCardConfirmationStatus confirmationStatus,
+		Instant confirmationDecidedAt,
 		Instant createdAt
 	) {
 		this.scanId = scanId;
@@ -56,6 +65,8 @@ public class IdCardScan {
 		this.recognizedName = recognizedName;
 		this.maskedIdNumber = maskedIdNumber;
 		this.issueDate = issueDate;
+		this.confirmationStatus = confirmationStatus;
+		this.confirmationDecidedAt = confirmationDecidedAt;
 		this.createdAt = createdAt;
 	}
 
@@ -75,7 +86,29 @@ public class IdCardScan {
 			recognizedName,
 			maskedIdNumber,
 			issueDate,
+			IdCardConfirmationStatus.PENDING,
+			null,
 			createdAt
 		);
+	}
+
+	public boolean hasConfirmationDecision() {
+		return confirmationStatus != IdCardConfirmationStatus.PENDING;
+	}
+
+	public boolean hasConfirmationDecision(boolean confirmed) {
+		return confirmationStatus == statusOf(confirmed);
+	}
+
+	public IdCardScan decideConfirmation(boolean confirmed, Instant decidedAt) {
+		this.confirmationStatus = statusOf(confirmed);
+		this.confirmationDecidedAt = decidedAt;
+		return this;
+	}
+
+	private IdCardConfirmationStatus statusOf(boolean confirmed) {
+		return confirmed
+			? IdCardConfirmationStatus.CONFIRMED
+			: IdCardConfirmationStatus.REJECTED;
 	}
 }
