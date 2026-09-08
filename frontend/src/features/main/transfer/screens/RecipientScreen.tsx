@@ -92,7 +92,7 @@ export function RecipientScreen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
+  root: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
   flex1: { flex: 1 },
   body: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 20 },
   mb3: { marginBottom: 3 },

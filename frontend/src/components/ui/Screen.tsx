@@ -37,5 +37,6 @@ export function Screen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    minHeight: 0,
   },
 });

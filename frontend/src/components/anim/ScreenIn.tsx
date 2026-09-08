@@ -18,5 +18,5 @@ export function ScreenIn({ children }: { children: ReactNode }) {
     transform: [{ translateX: (1 - progress.value) * 8 }],
   }));
 
-  return <Animated.View style={[{ flex: 1 }, style]}>{children}</Animated.View>;
+  return <Animated.View style={[{ flex: 1, minHeight: 0 }, style]}>{children}</Animated.View>;
 }

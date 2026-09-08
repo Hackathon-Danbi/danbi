@@ -21,6 +21,7 @@ export function FloatingHomeButton({ onGoHome, bg = '#fff' }: { onGoHome: () => 
 
 const styles = StyleSheet.create({
   wrap: {
+    flexShrink: 0,
     borderTopWidth: 1,
     borderTopColor: '#E9E6DF',
   },
@@ -30,6 +31,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingTop: 12,
-    paddingBottom: 6,
+    paddingBottom: 12,
   },
 });

@@ -38,7 +38,7 @@ export function PasswordScreen({
             <Path d="M7 11V7a5 5 0 0 1 10 0v4" stroke={INK} strokeWidth={2.5} strokeLinecap="round" />
           </Svg>
         </View>
-        <AppText size={24} weight={900} color={INK} align="center" lineHeight={33} style={styles.mb24}>
+        <AppText size={24} weight={900} color={INK} align="center" lineHeight={31} style={styles.mb16}>
           {'계좌 비밀번호\n4자리를 입력해 주세요'}
         </AppText>
 
@@ -56,43 +56,47 @@ export function PasswordScreen({
             />
           ))}
         </View>
-        <AppText size={13} color="#AAA" align="center" style={styles.mb32}>
+        <AppText size={13} color="#AAA" align="center">
           비밀번호는 다른 사람에게 보이지 않게 입력해 주세요.
         </AppText>
+      </View>
 
-        <View style={styles.grid}>
-          {KEYS.map((k, i) => {
-            const isText = k === '취소' || k === '지우기';
-            return (
-              <Pressable
-                key={i}
-                accessibilityRole="button"
-                accessibilityLabel={k}
-                onPress={() => handleKey(k)}
-                style={[styles.key, isText && styles.keyText]}
-              >
-                <AppText size={isText ? 14 : 22} weight={700} color={k === '취소' ? '#E05050' : INK}>
-                  {k}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
+      <View style={styles.grid}>
+        {Array.from({ length: 4 }, (_, row) => (
+          <View key={row} style={styles.row}>
+            {KEYS.slice(row * 3, row * 3 + 3).map((k) => {
+              const isText = k === '취소' || k === '지우기';
+              return (
+                <Pressable
+                  key={k}
+                  accessibilityRole="button"
+                  accessibilityLabel={k}
+                  onPress={() => handleKey(k)}
+                  style={[styles.key, isText && styles.keyText]}
+                >
+                  <AppText size={isText ? 14 : 22} weight={700} color={k === '취소' ? '#E05050' : INK}>
+                    {k}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
+  root: { flex: 1, minHeight: 0, backgroundColor: '#fff' },
   body: {
-    flex: 1,
+    flexShrink: 0,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
-  mb24: { marginBottom: 24 },
-  mb32: { marginBottom: 32 },
+  mb16: { marginBottom: 16 },
   lockBox: {
     width: 68,
     height: 68,
@@ -100,12 +104,12 @@ const styles = StyleSheet.create({
     backgroundColor: YELLOW,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 22,
+    marginBottom: 16,
   },
   dots: {
     flexDirection: 'row',
     gap: 20,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   dot: {
     width: 20,
@@ -114,15 +118,20 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   grid: {
-    width: '100%',
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  row: {
+    flex: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   key: {
-    width: '31.5%',
-    flexGrow: 1,
-    paddingVertical: 18,
+    flex: 1,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',

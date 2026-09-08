@@ -166,15 +166,15 @@ export function TransactionsScreen({
                 ))}
               </View>
             </View>
-          </View>
-        ))}
-        {dates.length === 0 ? (
-          <View style={styles.empty}>
-            <AppText size={16} weight={700} color="#888" align="center">
-              {reviewOnly ? '확인할 거래가 없어요.' : '이 달에는 거래내역이 없어요.'}
-            </AppText>
-          </View>
-        ) : null}
+          ))}
+          {dates.length === 0 ? (
+            <View style={styles.empty}>
+              <AppText size={16} weight={700} color="#888" align="center">
+                {reviewOnly ? '확인할 거래가 없어요.' : '이 달에는 거래내역이 없어요.'}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
         <View style={styles.spacer} />
       </ScrollView>
 
