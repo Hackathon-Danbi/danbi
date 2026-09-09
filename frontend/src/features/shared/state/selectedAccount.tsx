@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { accounts as ALL_ACCOUNTS, defaultAccount, type Account } from '@/features/shared/data';
 
@@ -18,36 +11,22 @@ type SelectedAccountContextValue = {
   accounts: Account[];
   selectedAccount: Account;
   selectAccount: (account: Account) => void;
-  /** 송금/입금 후 표시 잔액을 즉시 반영한다. delta 는 부호 포함(출금은 음수). */
-  adjustBalance: (accountId: number, delta: number) => void;
 };
 
 const SelectedAccountContext = createContext<SelectedAccountContextValue | null>(null);
 
 export function SelectedAccountProvider({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState(defaultAccount.accountId);
-  // 목데이터 잔액 위에 누적하는 증감분. 송금하면 여기서 즉시 차감된다.
-  const [balanceDeltas, setBalanceDeltas] = useState<Record<number, number>>({});
 
-  const adjustBalance = useCallback((accountId: number, delta: number) => {
-    if (!delta) return;
-    setBalanceDeltas((prev) => ({ ...prev, [accountId]: (prev[accountId] ?? 0) + delta }));
-  }, []);
-
-  const value = useMemo<SelectedAccountContextValue>(() => {
-    const withDeltas = ALL_ACCOUNTS.map((account) =>
-      balanceDeltas[account.accountId]
-        ? { ...account, balance: account.balance + balanceDeltas[account.accountId] }
-        : account,
-    );
-    return {
-      accounts: withDeltas,
+  const value = useMemo<SelectedAccountContextValue>(
+    () => ({
+      accounts: ALL_ACCOUNTS,
       selectedAccount:
-        withDeltas.find((account) => account.accountId === selectedId) ?? defaultAccount,
+        ALL_ACCOUNTS.find((account) => account.accountId === selectedId) ?? defaultAccount,
       selectAccount: (account: Account) => setSelectedId(account.accountId),
-      adjustBalance,
-    };
-  }, [adjustBalance, balanceDeltas, selectedId]);
+    }),
+    [selectedId],
+  );
 
   return (
     <SelectedAccountContext.Provider value={value}>{children}</SelectedAccountContext.Provider>

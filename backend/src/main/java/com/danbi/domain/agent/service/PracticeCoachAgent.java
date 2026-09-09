@@ -1,10 +1,10 @@
 package com.danbi.domain.agent.service;
 
-import com.danbi.domain.agent.model.AgentModels.Source;
-import com.danbi.domain.agent.model.AgentOutcome;
-import com.danbi.domain.agent.model.AgentContext;
-import com.danbi.domain.agent.model.AgentType;
-import com.danbi.domain.agent.model.Screen;
+import com.danbi.domain.agent.entity.AgentModels.Source;
+import com.danbi.domain.agent.entity.AgentOutcome;
+import com.danbi.domain.agent.entity.AgentContext;
+import com.danbi.domain.agent.entity.AgentType;
+import com.danbi.domain.agent.entity.Screen;
 import com.danbi.domain.agent.service.AgentSessions.Session;
 import java.util.List;
 import java.util.Map;

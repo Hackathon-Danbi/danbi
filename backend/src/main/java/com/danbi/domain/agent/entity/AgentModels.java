@@ -1,4 +1,4 @@
-package com.danbi.domain.agent.model;
+package com.danbi.domain.agent.entity;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

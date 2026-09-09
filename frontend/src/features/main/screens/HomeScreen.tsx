@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -7,12 +7,6 @@ import { AccountCard } from '../components/AccountCard';
 import { HomeHeader } from '../components/HomeHeader';
 import { MicButton } from '../components/MicButton';
 import { IconHistory, IconPractice, IconSavings, IconSend } from '../components/icons';
-
-// 문구 + 마이크(링 포함) + 안내문을 기본 크기로 그렸을 때의 세로 높이(px).
-// 제목 lineHeight 42 + 여백 16 + 마이크링박스 132*1.82 + 여백 12 + 안내문 lineHeight 28.
-const CENTER_DESIGN_HEIGHT = 338;
-// 아무리 좁아도 이 배율 밑으로는 줄이지 않는다.
-const MIN_CENTER_SCALE = 0.45;
 
 /** danbi_jj main/screens/transfer.tsx <HomeScreen> 이식. */
 export function HomeScreen({
@@ -41,14 +35,6 @@ export function HomeScreen({
     { label: '예적금', icon: <IconSavings />, action: onSavings },
   ];
 
-  // 가운데 영역이 실제로 받은 높이. flex 로 정해지므로 내용 크기와 무관 → 되먹임 없음.
-  const [centerHeight, setCenterHeight] = useState(0);
-  // 받은 높이가 기본 높이보다 작으면 그 비율만큼 폰트/마이크를 줄여 한 화면에 담는다.
-  const scale =
-    centerHeight > 0
-      ? Math.min(1, Math.max(MIN_CENTER_SCALE, centerHeight / CENTER_DESIGN_HEIGHT))
-      : 1;
-
   return (
     <View style={styles.root}>
       <HomeHeader
@@ -58,28 +44,20 @@ export function HomeScreen({
       />
       <AccountCard />
 
-      <View
-        style={styles.center}
-        onLayout={(e) => setCenterHeight(e.nativeEvent.layout.height)}
-      >
+      <View style={styles.center}>
         <AppText
-          size={Math.round(30 * scale)}
+          size={30}
           weight={900}
           color={INK}
           align="center"
           numberOfLines={1}
           adjustsFontSizeToFit
-          style={[styles.mainAsk, { marginBottom: Math.round(16 * scale) }]}
+          style={styles.mainAsk}
         >
           어떤 업무를 도와드릴까요?
         </AppText>
-        <MicButton onClick={onMic} size={Math.round(132 * scale)} />
-        <AppText
-          size={Math.round(20 * scale)}
-          weight={800}
-          color={INK}
-          style={{ marginTop: Math.round(12 * scale) }}
-        >
+        <MicButton onClick={onMic} size={132} />
+        <AppText size={20} weight={800} color={INK} style={styles.mt20}>
           마이크를 눌러 말씀해주세요
         </AppText>
       </View>
@@ -107,10 +85,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   // 한 줄 유지: 폭을 채우고 좁은 기기에서는 자동으로 축소(adjustsFontSizeToFit).
-  mainAsk: { alignSelf: 'stretch', paddingHorizontal: 16 },
+  mainAsk: { marginBottom: 16, alignSelf: 'stretch', paddingHorizontal: 16 },
+  mt20: { marginTop: 12 },
   tiles: {
     flexDirection: 'row',
     flexWrap: 'wrap',

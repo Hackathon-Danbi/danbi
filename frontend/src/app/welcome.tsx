@@ -1,18 +1,21 @@
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import { WelcomeModeScreen, type DisplayMode } from '@/features/onboarding/screens/WelcomeModeScreen';
 import { useBootstrap } from '@/lib/bootstrap';
 
 export default function WelcomeRoute() {
   const router = useRouter();
-  const { displayMode, onboardingDone, selectDisplayMode } = useBootstrap();
+  const { displayMode, selectDisplayMode } = useBootstrap();
 
   const handleSelect = async (mode: DisplayMode) => {
     await selectDisplayMode(mode);
     router.replace('/join');
   };
 
-  if (displayMode && onboardingDone) return <Redirect href="/(app)/home" />;
+  const handleSkipHome = async () => {
+    await selectDisplayMode(displayMode ?? 'danbi');
+    router.replace('/(app)/home');
+  };
 
-  return <WelcomeModeScreen onSelect={handleSelect} />;
+  return <WelcomeModeScreen onSelect={handleSelect} onSkipHome={handleSkipHome} />;
 }

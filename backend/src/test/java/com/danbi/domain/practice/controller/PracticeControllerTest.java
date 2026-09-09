@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.danbi.domain.practice.dto.PracticeMissionResponse;
 import com.danbi.domain.practice.dto.PracticeMissionsResponse;
 import com.danbi.domain.practice.service.PracticeService;
+import com.danbi.domain.practice.service.PracticeSessionService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,9 @@ class PracticeControllerTest {
 	@BeforeEach
 	void setUp() {
 		practiceService = mock(PracticeService.class);
-		mockMvc = MockMvcBuilders.standaloneSetup(new PracticeController(practiceService)).build();
+		mockMvc = MockMvcBuilders
+			.standaloneSetup(new PracticeController(practiceService, mock(PracticeSessionService.class)))
+			.build();
 	}
 
 	@Test

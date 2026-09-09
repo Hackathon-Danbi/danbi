@@ -243,6 +243,80 @@ public class HelpService {
 		return safetyShown && confirmedAfterRisk;
 	}
 
+	/**
+	 * 이상 송금 위험 감지를 기록한다. 위험 점검(riskCheck)에서 호출한다.
+	 * 같은 flowSession 에 아직 해소되지 않은 RISK_DETECTED 가 있으면 중복 기록하지 않는다.
+	 */
+	@Transactional
+	public void markRiskDetected(Long userId, String flowSessionId, FlowType flowType, String screenCode) {
+		if (flowSessionId == null || flowSessionId.isBlank()) {
+			return;
+		}
+		List<UserEvent> events = userEventRepository.findByFlowSessionIdOrderByCreatedAtAsc(flowSessionId);
+		if (unresolvedRiskDetectedAt(events).isPresent()) {
+			return;
+		}
+		userEventRepository.save(UserEvent.builder()
+			.userId(userId)
+			.flowSessionId(flowSessionId)
+			.flowType(flowType)
+			.screenCode(screenCode)
+			.eventType(EventType.RISK_DETECTED)
+			.createdAt(LocalDateTime.now(clock))
+			.build());
+	}
+
+	/**
+	 * 사용자가 안심확인 팝업에서 "확인했어요"를 눌렀을 때 호출한다.
+	 * 해당 flowSession 에 위험 감지(RISK_DETECTED) 기록이 있어야만 SAFETY_CHECK 노출/확인 이벤트를
+	 * 기록하고 true 를 반환한다. 위험 점검을 거치지 않은 세션이면 아무것도 하지 않고 false.
+	 */
+	@Transactional
+	public boolean confirmSafetyCheck(Long userId, String flowSessionId, FlowType flowType, String screenCode) {
+		if (flowSessionId == null || flowSessionId.isBlank()) {
+			return false;
+		}
+		List<UserEvent> events = userEventRepository.findByFlowSessionIdOrderByCreatedAtAsc(flowSessionId).stream()
+			.filter(e -> Objects.equals(e.getUserId(), userId))
+			.toList();
+		Optional<LocalDateTime> riskAt = events.stream()
+			.filter(e -> e.getEventType() == EventType.RISK_DETECTED)
+			.map(UserEvent::getCreatedAt)
+			.max(Comparator.naturalOrder());
+		if (riskAt.isEmpty()) {
+			return false;
+		}
+
+		LocalDateTime now = LocalDateTime.now(clock);
+		boolean alreadyShown = events.stream()
+			.filter(e -> e.getEventType() == EventType.HELP_SHOWN)
+			.filter(e -> e.getHelpStage() == HelpStage.SAFETY_CHECK)
+			.anyMatch(e -> !e.getCreatedAt().isBefore(riskAt.get()));
+		if (!alreadyShown) {
+			userEventRepository.save(UserEvent.builder()
+				.userId(userId)
+				.flowSessionId(flowSessionId)
+				.flowType(flowType)
+				.screenCode(screenCode)
+				.eventType(EventType.HELP_SHOWN)
+				.eventValue(HelpTriggerResponse.RISK_DETECTED)
+				.helpStage(HelpStage.SAFETY_CHECK)
+				.createdAt(now)
+				.build());
+		}
+		userEventRepository.save(UserEvent.builder()
+			.userId(userId)
+			.flowSessionId(flowSessionId)
+			.flowType(flowType)
+			.screenCode(screenCode)
+			.eventType(EventType.HELP_RESPONSE)
+			.helpStage(HelpStage.SAFETY_CHECK)
+			.userResponse(HelpUserResponse.SAFETY_CONFIRMED)
+			.createdAt(now.plusNanos(1_000))
+			.build());
+		return true;
+	}
+
 	/** 상담원 운영시간 사전 조회. 운영시간 내/외에 따라 프론트 버튼이 달라진다. */
 	public AgentAvailabilityResponse agentAvailability() {
 		LocalTime opens = LocalTime.parse(opensAt);

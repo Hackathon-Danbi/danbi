@@ -11,20 +11,12 @@ export const ONBOARDING_DESTINATION_ROUTES: Record<OnboardingDestination, Href> 
 };
 
 /**
- * 진입 라우트 판별.
- *
- *   displayMode 없음                        → /welcome
- *   온보딩 미완료                            → /join
- *   비밀번호 저장됨 + 이번 실행에서 미확인   → /login
- *   그 밖                                    → /(app)/home
+ * 시연용 진입. 가입·모드 완료를 저장하지 않으므로 항상 웰컴부터 시작한다.
  */
 export function resolveEntryRoute(
-  displayMode: DisplayMode | null,
-  onboardingDone: boolean,
-  lock?: { pinRegistered: boolean; unlocked: boolean },
+  _displayMode?: DisplayMode | null,
+  _onboardingDone?: boolean,
+  _lock?: { pinRegistered: boolean; unlocked: boolean },
 ): Href {
-  if (!displayMode) return '/welcome';
-  if (!onboardingDone) return '/join';
-  if (lock && lock.pinRegistered && !lock.unlocked) return '/login';
-  return '/(app)/home';
+  return '/welcome';
 }

@@ -2,7 +2,7 @@ package com.danbi.domain.agent.rag;
 
 import com.danbi.domain.agent.config.AgentProperties;
 import com.danbi.domain.agent.llm.AiGateway;
-import com.danbi.domain.agent.model.AgentModels.Source;
+import com.danbi.domain.agent.entity.AgentModels.Source;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;

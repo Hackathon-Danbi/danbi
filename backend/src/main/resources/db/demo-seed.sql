@@ -1,6 +1,11 @@
 -- 단비 시연영상용 메인 화면 데이터.
 -- 로컬 MySQL의 danbi DB에서만 수동 실행한다. 애플리케이션 시작 시 자동 실행되지 않는다.
 -- 반복 실행해도 같은 PK를 갱신하도록 작성했다.
+-- CLI: mysql ... danbi < demo-seed.sql / Workbench: 아래 USE 로 스키마를 잡는다.
+-- SET NAMES: 클라이언트 기본 charset 이 latin1 이어도 한글이 깨지지 않게 강제한다.
+
+SET NAMES utf8mb4;
+USE danbi;
 
 SET @demo_user_id = 1;
 SET @demo_checking_account_id = 1;

@@ -26,7 +26,6 @@ interface PracticeContextValue {
   practiceTarget: PracticeTarget;
   mode: PracticeFlowMode;
   reviewStep: ReviewableTransferStep | null;
-  reviewScore: { earnedPoints: number; newScore: number; maxScore: number } | null;
   setPracticeStyle: (style: PracticeStyle) => void;
   practiceRecipient: string;
   setPracticeRecipient: (value: string) => void;
@@ -79,7 +78,6 @@ export function PracticeProvider({
   mode = 'full',
   reviewStep = null,
   apiMissionId,
-  reviewScore = null,
 }: {
   children: ReactNode;
   onComplete?: () => void;
@@ -89,7 +87,6 @@ export function PracticeProvider({
   mode?: PracticeFlowMode;
   reviewStep?: ReviewableTransferStep | null;
   apiMissionId?: number;
-  reviewScore?: { earnedPoints: number; newScore: number; maxScore: number } | null;
 }) {
   const [history, setHistory] = useState<PracticeScreen[]>([initialState?.screen ?? 'practiceHub']);
   const screen = history[history.length - 1];
@@ -351,7 +348,6 @@ export function PracticeProvider({
     practiceTarget,
     mode,
     reviewStep,
-    reviewScore,
     setPracticeStyle,
     practiceRecipient,
     setPracticeRecipient,
@@ -388,7 +384,7 @@ export function PracticeProvider({
     screen, history.length, practiceStyle, practiceTarget, practiceRecipient, practiceRecipientChoice,
     practiceVoiceRecipientName, practiceRecipientName, practiceRecipients, practiceAmount,
     practiceMistakeMessage, transferMethod, pin, praise,
-    mode, reviewStep, reviewScore, go, back, guidedNext, completePracticeStep, startReviewStep,
+    mode, reviewStep, go, back, guidedNext, completePracticeStep, startReviewStep,
     restartReview, exitReview, choosePracticeStyle, beginPractice, enterPracticeAmount,
     recognizePracticeVoice,
   ]);
