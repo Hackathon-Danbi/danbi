@@ -172,6 +172,7 @@ export function TransferFlow() {
   const [stuckReviewStep, setStuckReviewStep] = useState<ReviewableTransferStep | null>(null);
 
   const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const helpCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helpStepRef = useRef<HelpStep>('idle');
   const helpModeRef = useRef(false);
   const screenRef = useRef<FlowScreen>('transfer');
@@ -253,6 +254,12 @@ export function TransferFlow() {
     if (advisorTimerRef.current) clearTimeout(advisorTimerRef.current);
     advisorTimerRef.current = null;
   };
+  const clearHelpCooldownTimer = useCallback(() => {
+    if (helpCooldownTimerRef.current !== null) {
+      clearTimeout(helpCooldownTimerRef.current);
+      helpCooldownTimerRef.current = null;
+    }
+  }, []);
   const abortStt = () => {
     sttSessionRef.current?.abort();
     sttSessionRef.current = null;
@@ -332,6 +339,18 @@ export function TransferFlow() {
       doTriggerHighlight(screenRef.current, 'inactivity');
     }, 20000);
   }, [doTriggerHighlight, isInCooldown]);
+
+  // 화면 이동·입력으로 도움 타이머를 취소해도 재표시 제한 종료 예약은 유지한다.
+  useEffect(() => {
+    if (helpDismissedAt === null) return;
+    const remaining = Math.max(0, helpDismissedAt + 30000 - Date.now());
+    helpCooldownTimerRef.current = setTimeout(() => {
+      helpCooldownTimerRef.current = null;
+      // screenRef를 통해 현재 화면을 확인하고, 지원 화면에서만 20초 감지를 재개한다.
+      startInactivityTimer();
+    }, remaining);
+    return clearHelpCooldownTimer;
+  }, [helpDismissedAt, startInactivityTimer, clearHelpCooldownTimer]);
 
   const doResolveHelp = useCallback(() => {
     clearHelpTimer();
@@ -554,24 +573,26 @@ export function TransferFlow() {
   useEffect(
     () => () => {
       clearHelpTimer();
+      clearHelpCooldownTimer();
       clearPhaseTimer();
       clearAdvisorTimer();
       abortStt();
       ocrRequestRef.current += 1;
       ttsStop();
     },
-    [],
+    [clearHelpCooldownTimer],
   );
 
   // ── 네비게이션 ──────────────────────────────────────────
   const goHome = useCallback(() => {
     clearPhaseTimer();
     clearHelpTimer();
+    clearHelpCooldownTimer();
     abortStt();
     ocrRequestRef.current += 1;
     ttsStop();
     router.dismissTo('/(app)/home');
-  }, [router]);
+  }, [router, clearHelpCooldownTimer]);
 
   const openTransfer = () => {
     doResolveHelp();
