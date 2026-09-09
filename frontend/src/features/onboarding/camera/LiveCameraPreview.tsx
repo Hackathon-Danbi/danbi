@@ -48,13 +48,17 @@ export function LiveCameraPreview({
           ref={cameraRef}
           facing={facing}
           mirror={mirror}
-          style={size}
+          style={StyleSheet.absoluteFill}
           mode="picture"
           animateShutter={false}
           onCameraReady={onReady}
         />
       ) : null}
-      {children}
+      {children ? (
+        <View pointerEvents="none" style={styles.overlay}>
+          {children}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -139,6 +143,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     overflow: 'hidden',
     backgroundColor: '#111',
+    position: 'relative',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    elevation: 20,
   },
   gate: {
     flex: 1,

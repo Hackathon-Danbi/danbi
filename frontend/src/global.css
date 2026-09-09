@@ -1,12 +1,12 @@
 /*
  * 웹(react-native-web) 전용 전역 스타일.
- * expo-font 가 Pretendard의 @font-face 를 런타임에 주입하므로
+ * expo-font 가 SUIT의 @font-face 를 런타임에 주입하므로
  * 여기서는 폰트 파일을 직접 로드하지 않고, 미로드 시의 fallback 체인과
  * 시니어 가독성용 기본값만 둔다.
  */
 :root {
   --font-korean:
-    'Pretendard', 'Pretendard-Regular', -apple-system, BlinkMacSystemFont,
+    'SUIT', 'SUIT-Regular', -apple-system, BlinkMacSystemFont,
     'Apple SD Gothic Neo', system-ui, sans-serif;
 }
 

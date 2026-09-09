@@ -90,8 +90,8 @@ export const STEP_HELP: Record<number, OnboardingHelpDef> = {
     showBar: true,
   },
   14: {
-    entryVoice: '얼굴 확인 화면이에요. 화면을 정면으로 바라봐주세요. 밝은 곳에서 하면 더 잘 돼요.',
-    hint: '정면을 바라보고 「얼굴 찍기」를 눌러주세요.',
+    entryVoice: '얼굴 확인 화면이에요. 정면, 오른쪽, 왼쪽, 다시 정면 네 장을 찍어요. 노란 선에 귀와 턱을 맞춰주세요.',
+    hint: '타원에 얼굴을 맞춘 뒤 「얼굴 찍기」를 눌러주세요.',
     showBar: false,
   },
   15: {

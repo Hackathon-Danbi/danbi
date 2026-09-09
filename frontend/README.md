@@ -6,7 +6,8 @@
 
 이 디렉터리(`frontend/`)는 원본 웹 구현(`danbi_jj/`, Next.js)을
 **Expo SDK 57 / expo-router / React Native** 로 이식한 것입니다. UI/UX, 시니어용
-큰 글씨·여백·색상, 화면 흐름과 상태 머신을 최대한 그대로 유지했습니다.
+큰 글씨·여백·색상, 화면 흐름과 상태 머신을 최대한 그대로 유지했습니다. 본문 글꼴은
+[SUIT](https://sun.fo/suit/)를 씁니다.
 
 ---
 
@@ -16,7 +17,7 @@
 npm install
 ```
 
-Pretendard OTF는 `assets/fonts/` 에 포함되어 있습니다. 런타임 로드에 실패하면
+SUIT TTF는 `assets/fonts/` 에 포함되어 있습니다. 런타임 로드에 실패하면
 시스템 한글 폰트로 fallback 합니다. 재배포 조건은 `assets/fonts/OFL.txt`에 있습니다.
 
 ## 실행
@@ -111,8 +112,8 @@ src/
   api/                     선택 API 계약 타입, 경로, 공통 fetch 클라이언트, 서비스
   theme/
     tokens.ts, fonts.ts   색상·간격·반경 토큰, 폰트 패밀리 resolver
-  global.css               웹 전용 @font-face
-assets/fonts/              Pretendard-{Regular,Medium,SemiBold,Bold,Black}.otf
+  global.css               웹 전용 fallback
+assets/fonts/              SUIT-{Regular,Medium,SemiBold,Bold,Heavy}.ttf
 ```
 
 ---
@@ -181,11 +182,11 @@ Metro 가 실행 플랫폼에 맞는 `.web` / `.native` 파일을 자동 선택�
 
 `src/theme/fonts.ts` 가 weight 별로 단일 `fontFamily` 값을 반환합니다.
 
-1. **Pretendard** (`assets/fonts/*.otf`, `expo-font` `useFonts` 로 로드, OFL 1.1)
+1. **SUIT** (`assets/fonts/*.ttf`, `expo-font` `useFonts` 로 로드, OFL 1.1)
 2. 시스템 기본 한글 폰트 (`undefined`)
 
 `Font.isLoaded()` 결과에 따라 실제 로드된 패밀리명만 사용하므로, 런타임 폰트 로드가
-실패하면 시스템 글꼴을 사용합니다. OTF 파일 자체는 앱 번들에 포함되어야 합니다.
+실패하면 시스템 글꼴을 사용합니다. TTF 파일 자체는 앱 번들에 포함되어야 합니다.
 
 ---
 

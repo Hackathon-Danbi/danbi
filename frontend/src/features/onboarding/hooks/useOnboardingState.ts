@@ -2,7 +2,30 @@ import { useEffect, useRef, useState } from 'react';
 
 import { savePin } from '@/features/auth/pinStore';
 import { currentUser } from '@/features/shared/data';
+import { nextFaceCaptureStage, type FaceCaptureStage } from '../face-capture/faceStages';
+import { saveApiIdentity } from '@/lib/api/identity';
+import { setBackendReachable } from '@/lib/api/live';
+import { bankCodeOf } from '@/lib/api/map';
+import * as onboardingApi from '@/lib/api/onboarding';
 import type { OnboardingDraft } from '../onboardingDraft';
+
+type ApiIds = {
+  session: string;
+  issuance: string;
+  scan: string;
+  verification: string;
+  accountTarget: string;
+  oneWon: string;
+};
+
+const EMPTY_API_IDS: ApiIds = {
+  session: '',
+  issuance: '',
+  scan: '',
+  verification: '',
+  accountTarget: '',
+  oneWon: '',
+};
 
 export const MOCK_OTP = '381529';
 export const MOCK_ACCOUNT_CODE = '4821';
@@ -36,7 +59,6 @@ export function useOnboardingState() {
   const [carrier, setCarrier] = useState<Carrier>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [requiredTerms, setRequiredTerms] = useState<boolean[]>([false]);
-  const [marketingTermAccepted, setMarketingTermAccepted] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpSendCount, setOtpSendCount] = useState(0);
   const [otp, setOtp] = useState('');
@@ -62,9 +84,24 @@ export function useOnboardingState() {
   const [pinMismatch, setPinMismatch] = useState(0);
   const [pinCreated, setPinCreated] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [liveApi, setLiveApi] = useState(false);
+  const [apiIds, setApiIds] = useState<ApiIds>(EMPTY_API_IDS);
+  const [idRecognizedName, setIdRecognizedName] = useState(MOCK_ID_NAME);
+  const [idMaskedNumber, setIdMaskedNumber] = useState(MOCK_ID_NUMBER);
+  const [idIssueDate, setIdIssueDate] = useState(MOCK_ID_ISSUED_DATE);
 
   const idTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const faceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idsRef = useRef<ApiIds>(EMPTY_API_IDS);
+  const liveRef = useRef(false);
+
+  const patchIds = (partial: Partial<ApiIds>) => {
+    idsRef.current = { ...idsRef.current, ...partial };
+    setApiIds({ ...idsRef.current });
+  };
+
+  const usingLiveApi = () =>
+    liveRef.current && idsRef.current.session !== '' && idsRef.current.session !== 'local';
 
   useEffect(
     () => () => {
@@ -93,7 +130,7 @@ export function useOnboardingState() {
   };
 
   const confirmIdInformation = () => {
-    setUserName(MOCK_ID_NAME);
+    setUserName(idRecognizedName || MOCK_ID_NAME);
     setIdInformationConfirmed(true);
   };
 
@@ -117,12 +154,16 @@ export function useOnboardingState() {
     setCertificateTerms((current) => current.map(() => value));
   };
 
-  const sendOtp = () => {
+  const markOtpSent = () => {
     setOtpSent(true);
     setOtpSendCount((count) => count + 1);
     setOtp('');
     setOtpError('');
     setOtpVerified(false);
+  };
+
+  const sendOtp = () => {
+    markOtpSent();
   };
 
   const updateOtp = (value: string) => {
@@ -235,6 +276,10 @@ export function useOnboardingState() {
     setAccountVerified(false);
     resetPin();
     setOnboardingCompleted(false);
+    setIdRecognizedName(MOCK_ID_NAME);
+    setIdMaskedNumber(MOCK_ID_NUMBER);
+    setIdIssueDate(MOCK_ID_ISSUED_DATE);
+    patchIds({ scan: '', accountTarget: '', oneWon: '' });
   };
 
   const setIdType = (nextIdType: IdType) => {
@@ -283,8 +328,216 @@ export function useOnboardingState() {
     setPinPhase('success');
   };
 
-  // 가입 완료 시 정한 간편 비밀번호를 저장해 로그인/재인증에서 쓴다.
-  const completeOnboarding = () => {
+  const ensureSession = async () => {
+    if (idsRef.current.session) return;
+    try {
+      const created = await onboardingApi.createOnboardingSession();
+      liveRef.current = true;
+      setLiveApi(true);
+      setBackendReachable(true);
+      patchIds({ session: created.onboardingSessionId });
+    } catch {
+      liveRef.current = false;
+      setLiveApi(false);
+      setBackendReachable(false);
+      patchIds({ session: 'local' });
+    }
+  };
+
+  const submitName = async () => {
+    if (!usingLiveApi()) return;
+    await onboardingApi.saveOnboardingName(idsRef.current.session, userName);
+  };
+
+  const requestOtp = async () => {
+    markOtpSent();
+    if (!usingLiveApi()) return;
+    const response = await onboardingApi.requestPhoneVerification(
+      idsRef.current.session,
+      carrier,
+      phoneNumber,
+    );
+    patchIds({ verification: response.verificationSessionId });
+  };
+
+  const resendOtp = async () => {
+    markOtpSent();
+    if (!usingLiveApi()) return;
+    if (!idsRef.current.verification) {
+      if (!usingLiveApi()) return;
+      const response = await onboardingApi.requestPhoneVerification(
+        idsRef.current.session,
+        carrier,
+        phoneNumber,
+      );
+      patchIds({ verification: response.verificationSessionId });
+      return;
+    }
+    await onboardingApi.resendPhoneVerification(idsRef.current.session, idsRef.current.verification);
+  };
+
+  const confirmOtp = async () => {
+    if (!usingLiveApi()) {
+      if (!verifyOtp()) {
+        throw new Error('숫자가 맞지 않아요. 문자를 다시 확인해주세요.');
+      }
+      return;
+    }
+    await onboardingApi.confirmPhoneVerification(
+      idsRef.current.session,
+      idsRef.current.verification,
+      otp,
+    );
+    setOtpError('');
+    setOtpVerified(true);
+  };
+
+  const startCertificate = async () => {
+    if (!usingLiveApi() || idsRef.current.issuance) return;
+    const response = await onboardingApi.startCertificateIssuance(idsRef.current.session);
+    patchIds({ issuance: response.issuanceId });
+  };
+
+  const scanIdPhoto = async (uri?: string) => {
+    if (!usingLiveApi()) {
+      setIdRecognizedName(MOCK_ID_NAME);
+      setIdMaskedNumber(MOCK_ID_NUMBER);
+      setIdIssueDate(MOCK_ID_ISSUED_DATE);
+      completeIdScan();
+      return;
+    }
+    if (!uri) {
+      if (idsRef.current.scan) {
+        completeIdScan();
+        return;
+      }
+      throw new Error('신분증 사진이 없어요. 다시 찍어주세요.');
+    }
+    if (!idsRef.current.issuance) await startCertificate();
+    const response = await onboardingApi.scanIdCard(idsRef.current.issuance, idType, uri);
+    patchIds({
+      scan: response.scanId,
+      issuance: response.issuanceId || idsRef.current.issuance,
+    });
+    setIdRecognizedName(response.recognizedName || MOCK_ID_NAME);
+    setIdMaskedNumber(response.maskedIdNumber || MOCK_ID_NUMBER);
+    setIdIssueDate(onboardingApi.formatIssueDate(response.issueDate) || MOCK_ID_ISSUED_DATE);
+    completeIdScan();
+  };
+
+  const confirmIdCard = async () => {
+    confirmIdInformation();
+    if (!usingLiveApi() || !idsRef.current.issuance || !idsRef.current.scan) return;
+    await onboardingApi.confirmIdCard(idsRef.current.issuance, idsRef.current.scan, true);
+  };
+
+  const verifyFacePose = async (
+    uri: string,
+    stage: FaceCaptureStage,
+  ): Promise<'advance' | 'success' | 'failure'> => {
+    if (faceTimer.current) clearTimeout(faceTimer.current);
+    setFaceStatus('checking');
+    setFaceVerified(false);
+    if (!usingLiveApi()) {
+      const next = nextFaceCaptureStage(stage);
+      if (next) {
+        setFaceStatus('idle');
+        return 'advance';
+      }
+      if (MOCK_FACE_FAILURE) {
+        setFaceStatus('failure');
+        return 'failure';
+      }
+      setFaceStatus('success');
+      setFaceVerified(true);
+      return 'success';
+    }
+    try {
+      const response = await onboardingApi.verifyFace(
+        idsRef.current.issuance,
+        idsRef.current.scan,
+        stage,
+        uri,
+      );
+      if (response.verified) {
+        setFaceStatus('success');
+        setFaceVerified(true);
+        return 'success';
+      }
+      if (response.nextStage) {
+        setFaceStatus('idle');
+        return 'advance';
+      }
+      setFaceStatus('failure');
+      return 'failure';
+    } catch {
+      setFaceStatus('failure');
+      return 'failure';
+    }
+  };
+
+  const saveAccountTarget = async (): Promise<'ACCOUNT_PASSWORD' | 'ONE_WON'> => {
+    const fallback = isKbAccount ? 'ACCOUNT_PASSWORD' : 'ONE_WON';
+    if (!usingLiveApi()) return fallback;
+    const response = await onboardingApi.saveAccountVerificationTarget(
+      idsRef.current.issuance,
+      bankCodeOf(bank ?? ''),
+      accountNumber,
+    );
+    patchIds({ accountTarget: response.accountVerificationTargetId });
+    return response.verificationMethod === 'ONE_WON' ? 'ONE_WON' : 'ACCOUNT_PASSWORD';
+  };
+
+  const verifyAccountPasswordLive = async () => {
+    if (!usingLiveApi()) {
+      verifyAccountPassword();
+      return;
+    }
+    await onboardingApi.verifyAccountPassword(
+      idsRef.current.accountTarget,
+      idsRef.current.issuance,
+      accountPassword,
+    );
+    setAccountVerified(true);
+  };
+
+  const requestOneWon = async () => {
+    sendAccountVerification();
+    if (!usingLiveApi()) return;
+    const response = await onboardingApi.requestOneWonVerification(
+      idsRef.current.accountTarget,
+      idsRef.current.issuance,
+    );
+    patchIds({ oneWon: response.verificationId });
+  };
+
+  const confirmOneWon = async () => {
+    if (!usingLiveApi()) {
+      if (!verifyAccountCode()) {
+        throw new Error('숫자가 맞지 않아요. 입금 내역을 다시 확인해주세요.');
+      }
+      return;
+    }
+    await onboardingApi.confirmOneWonVerification(
+      idsRef.current.accountTarget,
+      idsRef.current.issuance,
+      idsRef.current.oneWon,
+      accountCode,
+    );
+    setAccountError('');
+    setAccountVerified(true);
+  };
+
+  const finishOnboarding = async () => {
+    if (usingLiveApi()) {
+      await onboardingApi.setSimplePassword(idsRef.current.issuance, firstPin);
+      try {
+        const done = await onboardingApi.getOnboardingCompletion(idsRef.current.session);
+        if (done.userId) await saveApiIdentity({ userId: done.userId });
+      } catch {
+        /* 비밀번호는 저장됐으니 가입은 진행한다. */
+      }
+    }
     setOnboardingCompleted(true);
     if (pinCreated) void savePin(firstPin);
   };
@@ -293,7 +546,6 @@ export function useOnboardingState() {
     setPhoneOwnership(draft.phoneOwnership);
     setCarrier(draft.carrier);
     setRequiredTerms(draft.requiredTerms);
-    setMarketingTermAccepted(draft.marketingTermAccepted);
     setElectronicDocTermAccepted(draft.electronicDocTermAccepted);
     setFaceTermAccepted(draft.faceTermAccepted);
     setOtpSent(false);
@@ -304,7 +556,7 @@ export function useOnboardingState() {
     setIdTypeState(draft.idType);
     setIdScanStatus(draft.idScanCompleted ? 'success' : 'idle');
     setIdInformationConfirmed(draft.idInformationConfirmed);
-    setUserName(draft.idInformationConfirmed ? MOCK_ID_NAME : '');
+    setUserName(draft.userName || (draft.idInformationConfirmed ? draft.idRecognizedName || MOCK_ID_NAME : ''));
     setFaceStatus(draft.faceVerified ? 'success' : 'idle');
     setFaceVerified(draft.faceVerified);
     setBankState(draft.bank);
@@ -314,6 +566,23 @@ export function useOnboardingState() {
     setAccountCode('');
     setAccountError('');
     setAccountVerified(draft.accountVerified);
+    setIdRecognizedName(draft.idRecognizedName || MOCK_ID_NAME);
+    setIdMaskedNumber(draft.idMaskedNumber || MOCK_ID_NUMBER);
+    setIdIssueDate(draft.idIssueDate || MOCK_ID_ISSUED_DATE);
+    const restoredIds: ApiIds = {
+      session: draft.onboardingSessionId ?? '',
+      issuance: draft.issuanceId ?? '',
+      scan: draft.scanId ?? '',
+      verification: draft.verificationSessionId ?? '',
+      accountTarget: draft.accountVerificationTargetId ?? '',
+      oneWon: draft.oneWonVerificationId ?? '',
+    };
+    idsRef.current = restoredIds;
+    setApiIds(restoredIds);
+    const restoredLive = draft.liveApi === true && restoredIds.session !== '' && restoredIds.session !== 'local';
+    liveRef.current = restoredLive;
+    setLiveApi(restoredLive);
+    if (restoredLive) setBackendReachable(true);
     resetPin();
     setOnboardingCompleted(draft.step === 20);
   };
@@ -338,8 +607,6 @@ export function useOnboardingState() {
     requiredTerms,
     toggleRequiredTerm,
     setAllRequiredTerms,
-    marketingTermAccepted,
-    setMarketingTermAccepted,
     otpSent,
     otpSendCount,
     sendOtp,
@@ -381,7 +648,25 @@ export function useOnboardingState() {
     enterPin,
     resetPin,
     onboardingCompleted,
-    completeOnboarding,
+    completeOnboarding: finishOnboarding,
     restoreDraft,
+    liveApi,
+    apiIds,
+    idRecognizedName,
+    idMaskedNumber,
+    idIssueDate,
+    ensureSession,
+    submitName,
+    requestOtp,
+    resendOtp,
+    confirmOtp,
+    startCertificate,
+    scanIdPhoto,
+    confirmIdCard,
+    verifyFacePose,
+    saveAccountTarget,
+    verifyAccountPasswordLive,
+    requestOneWon,
+    confirmOneWon,
   };
 }

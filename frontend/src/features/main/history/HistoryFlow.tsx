@@ -35,7 +35,7 @@ const MONTH_NAMES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '1
 export function HistoryFlow() {
   const router = useRouter();
   const { view } = useLocalSearchParams<{ view?: string }>();
-  const { transactions, reviewTransaction } = useTransactions();
+  const { transactions, reviewTransaction, ensureMonth } = useTransactions();
   const { accounts, selectedAccount, selectAccount } = useSelectedAccount();
   const [selectedTx, setSelectedTx] = useState<TxRecord | null>(null);
   const [showEscalation, setShowEscalation] = useState(false);
@@ -58,8 +58,13 @@ export function HistoryFlow() {
     accountTransactions[0] ? yearMonthOf(accountTransactions[0].occurredAt) : currentYm
   ));
   const year = Math.floor(viewYm / 12);
+  const month = (viewYm % 12) + 1;
   const monthLabel = `${year}년 ${MONTH_NAMES[viewYm % 12]}월`;
   const canGoNext = viewYm < currentYm;
+
+  useEffect(() => {
+    void ensureMonth(year, month);
+  }, [ensureMonth, month, year]);
 
   const monthlyTransactions = filterTransactionsByMonth(accountTransactions, viewYm);
   const visibleTransactions = reviewOnly
