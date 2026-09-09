@@ -47,7 +47,7 @@ class SavingsQueryIntegrationTest {
         payment(free, "2026-08", PaymentStatus.UNPAID, null);
         payment(deposit, "2026-09", PaymentStatus.SCHEDULED, null);
         flush();
-        mvc.perform(get("/api/savings").principal(() -> "1"))
+        mvc.perform(get("/api/savings"))
                 .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.savings.length()").value(3))
                 .andExpect(jsonPath("$.savings[0].productType").value("TIME_DEPOSIT"))
@@ -65,11 +65,11 @@ class SavingsQueryIntegrationTest {
 
     @Test
     void emptyListAndMissingContractListFallback() throws Exception {
-        mvc.perform(get("/api/savings").principal(() -> "1"))
+        mvc.perform(get("/api/savings"))
                 .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("application/json")).andExpect(content().json("{\"savings\":[]}"));
         account(1L, ProductType.TIME_DEPOSIT);
         flush();
-        mvc.perform(get("/api/savings").principal(() -> "1"))
+        mvc.perform(get("/api/savings"))
                 .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.savings[0].appliedInterestRate").value(nullValue()))
                 .andExpect(jsonPath("$.savings[0].remainingMonths").value(0));
@@ -81,7 +81,7 @@ class SavingsQueryIntegrationTest {
         long id = c.getAccount().getAccountId();
         long contractId = c.getContractId();
         flush();
-        mvc.perform(get("/api/savings/deposits/{id}", id).principal(() -> "1"))
+        mvc.perform(get("/api/savings/deposits/{id}", id))
                 .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(content().json("""
                         {"accountId":%d,"contractId":%d,"productName":"테스트 상품",
@@ -96,7 +96,7 @@ class SavingsQueryIntegrationTest {
         for (var type : new ProductType[]{ProductType.FIXED_SAVINGS, ProductType.FREE_SAVINGS}) {
             var c = contract(account(1L, type), "2027-08-25");
             long id = c.getAccount().getAccountId();
-            mvc.perform(get("/api/savings/installments/{id}", id).principal(() -> "1"))
+            mvc.perform(get("/api/savings/installments/{id}", id))
                     .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("application/json"))
                     .andExpect(jsonPath("$.productType").value(type.name()))
                     .andExpect(jsonPath("$.contractId").value(c.getContractId()))
@@ -104,7 +104,7 @@ class SavingsQueryIntegrationTest {
                     .andExpect(jsonPath("$.currentMonthPayment").value(nullValue()));
             payment(c, "2026-09", PaymentStatus.SCHEDULED, null);
             flush();
-            mvc.perform(get("/api/savings/installments/{id}", id).principal(() -> "1"))
+            mvc.perform(get("/api/savings/installments/{id}", id))
                     .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith("application/json"))
                     .andExpect(jsonPath("$.currentMonthPayment.status").value("SCHEDULED"))
                     .andExpect(jsonPath("$.currentMonthPayment.amount").value(nullValue()));
@@ -112,12 +112,15 @@ class SavingsQueryIntegrationTest {
     }
 
     @Test
-    void authenticationIsRequiredAndCallerHeadersCannotImpersonate() throws Exception {
-        for (var path : new String[]{"/api/savings", "/api/savings/deposits/1", "/api/savings/installments/1"}) {
-            mvc.perform(get(path).header("X-User-Id", "1")) .andExpect(status().isUnauthorized());
-            mvc.perform(get(path).principal(() -> "invalid")).andExpect(status().isUnauthorized());
-            mvc.perform(get(path).principal(() -> "0")).andExpect(status().isUnauthorized());
-        }
+    void fixedUserIsUsedRegardlessOfAuthenticationOrHeaders() throws Exception {
+        var owned = contract(account(1L, ProductType.TIME_DEPOSIT), "2027-08-25");
+        contract(account(2L, ProductType.TIME_DEPOSIT), "2027-08-25");
+        long ownedId = owned.getAccount().getAccountId();
+        flush();
+        mvc.perform(get("/api/savings").header("X-User-Id", "2").principal(() -> "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.savings.length()").value(1))
+                .andExpect(jsonPath("$.savings[0].accountId").value(ownedId));
     }
 
     @Test
@@ -125,6 +128,7 @@ class SavingsQueryIntegrationTest {
         var deposit = account(1L, ProductType.TIME_DEPOSIT);
         var installment = account(1L, ProductType.FREE_SAVINGS);
         var checking = account(1L, ProductType.CHECKING);
+        long otherId = account(2L, ProductType.TIME_DEPOSIT).getAccountId();
         long depositId = deposit.getAccountId();
         long installmentId = installment.getAccountId();
         long checkingId = checking.getAccountId();
@@ -132,15 +136,15 @@ class SavingsQueryIntegrationTest {
         for (var category : new String[]{"deposits", "installments"}) {
             var base = "/api/savings/" + category + "/";
             for (var invalid : new String[]{"0", "-1", "abc", "9223372036854775808"}) {
-                mvc.perform(get(base + invalid).principal(() -> "1")).andExpect(status().isBadRequest());
+                mvc.perform(get(base + invalid)).andExpect(status().isBadRequest());
             }
-            mvc.perform(get(base + "999999").principal(() -> "1")).andExpect(status().isNotFound());
-            mvc.perform(get(base + depositId).principal(() -> "2")).andExpect(status().isNotFound());
-            mvc.perform(get(base + checkingId).principal(() -> "1")).andExpect(status().isBadRequest());
+            mvc.perform(get(base + "999999")).andExpect(status().isNotFound());
+            mvc.perform(get(base + otherId)).andExpect(status().isNotFound());
+            mvc.perform(get(base + checkingId)).andExpect(status().isBadRequest());
             long wrongType = category.equals("deposits") ? installmentId : depositId;
             long noContract = category.equals("deposits") ? depositId : installmentId;
-            mvc.perform(get(base + wrongType).principal(() -> "1")).andExpect(status().isBadRequest());
-            mvc.perform(get(base + noContract).principal(() -> "1")).andExpect(status().isInternalServerError());
+            mvc.perform(get(base + wrongType)).andExpect(status().isBadRequest());
+            mvc.perform(get(base + noContract)).andExpect(status().isInternalServerError());
         }
     }
 
