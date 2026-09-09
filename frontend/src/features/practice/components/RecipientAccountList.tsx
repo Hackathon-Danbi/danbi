@@ -43,11 +43,11 @@ export function RecipientAccountList({
               <AppText size={17} weight={900} color={P.ink}>
                 {recipient.name}
               </AppText>
-              <AppText size={13} color={P.muted}>
+              <AppText size={15} color={P.muted}>
                 {recipient.bank} · {formatAccountNumber(recipient.account)}
               </AppText>
               {accountBadge ? (
-                <AppText size={12} weight={700} color={P.accentText} style={styles.badge}>
+                <AppText size={14} weight={700} color={P.accentText} style={styles.badge}>
                   {accountBadge}
                 </AppText>
               ) : null}
@@ -74,7 +74,7 @@ export function RecipientAccountList({
           <AppText size={17} weight={900} color={P.ink}>
             새로운 계좌로 보내기
           </AppText>
-          <AppText size={13} color={P.muted}>
+          <AppText size={15} color={P.muted}>
             계좌번호를 직접 입력해요
           </AppText>
         </View>

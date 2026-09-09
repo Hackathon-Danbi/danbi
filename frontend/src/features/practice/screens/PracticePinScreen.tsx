@@ -24,7 +24,7 @@ export function PracticePinScreen() {
       <BackHeader title="비밀번호 입력" onBack={goBack} />
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.dataLabel}>
-          <AppText size={13} weight={850} color={P.accentText}>
+          <AppText size={15} weight={850} color={P.accentText}>
             ✓ 4 / 4 · 비밀번호 입력
           </AppText>
         </View>
@@ -45,7 +45,7 @@ export function PracticePinScreen() {
         {guided ? <PracticeMistakeFeedback message={practiceMistakeMessage} /> : null}
 
         <View style={styles.warning}>
-          <AppText size={13} weight={900} color="#a7372b">
+          <AppText size={15} weight={900} color="#a7372b">
             !
           </AppText>
           <AppText size={14} color={P.ink} lineHeight={21} style={styles.flex1}>

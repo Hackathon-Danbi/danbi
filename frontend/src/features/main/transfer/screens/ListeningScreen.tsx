@@ -1,8 +1,8 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Svg, { Polyline } from 'react-native-svg';
 
 import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { AppText } from '@/components/ui/AppText';
+import { BACK_BUTTON_SLOT, BackButton } from '@/components/ui/BackButton';
 import { BORDER, CREAM, INK, YELLOW } from '../../theme';
 import type { ListeningPhase } from '../../types';
 import { Waveform } from '../../components/Waveform';
@@ -64,19 +64,16 @@ export function ListeningScreen({
   return (
     <View style={styles.root} onTouchStart={onActivity}>
       <View style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="이전" onPress={onBack} style={styles.back} hitSlop={10}>
-          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-            <Polyline points="15 18 9 12 15 6" stroke={INK} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </Pressable>
-        <AppText size={17} weight={900} color={INK}>
+        <BackButton onPress={onBack} color={INK} />
+        <AppText size={18} weight={900} color={INK} align="center" numberOfLines={1} style={styles.headerTitle}>
           {copy.header}
         </AppText>
+        <View style={styles.headerSide} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.badge}>
-          <AppText size={13} weight={700} color="#9A7200">
+          <AppText size={15} weight={700} color="#9A7200">
             {copy.badge}
           </AppText>
         </View>
@@ -135,7 +132,7 @@ export function ListeningScreen({
                   궁금한 내용을 편하게 말씀해주세요.
                 </AppText>
                 <View style={styles.heardCard}>
-                  <AppText size={12} weight={700} color="#B8860B" style={styles.mb8}>
+                  <AppText size={14} weight={700} color="#B8860B" style={styles.mb8}>
                     말씀하신 내용
                   </AppText>
                   <AppText size={22} weight={900} color={INK}>
@@ -148,7 +145,7 @@ export function ListeningScreen({
             {phase === 'confirmed' ? (
               <>
                 <View style={styles.confirmCard}>
-                  <AppText size={12} weight={700} color="#999" style={styles.mb8}>
+                  <AppText size={14} weight={700} color="#999" style={styles.mb8}>
                     박옥순님의 {mode === 'transfer' ? '말씀' : '질문'}
                   </AppText>
                   <AppText size={22} weight={900} color={INK}>
@@ -206,12 +203,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     paddingTop: 18,
     paddingBottom: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
-  back: { position: 'absolute', left: 16, padding: 6 },
+  headerTitle: { flex: 1 },
+  headerSide: { minWidth: BACK_BUTTON_SLOT },
   body: {
     alignItems: 'center',
     paddingHorizontal: 24,

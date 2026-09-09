@@ -85,7 +85,7 @@ export function PracticeRecipientScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <PracticeProgress current={1} label={accountReview ? '계좌번호 입력' : '받는 사람 입력'} />
         <View style={styles.titleWrap}>
-          <AppText size={13} weight={700} color={P.accentText}>
+          <AppText size={15} weight={700} color={P.accentText}>
             {accountReview ? '계좌번호 입력' : '받는 사람 입력'}
           </AppText>
           <AppText size={30} weight={900} color={P.ink} lineHeight={38}>
@@ -94,7 +94,7 @@ export function PracticeRecipientScreen() {
         </View>
         {accountReview && !practiceMistakeMessage ? (
           <View style={styles.requestCard}>
-            <AppText size={13} weight={700} color={P.accentText}>연습할 계좌번호</AppText>
+            <AppText size={15} weight={700} color={P.accentText}>연습할 계좌번호</AppText>
             <AppText size={20} weight={900} color={P.ink} style={styles.mt4}>
               {practiceTarget.recipient.account}
             </AppText>
@@ -118,7 +118,7 @@ export function PracticeRecipientScreen() {
 
         {!guided ? (
           <View style={styles.requestCard}>
-            <AppText size={13} weight={700} color={P.accentText}>오늘 연습에서 받은 정보</AppText>
+            <AppText size={15} weight={700} color={P.accentText}>오늘 연습에서 받은 정보</AppText>
             <AppText size={17} weight={900} color={P.ink} style={styles.mt4}>
               {practiceTarget.recipient.name} · {practiceTarget.recipient.bank}
             </AppText>

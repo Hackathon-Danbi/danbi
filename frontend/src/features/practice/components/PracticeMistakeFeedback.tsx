@@ -16,7 +16,7 @@ export function PracticeMistakeFeedback({ message }: { message: string }) {
   return (
     <View style={styles.row} accessibilityLiveRegion="assertive">
       <View style={styles.mark}>
-        <AppText size={13} weight={900} color="#fff">
+        <AppText size={15} weight={900} color="#fff">
           !
         </AppText>
       </View>

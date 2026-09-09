@@ -47,7 +47,7 @@ export function FaceGuideOverlay({
 function Chip({ label, active }: { label: string; active: boolean }) {
   return (
     <View style={[styles.chip, active ? styles.chipOn : styles.chipOff]}>
-      <AppText size={14} weight={800} color={active ? '#111' : '#fff'}>
+      <AppText size={16} weight={800} color={active ? '#111' : '#fff'}>
         {label}
       </AppText>
     </View>

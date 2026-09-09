@@ -38,7 +38,7 @@ export function BottomTabBar({
             style={styles.tab}
           >
             {render(isActive)}
-            <AppText size={11} weight={700} color={isActive ? YELLOW : '#999'}>
+            <AppText size={13} weight={700} color={isActive ? YELLOW : '#999'}>
               {label}
             </AppText>
           </Pressable>

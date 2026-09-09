@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
+import { BACK_BUTTON_SLOT, BackButton } from '@/components/ui/BackButton';
 import { colors } from '@/theme/tokens';
 import { INK, YELLOW } from '../theme';
 
@@ -32,12 +33,8 @@ export function MoneyBag({ size = 44 }: { size?: number }) {
 export function SavingsHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <View style={styles.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="뒤로" onPress={onBack} style={styles.back} hitSlop={10}>
-        <AppText size={30} weight={400} color={INK} lineHeight={30}>
-          ‹
-        </AppText>
-      </Pressable>
-      <AppText size={18} weight={900} color={INK}>
+      <BackButton onPress={onBack} color={INK} />
+      <AppText size={18} weight={900} color={INK} align="center" numberOfLines={1} style={styles.headerTitle}>
         {title}
       </AppText>
       <View style={styles.headerSpacer} />
@@ -64,7 +61,7 @@ export function HomeBar({ onHome }: { onHome: () => void }) {
       <Svg width={22} height={25} viewBox="0 0 22 25" fill="none">
         <Path d="M0 9L11 0L22 9V25H15V16H7V25H0V9Z" fill="#FFCC00" />
       </Svg>
-      <AppText size={12} weight={700} color="#a87900">
+      <AppText size={14} weight={700} color="#a87900">
         홈
       </AppText>
     </Pressable>
@@ -81,14 +78,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 60,
-    paddingHorizontal: 14,
+    minHeight: 64,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E9E6DF',
     backgroundColor: '#fff',
   },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerSpacer: { width: 44, height: 44 },
+  headerTitle: { flex: 1 },
+  headerSpacer: { minWidth: BACK_BUTTON_SLOT },
   ask: {
     flexDirection: 'row',
     alignItems: 'center',

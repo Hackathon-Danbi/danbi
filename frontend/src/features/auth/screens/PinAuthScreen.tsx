@@ -95,11 +95,11 @@ export function PinAuthScreen({
         </View>
 
         <AppText
-          size={13}
+          size={15}
           weight={error ? 700 : 400}
           color={error ? '#E05050' : '#AAA'}
           align="center"
-          lineHeight={19}
+          lineHeight={21}
           style={s.hint}
         >
           {error || '비밀번호는 다른 사람에게 보이지 않게 입력해 주세요.'}
@@ -119,7 +119,7 @@ export function PinAuthScreen({
 
         {onForgot ? (
           <Pressable accessibilityRole="button" onPress={onForgot} style={s.forgot}>
-            <AppText size={14} weight={700} color="#888" style={s.underline}>
+            <AppText size={15} weight={700} color="#888" style={s.underline}>
               비밀번호를 잊으셨나요?
             </AppText>
           </Pressable>

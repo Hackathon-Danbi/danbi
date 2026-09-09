@@ -40,7 +40,7 @@ export function SavingsOverviewScreen({
       <ScrollView contentContainerStyle={styles.body}>
         {error ? (
           <View style={styles.errorCard}>
-            <AppText size={13} weight={700} color="#a7372b" lineHeight={19}>{error}</AppText>
+            <AppText size={15} weight={700} color="#a7372b" lineHeight={21}>{error}</AppText>
           </View>
         ) : null}
         {isSavings

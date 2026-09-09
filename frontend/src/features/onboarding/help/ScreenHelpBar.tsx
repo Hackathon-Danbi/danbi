@@ -18,7 +18,7 @@ export function ScreenHelpBar({ guidance, voiceEnabled, onReplay, onToggleVoice 
   if (!guidance) return null;
   return (
     <View style={s.bar} accessibilityLiveRegion="polite">
-      <AppText size={13} weight={600} lineHeight={19} color="#7A6000" style={s.text} numberOfLines={3}>
+      <AppText size={17} weight={600} lineHeight={24} color="#7A6000" style={s.text} numberOfLines={3}>
         {guidance}
       </AppText>
       <View style={s.actions}>
@@ -29,7 +29,7 @@ export function ScreenHelpBar({ guidance, voiceEnabled, onReplay, onToggleVoice 
           style={({ pressed }) => [s.btn, pressed && s.pressed]}
           hitSlop={6}
         >
-          <AppText size={12} weight={700} color="#7A6000">
+          <AppText size={16} weight={700} color="#7A6000">
             다시 듣기
           </AppText>
         </Pressable>
@@ -40,7 +40,7 @@ export function ScreenHelpBar({ guidance, voiceEnabled, onReplay, onToggleVoice 
           style={({ pressed }) => [s.btn, pressed && s.pressed]}
           hitSlop={6}
         >
-          <AppText size={12} weight={700} color="#7A6000">
+          <AppText size={16} weight={700} color="#7A6000">
             {voiceEnabled ? '음성 끄기' : '음성 켜기'}
           </AppText>
         </Pressable>

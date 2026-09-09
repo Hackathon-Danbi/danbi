@@ -18,7 +18,7 @@ export function AccountCard() {
         </View>
         <View style={styles.flex1}>
           <AppText
-            size={13}
+            size={15}
             weight={700}
             color="#888"
             numberOfLines={1}
@@ -29,7 +29,7 @@ export function AccountCard() {
           <AppText size={26} weight={900} color={INK} letterSpacing={-0.5} style={styles.mb2}>
             {formatWon(selectedAccount.balance)}
           </AppText>
-          <AppText size={12} color="#AAA" numberOfLines={1}>
+          <AppText size={14} color="#AAA" numberOfLines={1}>
             {selectedAccount.maskedAccountNumber} · 출금 가능{' '}
             {formatWon(selectedAccount.balance)}
           </AppText>

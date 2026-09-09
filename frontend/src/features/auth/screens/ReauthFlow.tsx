@@ -128,11 +128,11 @@ export function ReauthFlow({ onDone, onCancel }: { onDone: () => void; onCancel:
                 </View>
                 <PinKeypad onDigit={enterDigit} onBackspace={backspace} onClear={clearPin} />
                 <AppText
-                  size={13}
+                  size={15}
                   weight={pinError ? 700 : 400}
                   color={pinError ? '#E05050' : '#AAA'}
                   align="center"
-                  lineHeight={19}
+                  lineHeight={21}
                   style={s.pinHint}
                 >
                   {pinError || '비밀번호는 다른 사람에게 보이지 않게 입력해 주세요.'}

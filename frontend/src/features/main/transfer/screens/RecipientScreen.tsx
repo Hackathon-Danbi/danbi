@@ -33,7 +33,7 @@ export function RecipientScreen({
         <AppText size={30} weight={900} color={INK} lineHeight={38} style={styles.mb8}>
           {'누구에게\n보낼까요?'}
         </AppText>
-        <AppText size={14} color="#888" style={styles.mb28}>
+        <AppText size={16} color="#888" style={styles.mb28}>
           저장된 계좌를 고르거나 새 계좌를 입력하세요.
         </AppText>
 
@@ -58,7 +58,7 @@ export function RecipientScreen({
                     <AppText size={16} weight={900} color={INK} style={styles.mb3}>
                       {displayName}
                     </AppText>
-                    <AppText size={13} color="#999">
+                    <AppText size={15} color="#999">
                       {recipient.recipientBankName} · {recipient.recipientAccountNumber}
                     </AppText>
                   </View>
@@ -77,7 +77,7 @@ export function RecipientScreen({
                 <AppText size={16} weight={900} color={INK} style={styles.mb3}>
                   새로운 계좌에 보내기
                 </AppText>
-                <AppText size={13} color="#BBB">
+                <AppText size={15} color="#BBB">
                   계좌번호를 직접 입력해요
                 </AppText>
               </View>

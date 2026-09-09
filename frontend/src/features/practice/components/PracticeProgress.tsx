@@ -23,7 +23,7 @@ export function PracticeProgress({
           / {total}
         </AppText>
         {label ? (
-          <AppText size={13} weight={700} color={P.accentText}>
+          <AppText size={15} weight={700} color={P.accentText}>
             {label}
           </AppText>
         ) : null}

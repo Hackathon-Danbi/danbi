@@ -20,7 +20,7 @@ export function SoloHelp({ hint }: { hint: string }) {
     <View style={styles.card}>
       <View style={styles.head}>
         <View style={styles.qMark}>
-          <AppText size={13} weight={900} color={P.accentText}>
+          <AppText size={15} weight={900} color={P.accentText}>
             ?
           </AppText>
         </View>

@@ -47,7 +47,7 @@ export function AccountInputScreen({
         <View style={styles.bankRow}>
           <View style={styles.bankLeft}>
             <View style={[styles.bankChip, { backgroundColor: b.bg }]}>
-              <AppText size={13} weight={900} color={b.fg}>
+              <AppText size={15} weight={900} color={b.fg}>
                 {b.short}
               </AppText>
             </View>
@@ -56,7 +56,7 @@ export function AccountInputScreen({
             </AppText>
           </View>
           <Pressable accessibilityRole="button" onPress={onReselect} style={styles.reselect}>
-            <AppText size={13} weight={700} color="#888">
+            <AppText size={15} weight={700} color="#888">
               은행 다시 선택
             </AppText>
           </Pressable>
@@ -65,7 +65,7 @@ export function AccountInputScreen({
         <AppText size={22} weight={900} color={INK} lineHeight={29} style={styles.mb10}>
           {'계좌번호를\n입력해주세요'}
         </AppText>
-        <AppText size={14} color="#777" lineHeight={20} style={styles.guide}>
+        <AppText size={16} color="#777" lineHeight={23} style={styles.guide}>
           직접 입력하거나 사진에서 계좌번호를 찾을 수 있어요.
         </AppText>
 
@@ -95,7 +95,7 @@ export function AccountInputScreen({
           </AppText>
         </Pressable>
 
-        <AppText size={12} color="#AAA" lineHeight={18} style={styles.hint}>
+        <AppText size={14} color="#AAA" lineHeight={20} style={styles.hint}>
           숫자를 잘못 눌렀다면 오른쪽 아래 지우기를 눌러주세요.
         </AppText>
 

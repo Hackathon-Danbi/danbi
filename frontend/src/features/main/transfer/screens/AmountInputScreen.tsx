@@ -39,7 +39,7 @@ export function AmountInputScreen({
         <AppText size={24} weight={900} color={INK} lineHeight={31} style={styles.mb8}>
           {'얼마를\n보낼까요?'}
         </AppText>
-        <AppText size={14} color="#888" style={styles.mb12}>
+        <AppText size={16} color="#888" style={styles.mb12}>
           보낼 금액을 숫자로 입력해 주세요.
         </AppText>
 
@@ -60,7 +60,7 @@ export function AmountInputScreen({
         <View style={styles.quick}>
           {[10000, 30000, 50000].map((a) => (
             <Pressable key={a} accessibilityRole="button" onPress={() => addAmount(a)} style={styles.quickBtn}>
-              <AppText size={14} weight={700} color={INK}>
+              <AppText size={15} weight={700} color={INK}>
                 {a / 10000}만원
               </AppText>
             </Pressable>

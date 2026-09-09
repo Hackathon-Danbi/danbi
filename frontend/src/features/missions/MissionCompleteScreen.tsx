@@ -108,7 +108,7 @@ export function MissionCompleteScreen({
         <ProgressBar value={pct} height={10} />
       </View>
 
-      <AppText size={12} color={colors.muted} align="center" style={styles.disclaimer}>
+      <AppText size={14} color={colors.muted} align="center" style={styles.disclaimer}>
         연습 진행도를 나타내는 점수이며 실제 신용점수가 아니에요.
       </AppText>
 

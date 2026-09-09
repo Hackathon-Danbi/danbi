@@ -1078,7 +1078,7 @@ export function TransferFlow() {
                     <AppText size={22}>💡</AppText>
                   </View>
                   <View style={styles.flex1}>
-                    <AppText size={12} weight={700} color="#B8860B" style={styles.mb2}>
+                    <AppText size={14} weight={700} color="#B8860B" style={styles.mb2}>
                       단비의 도움말
                     </AppText>
                     <AppText size={17} weight={900} color={INK} lineHeight={24}>
@@ -1249,7 +1249,7 @@ export function TransferFlow() {
                 ) : (
                   <View style={styles.voiceActions}>
                     <View style={styles.offHoursBox}>
-                      <AppText size={13} weight={700} color="#C04040" align="center">
+                      <AppText size={15} weight={700} color="#C04040" align="center">
                         현재 상담 운영 시간 외입니다 (평일 09:00~18:00)
                       </AppText>
                     </View>

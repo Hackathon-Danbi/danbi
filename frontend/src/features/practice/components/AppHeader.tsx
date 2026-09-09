@@ -15,7 +15,7 @@ export function AppHeader({ badge }: { badge?: string }) {
       </AppText>
       {badge ? (
         <View style={styles.badge}>
-          <AppText size={13} weight={800} color={P.accentText}>
+          <AppText size={15} weight={800} color={P.accentText}>
             {badge}
           </AppText>
         </View>

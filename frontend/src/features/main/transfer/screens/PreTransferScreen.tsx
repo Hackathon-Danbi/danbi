@@ -49,7 +49,7 @@ export function PreTransferScreen({
 
         {fromAccount ? (
           <View style={styles.fromRow}>
-            <AppText size={13} weight={700} color="#888" style={styles.mb4}>
+            <AppText size={15} weight={700} color="#888" style={styles.mb4}>
               보내는 통장
             </AppText>
             <AppText size={16} weight={900} color={INK}>
@@ -61,7 +61,7 @@ export function PreTransferScreen({
         <PulseHighlight active={helpTarget === 'txCard'} borderRadius={18}>
           <View style={styles.card}>
             <Pressable onPress={handleSectionTap} style={styles.sectionTop}>
-              <AppText size={13} weight={700} color="#AAA" style={styles.mb8}>
+              <AppText size={15} weight={700} color="#AAA" style={styles.mb8}>
                 받는 사람
               </AppText>
               <View style={styles.rowBetween}>
@@ -75,7 +75,7 @@ export function PreTransferScreen({
             <View style={styles.divider} />
 
             <Pressable onPress={handleSectionTap} style={styles.sectionMid}>
-              <AppText size={13} weight={700} color="#AAA" style={styles.mb8}>
+              <AppText size={15} weight={700} color="#AAA" style={styles.mb8}>
                 은행 · 계좌번호
               </AppText>
               <View style={styles.rowBetweenTop}>
@@ -94,7 +94,7 @@ export function PreTransferScreen({
             <View style={styles.divider} />
 
             <Pressable onPress={handleSectionTap} style={styles.sectionBot}>
-              <AppText size={13} weight={700} color="#AAA" style={styles.mb8}>
+              <AppText size={15} weight={700} color="#AAA" style={styles.mb8}>
                 보낼 금액
               </AppText>
               <View style={styles.rowBetweenTop}>
@@ -102,7 +102,7 @@ export function PreTransferScreen({
                   <AppText size={28} weight={900} color={INK} style={styles.mb6}>
                     {fmt(txInfo.amount)}원
                   </AppText>
-                  <AppText size={13} weight={700} color="#E05050">
+                  <AppText size={15} weight={700} color="#E05050">
                     실제 출금 금액
                   </AppText>
                 </View>

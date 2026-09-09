@@ -53,9 +53,9 @@ export function WelcomeModeScreen({ onSelect }: Props) {
             {'글씨와 버튼을 크게\n보여드릴까요?'}
           </AppText>
           <AppText
-            size={20}
+            size={22}
             weight={400}
-            lineHeight={33}
+            lineHeight={34}
             color={colors.welcomeCopyBody}
             style={styles.copyBody}
           >
@@ -94,13 +94,13 @@ export function WelcomeModeScreen({ onSelect }: Props) {
           </Pressable>
 
           <View style={styles.hintRow}>
-            <AppText size={17} color={colors.welcomeActionsHint} align="center">
+            <AppText size={19} color={colors.welcomeActionsHint} align="center">
               언제든{' '}
             </AppText>
-            <AppText size={17} weight={800} color={colors.welcomeActionsStrong}>
+            <AppText size={19} weight={800} color={colors.welcomeActionsStrong}>
               설정
             </AppText>
-            <AppText size={17} color={colors.welcomeActionsHint}>
+            <AppText size={19} color={colors.welcomeActionsHint}>
               에서 변경할 수 있어요
             </AppText>
           </View>
