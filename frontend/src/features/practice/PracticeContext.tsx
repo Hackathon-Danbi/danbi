@@ -268,10 +268,13 @@ export function PracticeProvider({
 
   useEffect(() => {
     if (screen !== 'practicePin' || pin.length !== PRACTICE_PASSWORD_LENGTH || transferSubmittingRef.current) return;
+    // 서버 연습(실제 practicePassword 전송)일 때만 고정 비밀번호 1234를 강제한다.
+    // API 미설정 오프라인 연습은 기존처럼 아무 4자리나 허용한다.
+    const serverPractice = !!apiMissionId && isApiConfigured();
     const timer = setTimeout(() => {
-      if (pin !== PRACTICE_PASSWORD) {
+      if (serverPractice && pin !== PRACTICE_PASSWORD) {
         setPin('');
-        setPracticeMistakeMessage('연습용 비밀번호 1234를 입력해주세요.');
+        setPracticeMistakeMessage(`연습용 비밀번호 ${PRACTICE_PASSWORD}를 입력해주세요.`);
         return;
       }
       if (mode === 'review') {
@@ -288,37 +291,26 @@ export function PracticeProvider({
           setHistory(['practiceComplete']);
         }
       };
-      if (!apiMissionId || !isApiConfigured()) {
+      if (!serverPractice) {
         completeLocally();
         return;
       }
 
+      // 서버 연습 송금은 점수 동기화용 best-effort. 실패/타임아웃이어도 연습 흐름은 완료된다.
       transferSubmittingRef.current = true;
+      completeLocally();
       void (async () => {
         try {
           const session = await ensureSession(transferMethod === 'voice' ? 'VOICE' : 'DIRECT');
           const recipient = practiceRecipients.find((item) => (
             item.id === practiceRecipientChoice || item.account === practiceRecipient
           ));
-          if (!session || !recipient) throw new Error('연습용 받는 사람을 다시 선택해주세요.');
-          const accountId = Number(recipient.id);
-          if (!Number.isFinite(accountId)) throw new Error('연습용 계좌 정보를 확인하지 못했어요.');
-          const transfer = await practiceApi.transfer(
-            session.sessionId,
-            accountId,
-            Number(practiceAmount),
-            pin,
-          );
-          const result = await practiceApi.getResult(session.sessionId);
-          if (!transfer.practiceCompleted || !result.practiceCompleted || result.actualTransferCreated) {
-            throw new Error('연습 송금 완료 결과를 확인하지 못했어요.');
-          }
-          completeLocally();
-        } catch (cause) {
-          setPin('');
-          setPracticeMistakeMessage(
-            cause instanceof Error ? cause.message : '연습 송금을 완료하지 못했어요. 다시 시도해주세요.',
-          );
+          const accountId = recipient ? Number(recipient.id) : NaN;
+          if (!session || !recipient || !Number.isFinite(accountId)) return;
+          await practiceApi.transfer(session.sessionId, accountId, Number(practiceAmount), pin);
+          await practiceApi.getResult(session.sessionId);
+        } catch {
+          // 서버 동기화 실패는 조용히 무시한다. 연습은 이미 완료 처리됐다.
         } finally {
           transferSubmittingRef.current = false;
         }
