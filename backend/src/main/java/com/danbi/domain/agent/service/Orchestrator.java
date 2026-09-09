@@ -1,15 +1,14 @@
 package com.danbi.domain.agent.service;
 
-import com.danbi.domain.agent.entity.AgentModels;
 import com.danbi.domain.agent.llm.AiGateway;
 import com.danbi.domain.agent.llm.Prompts;
 import com.danbi.domain.agent.llm.Schemas;
-import com.danbi.domain.agent.entity.AgentException;
-import com.danbi.domain.agent.entity.AgentModels.Decision;
-import com.danbi.domain.agent.entity.AgentModels.Reply;
-import com.danbi.domain.agent.entity.AgentOutcome;
-import com.danbi.domain.agent.entity.AgentContext;
-import com.danbi.domain.agent.entity.AgentType;
+import com.danbi.domain.agent.model.AgentException;
+import com.danbi.domain.agent.model.AgentModels.Decision;
+import com.danbi.domain.agent.model.AgentModels.Reply;
+import com.danbi.domain.agent.model.AgentOutcome;
+import com.danbi.domain.agent.model.AgentContext;
+import com.danbi.domain.agent.model.AgentType;
 import com.danbi.domain.agent.service.AgentSessions.Session;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -51,7 +50,7 @@ public class Orchestrator {
             Decision decision = ai.structured(prompts.load("router"), context, Schemas.DECISION, Decision.class);
             if (decision.intent() == null) throw new AgentException(HttpStatus.BAD_GATEWAY, "요청을 다시 말씀해 주세요.");
             AgentOutcome outcome;
-            if (decision.intent() == AgentModels.Intent.CANCEL) {
+            if (decision.intent() == com.danbi.domain.agent.model.AgentModels.Intent.CANCEL) {
                 session.clearDraft(); session.practice = false;
                 outcome = AgentOutcome.message("orchestrator", "진행하던 입력을 취소했어요.");
             } else if (decision.unclear()) {

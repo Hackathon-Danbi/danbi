@@ -50,10 +50,9 @@ public class TransferController {
 		@RequestParam(defaultValue = "false") boolean isNewAccount,
 		@RequestParam(defaultValue = "false") boolean isInCall,
 		@RequestParam(defaultValue = "false") boolean requestedByCaller,
-		@RequestParam(defaultValue = "false") boolean phishingKeywordDetected,
-		@RequestParam(required = false) String flowSessionId) {
+		@RequestParam(defaultValue = "false") boolean phishingKeywordDetected) {
 		return transferService.riskCheck(accountId, amount, recipientAccountNumber,
-			isNewAccount, isInCall, requestedByCaller, phishingKeywordDetected, flowSessionId);
+			isNewAccount, isInCall, requestedByCaller, phishingKeywordDetected);
 	}
 
 	/** 송금 실행. POST /api/transfer/execute */

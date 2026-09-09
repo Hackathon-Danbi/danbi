@@ -51,6 +51,7 @@ interface Props {
   completedMissionIds: Set<MissionId>;
   dailyPracticeRecord: DailyPracticeRecord;
   quizRecord: QuizRecord;
+  reviewBonus: number;
   todayMission: DailyMission;
   transferDifficulties: TransferDifficulty[];
   apiDailyActivity?: TodayDailyActivity | null;
@@ -67,6 +68,7 @@ export function DailyHubScreen({
   completedMissionIds,
   dailyPracticeRecord,
   quizRecord,
+  reviewBonus,
   todayMission,
   transferDifficulties,
   onQuizComplete,
@@ -82,6 +84,7 @@ export function DailyHubScreen({
     completedMissionIds,
     dailyPracticeRecord,
     quizRecord,
+    reviewBonus,
   }, referenceDate);
   const localTodayQuestion = getTodayQuestion(referenceDate);
   const todayQuestion: QuizQuestion = apiDailyActivity ? {

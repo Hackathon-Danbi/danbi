@@ -31,7 +31,6 @@ export type TransferExecuteInput = {
   transferMethod: TransferMethod;
   accountPassword: string;
   riskAcknowledged: boolean;
-  /** 위험 점검부터 실행까지 한 번의 송금 시도를 잇는 세션 ID. 안심확인 되짚기에 쓰인다. */
   flowSessionId: string;
 };
 
@@ -60,7 +59,6 @@ export function riskCheckTransfer(params: {
   amount: number;
   recipientAccountNumber: string;
   isNewAccount: boolean;
-  flowSessionId: string;
 }) {
   const query = new URLSearchParams({
     accountId: String(params.accountId),
@@ -70,7 +68,6 @@ export function riskCheckTransfer(params: {
     isInCall: 'false',
     requestedByCaller: 'false',
     phishingKeywordDetected: 'false',
-    flowSessionId: params.flowSessionId,
   });
   return apiJson<RiskCheckResponse>(`/api/transfer/risk-check?${query.toString()}`);
 }
@@ -93,6 +90,53 @@ export function executeTransfer(input: TransferExecuteInput) {
       phishingKeywordDetected: false,
       flowSessionId: input.flowSessionId,
     }),
+  });
+}
+
+const safetyEventBody = (
+  userId: number,
+  flowSessionId: string,
+  eventType: 'RISK_DETECTED' | 'HELP_RESPONSE',
+  userResponse?: 'SAFETY_CONFIRMED' | 'TRANSFER_PAUSED',
+) => ({
+  userId,
+  flowSessionId,
+  flowType: 'REAL_TRANSFER',
+  screenCode: 'SAFETY_CHECK',
+  eventType,
+  reasonCode: eventType === 'RISK_DETECTED' ? 'NEW_RECIPIENT' : null,
+  eventValue: null,
+  transferId: null,
+  helpStage: eventType === 'HELP_RESPONSE' ? 'SAFETY_CHECK' : null,
+  userResponse: userResponse ?? null,
+});
+
+/** 서버가 동일 송금 세션에 SAFETY_CHECK 노출 기록을 남기도록 위험 감지와 trigger를 연속 호출한다. */
+export async function beginTransferSafetyCheck(userId: number, flowSessionId: string) {
+  await apiJson('/api/help/behavior-events', {
+    method: 'POST',
+    body: JSON.stringify(safetyEventBody(userId, flowSessionId, 'RISK_DETECTED')),
+  });
+  return apiJson('/api/help/trigger', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId,
+      flowSessionId,
+      flowType: 'REAL_TRANSFER',
+      screenCode: 'SAFETY_CHECK',
+      signal: 'LONG_STAY',
+    }),
+  });
+}
+
+export function finishTransferSafetyCheck(
+  userId: number,
+  flowSessionId: string,
+  response: 'SAFETY_CONFIRMED' | 'TRANSFER_PAUSED',
+) {
+  return apiJson('/api/help/behavior-events', {
+    method: 'POST',
+    body: JSON.stringify(safetyEventBody(userId, flowSessionId, 'HELP_RESPONSE', response)),
   });
 }
 

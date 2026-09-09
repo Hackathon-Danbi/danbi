@@ -1,9 +1,9 @@
 package com.danbi.domain.agent.service;
 
 import com.danbi.domain.agent.config.AgentProperties;
-import com.danbi.domain.agent.entity.AgentException;
-import com.danbi.domain.agent.entity.AgentModels.Reply;
-import com.danbi.domain.agent.entity.AgentModels.SessionToken;
+import com.danbi.domain.agent.model.AgentException;
+import com.danbi.domain.agent.model.AgentModels.Reply;
+import com.danbi.domain.agent.model.AgentModels.SessionToken;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;

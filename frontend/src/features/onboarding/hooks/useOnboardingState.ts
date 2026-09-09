@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { savePin } from '@/features/auth/pinStore';
 import { currentUser } from '@/features/shared/data';
 import { nextFaceCaptureStage, type FaceCaptureStage } from '../face-capture/faceStages';
+import { saveApiIdentity } from '@/lib/api/identity';
 import { setBackendReachable } from '@/lib/api/live';
 import { bankCodeOf } from '@/lib/api/map';
 import * as onboardingApi from '@/lib/api/onboarding';
@@ -531,10 +532,8 @@ export function useOnboardingState() {
     if (usingLiveApi()) {
       await onboardingApi.setSimplePassword(idsRef.current.issuance, firstPin);
       try {
-        // 해커톤은 "유저 1 / 계좌 1" 고정이라 가입이 만든 user_id 로 식별자를 바꾸지 않는다.
-        // (바꾸면 시연 시드 데이터(user_id=1)와 어긋나 저장수취인·계좌가 빈 화면이 됨)
-        // 실제 다중 사용자로 갈 때 done.userId 로 saveApiIdentity 를 되살린다.
-        await onboardingApi.getOnboardingCompletion(idsRef.current.session);
+        const done = await onboardingApi.getOnboardingCompletion(idsRef.current.session);
+        if (done.userId) await saveApiIdentity({ userId: done.userId });
       } catch {
         /* 비밀번호는 저장됐으니 가입은 진행한다. */
       }
@@ -586,53 +585,6 @@ export function useOnboardingState() {
     if (restoredLive) setBackendReachable(true);
     resetPin();
     setOnboardingCompleted(draft.step === 20);
-  };
-
-  /**
-   * 서버에 없는 세션(가입/인증서/휴대폰 세션)을 들고 있을 때 처음 상태로 되돌린다.
-   * 저장된 draft 가 지워진 DB 를 가리키는 경우(예: 백엔드 재시작·초기화) 호출한다.
-   */
-  const hardReset = () => {
-    idTimers.current.forEach(clearTimeout);
-    idTimers.current = [];
-    if (faceTimer.current) clearTimeout(faceTimer.current);
-    faceTimer.current = null;
-
-    setPhoneOwnership(null);
-    setIdTypeState(null);
-    setIdScanStatus('idle');
-    setIdInformationConfirmed(false);
-    setUserName('');
-    setCarrier(null);
-    setPhoneNumber('');
-    setRequiredTerms([false]);
-    setOtpSent(false);
-    setOtpSendCount(0);
-    setOtp('');
-    setOtpError('');
-    setOtpVerified(false);
-    setCertificateTerms([false]);
-    setElectronicDocTermAccepted(false);
-    setFaceTermAccepted(false);
-    setFaceStatus('idle');
-    setFaceVerified(false);
-    setBankState(null);
-    setAccountNumber('');
-    setAccountPassword('');
-    setAccountVerificationSent(false);
-    setAccountCode('');
-    setAccountError('');
-    setAccountVerified(false);
-    resetPin();
-    setOnboardingCompleted(false);
-    setIdRecognizedName(MOCK_ID_NAME);
-    setIdMaskedNumber(MOCK_ID_NUMBER);
-    setIdIssueDate(MOCK_ID_ISSUED_DATE);
-
-    idsRef.current = EMPTY_API_IDS;
-    setApiIds(EMPTY_API_IDS);
-    liveRef.current = false;
-    setLiveApi(false);
   };
 
   return {
@@ -716,6 +668,5 @@ export function useOnboardingState() {
     verifyAccountPasswordLive,
     requestOneWon,
     confirmOneWon,
-    hardReset,
   };
 }

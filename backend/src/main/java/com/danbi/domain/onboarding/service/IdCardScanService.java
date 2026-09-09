@@ -21,11 +21,9 @@ import com.danbi.domain.onboarding.repository.IdCardScanRepository;
 import com.danbi.domain.onboarding.repository.OnboardingSessionRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,18 +46,13 @@ public class IdCardScanService {
 	private final IdCardOcrClient idCardOcrClient;
 	private final Clock clock;
 
-	@Value("${danbi.onboarding.demo-id-card-pass:false}")
-	private boolean demoIdCardPass;
-
 	@Transactional
 	public ScanIdCardResponse scan(
 		String issuanceId,
 		IdCardType idCardType,
 		MultipartFile image
 	) {
-		if (!demoIdCardPass) {
-			validateImage(image);
-		}
+		validateImage(image);
 		CertificateIssuance issuance = certificateIssuanceRepository.findById(issuanceId)
 			.orElseThrow(() -> new CertificateIssuanceNotFoundException(issuanceId));
 		OnboardingSession onboardingSession = onboardingSessionRepository
@@ -68,19 +61,9 @@ public class IdCardScanService {
 				issuance.getOnboardingSessionId()
 			));
 
-		IdCardOcrResult ocrResult;
-		if (demoIdCardPass) {
-			// 데모에서는 실제 신분증을 판독하지 않고 가입 이름으로 예시 정보를 만든다.
-			ocrResult = new IdCardOcrResult(
-				normalizeName(onboardingSession.getName()),
-				"900101-1******",
-				LocalDate.of(2020, 3, 12)
-			);
-		} else {
-			ocrResult = idCardOcrClient.recognize(idCardType, image);
-			validateOcrResult(ocrResult);
-			validateName(onboardingSession.getName(), ocrResult.recognizedName());
-		}
+		IdCardOcrResult ocrResult = idCardOcrClient.recognize(idCardType, image);
+		validateOcrResult(ocrResult);
+		validateName(onboardingSession.getName(), ocrResult.recognizedName());
 
 		IdCardScan scan = IdCardScan.recognized(
 			generateScanId(),

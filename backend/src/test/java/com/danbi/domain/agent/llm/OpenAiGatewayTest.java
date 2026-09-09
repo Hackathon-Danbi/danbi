@@ -3,9 +3,9 @@ package com.danbi.domain.agent.llm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.danbi.domain.agent.AgentTestSupport;
-import com.danbi.domain.agent.entity.AgentException;
-import com.danbi.domain.agent.entity.AgentModels.Decision;
-import com.danbi.domain.agent.entity.AgentModels.Intent;
+import com.danbi.domain.agent.model.AgentException;
+import com.danbi.domain.agent.model.AgentModels.Decision;
+import com.danbi.domain.agent.model.AgentModels.Intent;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.URI;

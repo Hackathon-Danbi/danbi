@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 
@@ -15,15 +15,6 @@ type Props = {
 
 export function useOnboardingCamera() {
   const [permission, requestPermission] = useCameraPermissions();
-  const asked = useRef(false);
-
-  useEffect(() => {
-    if (asked.current || permission == null) return;
-    if (permission.granted || permission.canAskAgain === false) return;
-    asked.current = true;
-    void requestPermission();
-  }, [permission, requestPermission]);
-
   return {
     granted: permission?.granted === true,
     loading: permission == null,

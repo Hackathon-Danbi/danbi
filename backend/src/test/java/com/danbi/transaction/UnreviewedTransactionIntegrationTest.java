@@ -29,6 +29,7 @@ class UnreviewedTransactionIntegrationTest {
     static final String SUMMARY = "/api/v1/unreviewed-transactions/summary";
     static final String COUNTS = "/api/v1/accounts/unreviewed-transaction-counts";
     static final String LIST = "/api/v1/accounts/{id}/unreviewed-transactions";
+    static final String VOICE_SUMMARY = "/api/voice/unread-summary";
 
     @TestConfiguration
     static class TestClock {
@@ -165,6 +166,34 @@ class UnreviewedTransactionIntegrationTest {
         mvc.perform(get(SUMMARY)).andExpect(status().isOk())
                 .andExpect(content().json("{\"unreviewedDays\":0,\"unreviewedCount\":1}"));
     }
+
+	@Test
+	void voiceSummaryUsesDemoFriendlyPensionAndSavingsCopy() throws Exception {
+		var account = account(1L, "KB국민은행", "100-123-3456");
+		var pension = Transaction.builder().accountId(account.getAccountId())
+			.description("국민연금 입금").transactionType(TransactionType.DEPOSIT)
+			.paymentMethod(PaymentMethod.TRANSFER).amount(650000L)
+			.occurredAt(LocalDateTime.parse("2026-09-08T09:00:00"))
+			.reviewStatus(ReviewStatus.PENDING).build();
+		var savings = Transaction.builder().accountId(account.getAccountId())
+			.description("KB 국민행복적금 자동납입").transactionType(TransactionType.WITHDRAWAL)
+			.paymentMethod(PaymentMethod.AUTO_TRANSFER).amount(300000L)
+			.occurredAt(LocalDateTime.parse("2026-09-07T10:00:00"))
+			.reviewStatus(ReviewStatus.PENDING).build();
+		em.persist(pension);
+		em.persist(savings);
+		flush();
+
+		mvc.perform(get(VOICE_SUMMARY))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.unreadCount").value(2))
+			.andExpect(jsonPath("$.accounts.length()").value(1))
+			.andExpect(jsonPath("$.accounts[0].accountName").value("생활비 통장"))
+			.andExpect(jsonPath("$.accounts[0].unreadCount").value(2))
+			.andExpect(jsonPath("$.summaryText")
+				.value("연금이 들어왔어요. 적금이 자동 납입됐어요."))
+			.andExpect(jsonPath("$.audioUrl").value(nullValue()));
+	}
 
     @Test
     void usesFixedUserAndEnforcesOwnershipAndValidIds() throws Exception {

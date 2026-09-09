@@ -1,7 +1,7 @@
 package com.danbi.domain.agent.llm;
 
 import com.danbi.domain.agent.config.AgentProperties;
-import com.danbi.domain.agent.entity.AgentException;
+import com.danbi.domain.agent.model.AgentException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
