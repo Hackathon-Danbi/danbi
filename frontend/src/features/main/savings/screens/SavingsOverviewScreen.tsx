@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { speak } from '@/lib/speech/tts';
 import { INK, YELLOW } from '../../theme';
 import { AskDanbiButton, HomeBar, SavingsHeader } from '../../imports/_shared';
 import { DepositOverviewCard } from '../../imports/DepositOverview';
 import { SavingsOverviewCard } from '../../imports/SavingsOverview';
+import type { SavingsProductSummary } from '@/api';
 
 /** danbi_jj main/screens/savings.tsx <SavingsOverviewScreen> 이식 (적금 ↔ 예금 carousel). */
 export function SavingsOverviewScreen({
@@ -14,25 +14,42 @@ export function SavingsOverviewScreen({
   onSavingsDetail,
   onDepositDetail,
   onHome,
+  products,
+  error,
+  onAskDanbi,
 }: {
   onBack: () => void;
-  onSavingsDetail: () => void;
-  onDepositDetail: () => void;
+  onSavingsDetail: (product: SavingsProductSummary) => void;
+  onDepositDetail: (product: SavingsProductSummary) => void;
   onHome: () => void;
+  products: SavingsProductSummary[];
+  error?: string;
+  onAskDanbi: (product: SavingsProductSummary) => void;
 }) {
   const [cardIndex, setCardIndex] = useState(0);
-  const isSavings = cardIndex === 0;
+  const safeCardIndex = Math.min(cardIndex, Math.max(0, products.length - 1));
+  const product = products[safeCardIndex] ?? products[0];
+  const isSavings = product?.productType !== 'TIME_DEPOSIT';
+
+  if (!product) return null;
 
   return (
     <View style={styles.root}>
       <SavingsHeader title="나의 예금 · 적금" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.body}>
-        {isSavings ? <SavingsOverviewCard /> : <DepositOverviewCard />}
+        {error ? (
+          <View style={styles.errorCard}>
+            <AppText size={13} weight={700} color="#a7372b" lineHeight={19}>{error}</AppText>
+          </View>
+        ) : null}
+        {isSavings
+          ? <SavingsOverviewCard product={product} />
+          : <DepositOverviewCard product={product} />}
 
         <Pressable
           accessibilityRole="button"
-          onPress={isSavings ? onSavingsDetail : onDepositDetail}
+          onPress={() => isSavings ? onSavingsDetail(product) : onDepositDetail(product)}
           style={styles.detailBtn}
         >
           <AppText size={17} weight={900} color={INK}>
@@ -43,25 +60,26 @@ export function SavingsOverviewScreen({
         <View style={styles.nav}>
           <Pressable
             accessibilityRole="button"
-            disabled={isSavings}
-            onPress={() => setCardIndex(0)}
-            style={[styles.navBtn, isSavings && styles.navBtnOff]}
+            disabled={safeCardIndex === 0}
+            onPress={() => setCardIndex((current) => Math.max(0, current - 1))}
+            style={[styles.navBtn, safeCardIndex === 0 && styles.navBtnOff]}
           >
-            <AppText size={18} weight={900} color={isSavings ? '#a8a39b' : '#2d2926'}>
+            <AppText size={18} weight={900} color={safeCardIndex === 0 ? '#a8a39b' : '#2d2926'}>
               ‹ 이전
             </AppText>
           </Pressable>
           <View style={styles.dots}>
-            <View style={[styles.dot, isSavings && styles.dotOn]} />
-            <View style={[styles.dot, !isSavings && styles.dotOn]} />
+            {products.map((item, index) => (
+              <View key={item.accountId} style={[styles.dot, index === safeCardIndex && styles.dotOn]} />
+            ))}
           </View>
           <Pressable
             accessibilityRole="button"
-            disabled={!isSavings}
-            onPress={() => setCardIndex(1)}
-            style={[styles.navBtn, !isSavings && styles.navBtnOff]}
+            disabled={safeCardIndex === products.length - 1}
+            onPress={() => setCardIndex((current) => Math.min(products.length - 1, current + 1))}
+            style={[styles.navBtn, safeCardIndex === products.length - 1 && styles.navBtnOff]}
           >
-            <AppText size={18} weight={900} color={!isSavings ? '#a8a39b' : '#2d2926'}>
+            <AppText size={18} weight={900} color={safeCardIndex === products.length - 1 ? '#a8a39b' : '#2d2926'}>
               다음 ›
             </AppText>
           </Pressable>
@@ -71,11 +89,7 @@ export function SavingsOverviewScreen({
           궁금한 점이 있으신가요?
         </AppText>
         <AskDanbiButton
-          onPress={() => speak(
-            isSavings
-              ? '적금은 매달 일정한 금액을 모으는 상품이에요. 자세히 보기를 누르면 납입 정보와 만기 금액을 확인할 수 있어요.'
-              : '예금은 목돈을 일정 기간 맡기는 상품이에요. 자세히 보기를 누르면 금리와 만기 정보를 확인할 수 있어요.',
-          )}
+          onPress={() => onAskDanbi(product)}
         />
       </ScrollView>
 
@@ -108,4 +122,5 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#DDD9D1' },
   dotOn: { backgroundColor: YELLOW },
   ask: { marginTop: 6 },
+  errorCard: { padding: 12, borderRadius: 12, backgroundColor: '#fff0ed' },
 });

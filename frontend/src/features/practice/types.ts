@@ -1,12 +1,12 @@
 /** Figma Make 연습모드에서 필요한 타입만 분리. */
 export type PracticeStyle = 'guided' | 'solo' | null;
 export type TransferMethod = 'voice' | 'manual';
-export type SavedRecipientId = 'minsu' | 'younghee';
-export type RecipientChoice = SavedRecipientId | 'new' | null;
+export type SavedRecipientId = string;
+export type RecipientChoice = SavedRecipientId | null;
 
 export interface PracticeTarget {
   recipient: {
-    id: SavedRecipientId | 'new';
+    id: SavedRecipientId;
     name: string;
     bank: string;
     account: string;

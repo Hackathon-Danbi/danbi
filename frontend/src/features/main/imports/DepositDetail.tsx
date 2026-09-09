@@ -3,9 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { INK } from '../theme';
 import { MoneyBag } from './_shared';
+import type { SavingsDepositDetail } from '@/api';
+import { formatSavingsDate, monthsBetween } from '../savings/format';
 
 /** danbi_jj app/imports/06DepositDetail2 (예금 상세) 정보 구조 이식. */
-export function DepositDetailBody() {
+export function DepositDetailBody({ detail }: { detail: SavingsDepositDetail }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
@@ -13,7 +15,7 @@ export function DepositDetailBody() {
           <MoneyBag />
           <View style={styles.flex1}>
             <AppText size={22} weight={900} color={INK}>
-              KB 국민수퍼정기예금
+              {detail.productName}
             </AppText>
           </View>
           <View style={styles.badge}>
@@ -27,7 +29,7 @@ export function DepositDetailBody() {
           현재 맡긴 금액
         </AppText>
         <AppText size={36} weight={900} color={INK} letterSpacing={-1} style={styles.mb14}>
-          10,000,000원
+          {detail.balance.toLocaleString('ko-KR')}원
         </AppText>
 
         <View style={styles.divider} />
@@ -36,10 +38,10 @@ export function DepositDetailBody() {
           세전 예상 수령액
         </AppText>
         <AppText size={31} weight={900} color={INK} letterSpacing={-0.5} style={styles.mt6}>
-          약 10,134,000원
+          약 {detail.expectedMaturityAmount.toLocaleString('ko-KR')}원
         </AppText>
         <AppText size={12} color="#725600" style={styles.mt6}>
-          가입 금리 연 3.20% 기준
+          가입 금리 연 {detail.appliedInterestRate.toFixed(2)}% 기준
         </AppText>
       </View>
 
@@ -48,9 +50,9 @@ export function DepositDetailBody() {
       </AppText>
 
       {[
-        ['📅', '2025년 3월 12일에 가입했어요'],
-        ['⏳', '12개월 만기예요'],
-        ['🏁', '2026년 3월 12일에 만기예요'],
+        ['📅', `${formatSavingsDate(detail.openedAt)}에 가입했어요`],
+        ['⏳', `${monthsBetween(detail.openedAt, detail.maturityAt)}개월 만기예요`],
+        ['🏁', `${formatSavingsDate(detail.maturityAt)}에 만기예요`],
       ].map(([icon, text]) => (
         <View key={text} style={styles.infoRow}>
           <View style={styles.infoIcon}>

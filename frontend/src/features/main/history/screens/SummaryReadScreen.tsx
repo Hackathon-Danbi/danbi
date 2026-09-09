@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path, Polygon, Rect } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
-import { speak, stop as stopTts } from '@/lib/speech/tts';
+import { speakResponse, stop as stopTts } from '@/lib/speech/tts';
 import { INK, YELLOW } from '../../theme';
 import { NavBar } from '../../components/NavBar';
 import { RealTxBadge } from '../components/RealTxBadge';
@@ -26,16 +26,22 @@ export function SummaryReadScreen({
   lines,
   onDetail,
   onBack,
+  summaryText,
+  audioUrl,
 }: {
   total: number;
   /** 통장별 요약 줄. 예: ["생활비 통장 2건", "연금 통장 1건"] */
   lines: string[];
   onDetail: () => void;
   onBack: () => void;
+  summaryText?: string;
+  audioUrl?: string | null;
 }) {
   const spoken = useMemo(
-    () => [`최근 7일 동안 확인하지 않은 거래는 모두 ${total}건이에요.`, ...lines],
-    [total, lines],
+    () => summaryText
+      ? [summaryText]
+      : [`최근 7일 동안 확인하지 않은 거래는 모두 ${total}건이에요.`, ...lines],
+    [total, lines, summaryText],
   );
   const lineSecs = useMemo(() => spoken.map(estimateSec), [spoken]);
   const totalSec = useMemo(() => lineSecs.reduce((a, b) => a + b, 0), [lineSecs]);
@@ -80,7 +86,7 @@ export function SummaryReadScreen({
         }
         // 진행 막대가 앞선 줄보다 뒤로 가지 않게 이 줄 시작 지점으로 맞춘다.
         setElapsed((e) => Math.max(e, i === 0 ? 0 : cumSec[i - 1]));
-        speak(spoken[i], {
+        void speakResponse(spoken[i], i === 0 ? audioUrl : null, {
           onDone: () => {
             if (runId.current === myRun) next(i + 1);
           },
@@ -89,7 +95,7 @@ export function SummaryReadScreen({
 
       next(startLine);
     },
-    [startTimer, clearTimer, spoken, totalSec, cumSec],
+    [startTimer, clearTimer, spoken, totalSec, cumSec, audioUrl],
   );
 
   // 화면 전환이 한 박자 지난 뒤 읽기 시작하고, 나갈 때 정리한다.
@@ -171,11 +177,7 @@ export function SummaryReadScreen({
 
         <View style={styles.card}>
           <AppText size={16} color={INK} lineHeight={26}>
-            {'“'}최근 7일 동안 확인하지 않은 거래는 모두{' '}
-            <AppText size={16} weight={900} color={INK}>
-              {total}건
-            </AppText>
-            이에요.{'”'}
+            {'“'}{summaryText ?? `최근 7일 동안 확인하지 않은 거래는 모두 ${total}건이에요.`}{'”'}
           </AppText>
           <View style={styles.cardLines}>
             {lines.map((line) => (

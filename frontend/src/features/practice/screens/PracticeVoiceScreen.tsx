@@ -22,6 +22,7 @@ import {
 } from '../voiceTransfer';
 import type { ParsedVoiceTransfer } from '../voiceTransfer';
 import { BottomActions, PrimaryButton, QuietButton, SecondaryButton } from './shared';
+import { isApiConfigured } from '@/api';
 
 type VoiceState = 'idle' | 'listening' | 'recognized' | 'retry';
 
@@ -30,6 +31,8 @@ export function PracticeVoiceScreen() {
   const {
     practiceStyle,
     practiceTarget,
+    practiceRecipients,
+    recognizePracticeVoice,
     setTransferMethod,
     setPracticeRecipient,
     setPracticeRecipientChoice,
@@ -58,7 +61,10 @@ export function PracticeVoiceScreen() {
     guided &&
     resultComplete &&
     (
-      parsedResult?.recipient?.id !== practiceTarget.recipient.id ||
+      (
+        parsedResult?.recipient?.id !== practiceTarget.recipient.id &&
+        parsedResult?.recipient?.name !== practiceTarget.recipient.name
+      ) ||
       parsedResult.amount !== practiceTarget.amount
     )
   );
@@ -75,7 +81,7 @@ export function PracticeVoiceScreen() {
   };
 
   const handleTranscript = (heard: string, meta: SpeechRecognitionResultMeta) => {
-    const parsed = parseVoiceTransfer(heard, [targetVoiceRecipient]);
+    const parsed = parseVoiceTransfer(heard, [...practiceRecipients, targetVoiceRecipient]);
     setTranscript(parsed.transcript);
     setParsedResult(parsed);
     setResultSource(meta.source);
@@ -99,6 +105,7 @@ export function PracticeVoiceScreen() {
       if (guided) ttsSpeak(message);
     },
     fallbackTranscript: targetVoiceExample,
+    serverTranscribe: isApiConfigured() ? recognizePracticeVoice : undefined,
   });
 
   const startListening = () => {
@@ -319,6 +326,11 @@ export function PracticeVoiceScreen() {
         <BottomActions>
           <PrimaryButton label="다시 말하기" onPress={startListening} />
           <QuietButton label="직접 입력 연습으로 바꾸기" onPress={switchToDirectEntry} />
+        </BottomActions>
+      ) : null}
+      {voiceState === 'listening' && recognition.isRecording ? (
+        <BottomActions>
+          <PrimaryButton label="말하기 완료" onPress={() => void recognition.submit()} />
         </BottomActions>
       ) : null}
       {voiceState === 'recognized' && resultComplete && !guidedResultMismatch ? (

@@ -3,9 +3,17 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { INK, YELLOW } from '../theme';
 import { MoneyBag } from './_shared';
+import type { SavingsInstallmentDetail } from '@/api';
+import { formatSavingsDate } from '../savings/format';
 
 /** danbi_jj app/imports/05SavingsDetail3 (적금 상세) 정보 구조 이식. */
-export function SavingsDetailBody() {
+export function SavingsDetailBody({ detail }: { detail: SavingsInstallmentDetail }) {
+  const payment = detail.currentMonthPayment;
+  const paymentText = payment
+    ? payment.status === 'PAID'
+      ? `이번 달 ${payment.amount.toLocaleString('ko-KR')}원을 넣었어요`
+      : `이번 달 ${payment.scheduledAmount.toLocaleString('ko-KR')}원 납입 예정이에요`
+    : '이번 달 납입 정보가 없어요';
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
@@ -13,12 +21,12 @@ export function SavingsDetailBody() {
           <MoneyBag />
           <View style={styles.flex1}>
             <AppText size={22} weight={900} color={INK}>
-              KB 국민행복적금
+              {detail.productName}
             </AppText>
           </View>
           <View style={styles.badge}>
             <AppText size={12} weight={700} color="#66625b">
-              정기적금
+              {detail.productType === 'FIXED_SAVINGS' ? '정기적금' : '자유적금'}
             </AppText>
           </View>
         </View>
@@ -27,7 +35,7 @@ export function SavingsDetailBody() {
           현재 모은 금액
         </AppText>
         <AppText size={36} weight={900} color={INK} letterSpacing={-1} style={styles.mb14}>
-          3,600,000원
+          {detail.balance.toLocaleString('ko-KR')}원
         </AppText>
 
         <View style={styles.divider} />
@@ -43,10 +51,10 @@ export function SavingsDetailBody() {
           </View>
         </View>
         <AppText size={31} weight={900} color={INK} style={styles.mt6}>
-          약 7,120,000원
+          약 {detail.expectedMaturityAmount.toLocaleString('ko-KR')}원
         </AppText>
         <AppText size={12} color="#725600" style={styles.mt6}>
-          가입 금리 연 3.20% 기준
+          가입 금리 연 {detail.appliedInterestRate.toFixed(2)}% 기준
         </AppText>
       </View>
 
@@ -55,9 +63,9 @@ export function SavingsDetailBody() {
       </AppText>
 
       {[
-        ['✓', '이번 달 30만원을 넣었어요'],
-        ['📅', '매월 25일에 30만원씩 넣어요'],
-        ['🏁', '2027년 8월 25일에 만기예요'],
+        ['✓', paymentText],
+        ['📅', payment ? `${formatSavingsDate(payment.paymentDate)} 납입 정보예요` : '납입 일정을 확인해주세요'],
+        ['🏁', `${formatSavingsDate(detail.maturityAt)}에 만기예요`],
       ].map(([icon, text]) => (
         <View key={text} style={styles.infoRow}>
           <View style={styles.infoIcon}>

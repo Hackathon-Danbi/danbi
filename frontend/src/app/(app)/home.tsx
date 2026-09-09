@@ -15,7 +15,14 @@ import {
 import { useTransactions } from '@/features/main/TransactionContext';
 import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 import { useSpeechRecognition } from '@/lib/speech/useSpeechRecognition';
+import { isApiConfigured, voiceApi } from '@/api';
+import type { VoiceQueryResult } from '@/api';
+import { speakResponse } from '@/lib/speech/tts';
 import type { ListeningPhase } from '@/features/main/types';
+import {
+  createBalanceVoiceAnswer,
+  isBalanceVoiceQuery,
+} from '@/features/main/voiceQuery';
 
 type View = 'unconfirmed' | 'home' | 'listening' | 'result';
 
@@ -26,14 +33,20 @@ type View = 'unconfirmed' | 'home' | 'listening' | 'result';
 export default function HomeRoute() {
   const router = useRouter();
   const { transactions, pendingTransactions, unknownTransactions } = useTransactions();
-  const { accounts } = useSelectedAccount();
+  const { accounts, selectedAccount } = useSelectedAccount();
   // 미확인 게이트는 홈(생활비 통장)뿐 아니라 모든 통장의 미확인 건수를 합쳐서 안내한다.
   const unconfirmedTotal = useMemo(
     () => totalUnconfirmed(groupUnconfirmedByAccount(accounts, transactions)),
     [accounts, transactions],
   );
   const [view, setView] = useState<View>(unconfirmedTotal > 0 ? 'unconfirmed' : 'home');
-  const recognition = useSpeechRecognition();
+  const [voiceAnswer, setVoiceAnswer] = useState<VoiceQueryResult | null>(null);
+  const [queryError, setQueryError] = useState('');
+  const recognition = useSpeechRecognition({
+    serverTranscribe: isApiConfigured()
+      ? async (audio) => (await voiceApi.recognize(audio)).queryText
+      : undefined,
+  });
   const activeView: View = view === 'unconfirmed' && unconfirmedTotal === 0 ? 'home' : view;
   const phase: ListeningPhase = recognition.status === 'recognized'
     ? 'confirmed'
@@ -42,13 +55,36 @@ export default function HomeRoute() {
       : 'idle';
 
   const openBalance = () => {
+    setVoiceAnswer(null);
+    setQueryError('');
     setView('listening');
     recognition.start();
   };
 
   const goHome = () => {
     recognition.reset();
+    setQueryError('');
     setView('home');
+  };
+
+  const confirmVoiceQuery = async () => {
+    if (!recognition.transcript) return;
+    setQueryError('');
+    if (isBalanceVoiceQuery(recognition.transcript) || !isApiConfigured()) {
+      const answer = createBalanceVoiceAnswer(selectedAccount);
+      setVoiceAnswer(answer);
+      setView('result');
+      void speakResponse(answer.answerText);
+      return;
+    }
+    try {
+      const answer = await voiceApi.query(recognition.transcript);
+      setVoiceAnswer(answer);
+      setView('result');
+      void speakResponse(answer.answerText, answer.audioUrl);
+    } catch (cause) {
+      setQueryError(cause instanceof Error ? cause.message : '질문을 처리하지 못했어요. 다시 시도해주세요.');
+    }
   };
 
   useAndroidBack(() => {
@@ -95,10 +131,12 @@ export default function HomeRoute() {
             mode="balance"
             phase={phase}
             transcript={recognition.transcript}
-            error={recognition.error || undefined}
+            error={queryError || recognition.error || undefined}
+            recording={recognition.isRecording}
+            onFinishRecording={() => void recognition.submit()}
             onBack={goHome}
             onRetry={recognition.start}
-            onConfirm={() => setView('result')}
+            onConfirm={() => void confirmVoiceQuery()}
           />
         )}
 
@@ -107,6 +145,12 @@ export default function HomeRoute() {
             onBack={goHome}
             onViewHistory={() => router.push('/(app)/history')}
             onMic={openBalance}
+            question={recognition.transcript}
+            answerText={voiceAnswer?.answerText ?? ''}
+            relatedAccountId={voiceAnswer?.relatedAccountId}
+            onReplay={voiceAnswer
+              ? () => void speakResponse(voiceAnswer.answerText, voiceAnswer.audioUrl)
+              : undefined}
           />
         )}
       </ScreenIn>

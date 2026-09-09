@@ -47,6 +47,13 @@
         }
       ],
       [
+        "expo-audio",
+        {
+          "microphonePermission": "음성 질문과 송금 연습을 위해 마이크 접근이 필요합니다.",
+          "enableBackgroundRecording": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "저장된 사진에서 계좌번호를 찾으려면 사진 접근이 필요합니다.",
@@ -61,7 +68,8 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -19,6 +19,7 @@ export function PracticeReviewScreen() {
     practiceRecipient,
     practiceRecipientChoice,
     practiceRecipientName,
+    practiceRecipients,
     practiceAmount,
     formattedPracticeAmount,
     practiceMistakeMessage,
@@ -27,10 +28,15 @@ export function PracticeReviewScreen() {
     guidedNext,
   } = usePracticeApp();
   const guided = practiceStyle === 'guided';
+  const selectedRecipient = practiceRecipients.find((recipient) => (
+    recipient.id === practiceRecipientChoice || recipient.account === practiceRecipient
+  ));
 
   const reviewError = getPracticeReviewError({
     guided,
-    recipientMatches: practiceRecipientChoice === practiceTarget.recipient.id,
+    recipientMatches: practiceRecipientChoice === practiceTarget.recipient.id
+      || selectedRecipient?.name === practiceTarget.recipient.name
+      || selectedRecipient?.account === practiceTarget.recipient.account,
     amountMatches: Number(practiceAmount) === Number(practiceTarget.amount),
   });
 
