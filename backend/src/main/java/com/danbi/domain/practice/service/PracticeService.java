@@ -1,264 +1,162 @@
 package com.danbi.domain.practice.service;
 
-import com.danbi.domain.practice.dto.MissionCompletionRequest;
-import com.danbi.domain.practice.dto.MissionCompletionResponse;
-import com.danbi.domain.practice.dto.PracticeHubResponse;
+import com.danbi.domain.practice.dto.CompletePracticeRequest;
+import com.danbi.domain.practice.dto.PracticeCompletionResult;
+import com.danbi.domain.practice.dto.PracticeMissionResponse;
+import com.danbi.domain.practice.dto.PracticeMissionsResponse;
 import com.danbi.domain.practice.dto.QuizAnswerRequest;
-import com.danbi.domain.practice.dto.QuizAnswerResponse;
-import com.danbi.domain.practice.dto.TransferDifficultyRequest;
-import com.danbi.domain.practice.dto.TransferDifficultyResponse;
+import com.danbi.domain.practice.dto.QuizAnswerResult;
+import com.danbi.domain.practice.dto.TodayDailyActivityResponse;
 import com.danbi.domain.practice.entity.DailyActivity;
 import com.danbi.domain.practice.entity.FinancialQuestion;
+import com.danbi.domain.practice.entity.MissionType;
 import com.danbi.domain.practice.entity.PracticeMission;
-import com.danbi.domain.practice.entity.TransferDifficulty;
 import com.danbi.domain.practice.entity.UserMissionProgress;
 import com.danbi.domain.practice.repository.DailyActivityRepository;
 import com.danbi.domain.practice.repository.FinancialQuestionRepository;
 import com.danbi.domain.practice.repository.PracticeMissionRepository;
-import com.danbi.domain.practice.repository.TransferDifficultyRepository;
 import com.danbi.domain.practice.repository.UserMissionProgressRepository;
 import java.time.Clock;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * "나의 금융 독립"(연습모드) 백엔드. FE {@code financialIndependenceApi} / {@code practiceApi} 계약에 맞춘다.
+ * 주간 도장·금융 독립 점수판은 FE가 로컬 데이터로 계산하므로 서버가 내려주지 않는다.
+ * 로그인 도입 전까지 사용자 식별은 {@code userId}(기본 1), 개별 활동은 {@code dailyActivityId} 로 한다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PracticeService {
 
-	private static final List<String> OX_CHOICES = List.of("O", "X");
+	/** 오늘의 대표 송금 연습 미션(없으면 TRANSFER 중 가장 앞). */
+	private static final String DAILY_MISSION_CODE = "guided-transfer";
 
 	private final PracticeMissionRepository missionRepository;
 	private final FinancialQuestionRepository questionRepository;
 	private final UserMissionProgressRepository progressRepository;
 	private final DailyActivityRepository dailyActivityRepository;
-	private final TransferDifficultyRepository transferDifficultyRepository;
 	private final Clock clock;
 
-	/** "나의 금융 독립" 허브 화면 조회. */
-	public PracticeHubResponse getHub(Long userId) {
-		List<PracticeMission> catalog = missionRepository.findAll();
-		Map<Long, Integer> pointsByMissionId = catalog.stream()
-			.collect(Collectors.toMap(PracticeMission::getMissionId, PracticeMission::getScoreReward));
-		Map<Long, String> codeByMissionId = catalog.stream()
-			.collect(Collectors.toMap(PracticeMission::getMissionId, PracticeMission::getCode));
-
-		int maxScore = catalog.stream().mapToInt(PracticeMission::getScoreReward).sum();
-		List<UserMissionProgress> completedProgress = progressRepository.findByUserIdAndCompletedTrue(userId);
-		int score = Math.min(
-			maxScore,
-			completedProgress.stream()
-				.mapToInt(progress -> pointsByMissionId.getOrDefault(progress.getMissionId(), 0))
-				.sum()
-		);
-		List<String> completedMissionCodes = completedProgress.stream()
-			.map(progress -> codeByMissionId.get(progress.getMissionId()))
-			.filter(java.util.Objects::nonNull)
-			.sorted()
-			.toList();
-
+	/** GET /api/daily-activities/today — 오늘 행이 없으면 만들고 문제를 배정한다. */
+	@Transactional
+	public TodayDailyActivityResponse getToday(Long userId) {
 		LocalDate today = LocalDate.now(clock);
-		LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-		LocalDate sunday = monday.plusDays(6);
-		Map<LocalDate, DailyActivity> activityByDate = dailyActivityRepository
-			.findByUserIdAndActivityDateBetween(userId, monday, sunday)
-			.stream()
-			.collect(Collectors.toMap(DailyActivity::getActivityDate, Function.identity()));
+		PracticeMission mission = dailyMission();
 
-		List<PracticeHubResponse.WeeklyStamp> weeklyStamps = new ArrayList<>();
-		for (int i = 0; i < 7; i++) {
-			LocalDate day = monday.plusDays(i);
-			DailyActivity activity = activityByDate.get(day);
-			weeklyStamps.add(new PracticeHubResponse.WeeklyStamp(
-				day,
-				day.getDayOfWeek().name(),
-				activity != null && activity.isDayCompleted(),
-				day.equals(today)
-			));
-		}
-		int completedWeekdayCount = (int) weeklyStamps.stream()
-			.filter(PracticeHubResponse.WeeklyStamp::completed)
-			.count();
+		DailyActivity activity = dailyActivityRepository.findByUserIdAndActivityDate(userId, today)
+			.orElseGet(() -> DailyActivity.start(userId, today));
+		activity.assignQuestion(pickQuestionId(today));
+		DailyActivity saved = dailyActivityRepository.save(activity);
 
-		DailyActivity todayActivity = activityByDate.get(today);
-		PracticeHubResponse.Today todaySection = buildToday(userId, today, todayActivity);
-		PracticeHubResponse.ReviewDifficulty reviewDifficulty = pickReviewDifficulty(userId);
-
-		return new PracticeHubResponse(
-			score,
-			maxScore,
-			maxScore > 0 && score >= maxScore,
-			completedMissionCodes,
-			weeklyStamps,
-			completedWeekdayCount,
-			todaySection,
-			reviewDifficulty
+		FinancialQuestion question = requireQuestion(saved.getQuestionId());
+		return new TodayDailyActivityResponse(
+			saved.getDailyActivityId(),
+			today.toString(),
+			new TodayDailyActivityResponse.Question(
+				question.getQuestionId(),
+				question.getQuestionText(),
+				saved.getSelectedAnswer()
+			),
+			new TodayDailyActivityResponse.Mission(
+				mission.getMissionId(),
+				mission.getMissionType().name(),
+				mission.getTitle(),
+				mission.getDescription(),
+				mission.getScoreReward()
+			),
+			saved.isPracticeCompleted(),
+			saved.getEarnedScore()
 		);
 	}
 
-	/** 오늘의 금융 한 문제 응답 저장. 하루 1회, 멱등. */
+	/** POST /api/daily-activities/{id}/answer — 하루 1회, 첫 응답 유지(멱등). */
 	@Transactional
-	public QuizAnswerResponse answerQuiz(Long userId, QuizAnswerRequest request) {
-		LocalDate date = request.date() != null ? request.date() : LocalDate.now(clock);
-		FinancialQuestion question = questionRepository.findById(request.questionId())
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "문제를 찾을 수 없습니다."));
+	public QuizAnswerResult answerQuiz(Long dailyActivityId, QuizAnswerRequest request) {
+		DailyActivity activity = requireActivity(dailyActivityId);
+		activity.assignQuestion(pickQuestionId(activity.getActivityDate()));
+		FinancialQuestion question = requireQuestion(activity.getQuestionId());
 
-		DailyActivity activity = dailyActivityRepository.findByUserIdAndActivityDate(userId, date)
-			.orElseGet(() -> DailyActivity.start(userId, date));
-		boolean applied = activity.answerQuiz(question.getQuestionId(), request.answeredIndex() == 0);
+		activity.answerQuiz(activity.getQuestionId(), request.selectedAnswer());
 		dailyActivityRepository.save(activity);
 
-		int storedIndex = Boolean.TRUE.equals(activity.getSelectedAnswer()) ? 0 : 1;
-		return new QuizAnswerResponse(
-			question.isCorrect(storedIndex),
-			question.correctIndex(),
+		boolean stored = Boolean.TRUE.equals(activity.getSelectedAnswer());
+		return new QuizAnswerResult(
+			question.getQuestionId(),
+			stored,
+			stored == question.isCorrectAnswer(),
+			question.isCorrectAnswer(),
 			question.getExplanation(),
-			!applied,
-			activity.isDayCompleted()
+			activity.getEarnedScore()
 		);
 	}
 
-	/** 금융 연습(미션) 완료 저장. 점수는 미션당 최초 1회만. */
+	/** PATCH /api/daily-activities/{id}/practice — 점수는 미션당 최초 1회만 반영. */
 	@Transactional
-	public MissionCompletionResponse completeMission(Long userId, MissionCompletionRequest request) {
-		LocalDate date = request.date() != null ? request.date() : LocalDate.now(clock);
-		PracticeMission mission = missionRepository.findByCode(request.missionCode())
+	public PracticeCompletionResult completePractice(Long dailyActivityId, CompletePracticeRequest request) {
+		DailyActivity activity = requireActivity(dailyActivityId);
+		PracticeMission mission = missionRepository.findById(request.missionId())
 			.orElseThrow(() -> new ResponseStatusException(
-				HttpStatus.NOT_FOUND, "연습을 찾을 수 없습니다: " + request.missionCode()));
+				HttpStatus.NOT_FOUND, "연습을 찾을 수 없습니다: " + request.missionId()));
 
 		UserMissionProgress progress = progressRepository
-			.findByUserIdAndMissionId(userId, mission.getMissionId())
-			.orElseGet(() -> UserMissionProgress.of(userId, mission.getMissionId()));
-		boolean firstCompletion = progress.markCompleted(clock);
+			.findByUserIdAndMissionId(activity.getUserId(), mission.getMissionId())
+			.orElseGet(() -> UserMissionProgress.of(activity.getUserId(), mission.getMissionId()));
+		progress.markCompleted(clock);
 		progressRepository.save(progress);
-		int earnedPoints = firstCompletion ? mission.getScoreReward() : 0;
 
-		DailyActivity activity = dailyActivityRepository.findByUserIdAndActivityDate(userId, date)
-			.orElseGet(() -> DailyActivity.start(userId, date));
-		boolean practiceAlreadyCompletedToday = activity.isPracticeCompleted();
 		activity.completePractice(mission.getMissionId(), mission.getScoreReward());
 		dailyActivityRepository.save(activity);
 
-		List<PracticeMission> catalog = missionRepository.findAll();
-		int maxScore = catalog.stream().mapToInt(PracticeMission::getScoreReward).sum();
-		int totalScore = totalScore(catalog, userId, maxScore);
-
-		return new MissionCompletionResponse(
-			earnedPoints,
-			totalScore,
-			maxScore,
-			firstCompletion,
-			practiceAlreadyCompletedToday,
-			activity.isDayCompleted()
+		return new PracticeCompletionResult(
+			activity.getDailyActivityId(),
+			mission.getMissionId(),
+			activity.isPracticeCompleted(),
+			activity.getEarnedScore()
 		);
 	}
 
-	/** 실제 송금에서 사용자가 막힌 지점 적재. */
-	@Transactional
-	public TransferDifficultyResponse recordDifficulty(Long userId, TransferDifficultyRequest request) {
-		LocalDateTime occurredAt = request.occurredAt() != null
-			? request.occurredAt()
-			: LocalDateTime.now(clock);
-		TransferDifficulty saved = transferDifficultyRepository.save(TransferDifficulty.of(
-			userId,
-			request.transferId(),
-			request.step(),
-			request.reason(),
-			occurredAt
-		));
-		return TransferDifficultyResponse.from(saved);
-	}
-
-	public List<TransferDifficultyResponse> listDifficulties(Long userId) {
-		return transferDifficultyRepository.findByUserIdOrderByOccurredAtDesc(userId).stream()
-			.map(TransferDifficultyResponse::from)
+	/** GET /api/practice/missions — 송금 연습 카탈로그({@code { missions: [...] }}). */
+	public PracticeMissionsResponse listTransferMissions() {
+		List<PracticeMissionResponse> missions = missionRepository.findAllByOrderByMissionIdAsc().stream()
+			.filter(mission -> mission.getMissionType() == MissionType.TRANSFER)
+			.map(PracticeMissionResponse::from)
 			.toList();
+		return new PracticeMissionsResponse(missions);
 	}
 
-	/** 맞춤 복습 완료 처리. */
-	@Transactional
-	public TransferDifficultyResponse completeDifficulty(Long userId, Long difficultyId, boolean completed) {
-		TransferDifficulty difficulty = transferDifficultyRepository
-			.findByDifficultyIdAndUserId(difficultyId, userId)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "복습 항목을 찾을 수 없습니다."));
-		if (completed) {
-			difficulty.markCompleted(clock);
-			transferDifficultyRepository.save(difficulty);
-		}
-		return TransferDifficultyResponse.from(difficulty);
+	private DailyActivity requireActivity(Long dailyActivityId) {
+		return dailyActivityRepository.findById(dailyActivityId)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "오늘의 활동을 찾을 수 없습니다."));
 	}
 
-	private int totalScore(List<PracticeMission> catalog, Long userId, int maxScore) {
-		Map<Long, Integer> pointsByMissionId = catalog.stream()
-			.collect(Collectors.toMap(PracticeMission::getMissionId, PracticeMission::getScoreReward));
-		int raw = progressRepository.findByUserIdAndCompletedTrue(userId).stream()
-			.mapToInt(progress -> pointsByMissionId.getOrDefault(progress.getMissionId(), 0))
-			.sum();
-		return Math.min(raw, maxScore);
+	private FinancialQuestion requireQuestion(Long questionId) {
+		return questionRepository.findById(questionId)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "문제를 찾을 수 없습니다."));
 	}
 
-	private PracticeHubResponse.Today buildToday(Long userId, LocalDate today, DailyActivity todayActivity) {
+	private PracticeMission dailyMission() {
+		return missionRepository.findByCode(DAILY_MISSION_CODE)
+			.or(() -> missionRepository.findAllByOrderByMissionIdAsc().stream()
+				.filter(mission -> mission.getMissionType() == MissionType.TRANSFER)
+				.findFirst())
+			.orElseThrow(() -> new ResponseStatusException(
+				HttpStatus.INTERNAL_SERVER_ERROR, "연습 미션 시드가 없습니다."));
+	}
+
+	/** 날짜별 결정적 문제 선택(문제은행을 하루씩 순회). */
+	private Long pickQuestionId(LocalDate date) {
 		List<FinancialQuestion> questions = questionRepository.findAllByOrderByQuestionIdAsc();
-		FinancialQuestion question = null;
-		if (!questions.isEmpty()) {
-			int index = (int) Math.floorMod(today.toEpochDay(), questions.size());
-			question = questions.get(index);
+		if (questions.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "금융 문제 시드가 없습니다.");
 		}
-		if (todayActivity != null && todayActivity.getQuestionId() != null) {
-			question = questionRepository.findById(todayActivity.getQuestionId()).orElse(question);
-		}
-
-		PracticeHubResponse.Question questionView = question == null
-			? null
-			: new PracticeHubResponse.Question(question.getQuestionId(), question.getQuestionText(), OX_CHOICES);
-
-		PracticeHubResponse.QuizResult quizResult = null;
-		if (todayActivity != null && todayActivity.isQuizAnswered() && question != null) {
-			int selectedIndex = Boolean.TRUE.equals(todayActivity.getSelectedAnswer()) ? 0 : 1;
-			int correctIndex = question.correctIndex();
-			quizResult = new PracticeHubResponse.QuizResult(
-				selectedIndex,
-				correctIndex,
-				selectedIndex == correctIndex,
-				question.getExplanation()
-			);
-		}
-
-		return new PracticeHubResponse.Today(
-			today,
-			todayActivity != null && todayActivity.isQuizAnswered(),
-			todayActivity != null && todayActivity.isPracticeCompleted(),
-			questionView,
-			quizResult
-		);
-	}
-
-	private PracticeHubResponse.ReviewDifficulty pickReviewDifficulty(Long userId) {
-		return transferDifficultyRepository.findByUserIdOrderByOccurredAtDesc(userId).stream()
-			.filter(difficulty -> difficulty.getStep().isReviewable())
-			.min(Comparator
-				.comparing((TransferDifficulty difficulty) -> difficulty.isCompleted())
-				.thenComparing(TransferDifficulty::getOccurredAt, Comparator.reverseOrder()))
-			.map(difficulty -> new PracticeHubResponse.ReviewDifficulty(
-				difficulty.getDifficultyId(),
-				difficulty.getStep().getCode(),
-				difficulty.getReason() == null ? null : difficulty.getReason().getCode(),
-				difficulty.getOccurredAt(),
-				difficulty.isCompleted()
-			))
-			.orElse(null);
+		int index = (int) Math.floorMod(date.toEpochDay(), questions.size());
+		return questions.get(index).getQuestionId();
 	}
 }

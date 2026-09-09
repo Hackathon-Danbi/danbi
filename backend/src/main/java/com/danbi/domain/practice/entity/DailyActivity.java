@@ -76,6 +76,13 @@ public class DailyActivity {
 		return selectedAnswer != null;
 	}
 
+	/** 오늘 배정된 문제를 채운다. 이미 배정돼 있으면 유지. */
+	public void assignQuestion(Long questionId) {
+		if (this.questionId == null) {
+			this.questionId = questionId;
+		}
+	}
+
 	/** 이번 주 안심 도장 획득 조건: 퀴즈 + 연습 모두 완료. */
 	public boolean isDayCompleted() {
 		return isQuizAnswered() && practiceCompleted;
