@@ -82,8 +82,37 @@ export const TRANSFER_DIFFICULTY_COPY: Record<
 export const REVIEWABLE_TRANSFER_STEPS = ['recipient', 'account', 'amount', 'voice'] as const;
 export type ReviewableTransferStep = (typeof REVIEWABLE_TRANSFER_STEPS)[number];
 
-export function isReviewableTransferStep(step: TransferDifficultyStep): step is ReviewableTransferStep {
+export function isReviewableTransferStep(step: string): step is ReviewableTransferStep {
   return REVIEWABLE_TRANSFER_STEPS.some((candidate) => candidate === step);
+}
+
+/** 실제 송금 화면 → 연습 가능한 맞춤 복습 단계. 비밀번호만 막힌 경우는 연습 화면이 없어 제외한다. */
+const TRANSFER_SCREEN_REVIEW_STEP: Record<string, ReviewableTransferStep> = {
+  transfer: 'voice',
+  listening: 'voice',
+  voiceconfirm: 'voice',
+  recipient: 'recipient',
+  bankselect: 'recipient',
+  accountinput: 'account',
+  ocrprocessing: 'account',
+  ocrconfirm: 'account',
+  ocrselect: 'account',
+  ocrfailure: 'account',
+  amountinput: 'amount',
+  pretransfer: 'amount',
+};
+
+export function reviewStepForTransferScreen(screen: string): ReviewableTransferStep | null {
+  return TRANSFER_SCREEN_REVIEW_STEP[screen] ?? null;
+}
+
+export function difficultyFromReviewStep(step: ReviewableTransferStep): TransferDifficulty {
+  return {
+    id: `live-${step}`,
+    step,
+    occurredAt: new Date().toISOString().slice(0, 10),
+    completed: false,
+  };
 }
 
 function isTransferDifficulty(value: unknown): value is TransferDifficulty {

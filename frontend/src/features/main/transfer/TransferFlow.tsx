@@ -25,6 +25,10 @@ import {
 } from '@/lib/api/transfer';
 import { StorageKeys, usePersistentState } from '@/lib/storage';
 import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
+import {
+  reviewStepForTransferScreen,
+  type ReviewableTransferStep,
+} from '@/features/missions/transferDifficulty';
 
 import { CONTACTS, RECENT_RECIPIENT_CANDIDATES } from '../data';
 import { CREAM, INK, LARGE_AMOUNT_THRESHOLD, YELLOW } from '../theme';
@@ -158,6 +162,7 @@ export function TransferFlow() {
   const [ttsPhase, setTtsPhase] = useState<'idle' | 'playing' | 'done'>('idle');
   const [advisorState, setAdvisor] = useState<'idle' | 'connecting' | 'connected'>('idle');
   const [ptReviewDone, setPtReviewDone] = useState(false);
+  const [stuckReviewStep, setStuckReviewStep] = useState<ReviewableTransferStep | null>(null);
 
   const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helpStepRef = useRef<HelpStep>('idle');
@@ -277,6 +282,8 @@ export function TransferFlow() {
       });
       helpStepRef.current = 'highlight';
       helpModeRef.current = true;
+      const reviewStep = reviewStepForTransferScreen(s);
+      if (reviewStep) setStuckReviewStep(reviewStep);
       clearHelpTimer();
       helpTimerRef.current = setTimeout(() => doEscalateTo('voice'), 20000);
     },
@@ -983,7 +990,23 @@ export function TransferFlow() {
           />
         )}
 
-        {screen === 'transferdone' && <TransferDoneScreen txInfo={txInfo} onHome={goHome} />}
+        {screen === 'transferdone' && (
+          <TransferDoneScreen
+            txInfo={txInfo}
+            onHome={goHome}
+            stuckStep={stuckReviewStep}
+            onPracticeStuckStep={
+              stuckReviewStep
+                ? () => {
+                    router.push({
+                      pathname: '/(app)/practice',
+                      params: { review: stuckReviewStep },
+                    });
+                  }
+                : undefined
+            }
+          />
+        )}
       </ScreenIn>
 
       <ConfirmPopup
