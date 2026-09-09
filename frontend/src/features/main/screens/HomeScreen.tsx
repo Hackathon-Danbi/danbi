@@ -45,11 +45,19 @@ export function HomeScreen({
       <AccountCard />
 
       <View style={styles.center}>
-        <AppText size={21} weight={900} color={INK} align="center" style={styles.mb24}>
+        <AppText
+          size={30}
+          weight={900}
+          color={INK}
+          align="center"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={styles.mainAsk}
+        >
           어떤 업무를 도와드릴까요?
         </AppText>
-        <MicButton onClick={onMic} size={104} />
-        <AppText size={15} weight={800} color={INK} style={styles.mt20}>
+        <MicButton onClick={onMic} size={132} />
+        <AppText size={20} weight={800} color={INK} style={styles.mt20}>
           마이크를 눌러 말씀해주세요
         </AppText>
       </View>
@@ -78,8 +86,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mb24: { marginBottom: 24 },
-  mt20: { marginTop: 20 },
+  // 한 줄 유지: 폭을 채우고 좁은 기기에서는 자동으로 축소(adjustsFontSizeToFit).
+  mainAsk: { marginBottom: 16, alignSelf: 'stretch', paddingHorizontal: 16 },
+  mt20: { marginTop: 12 },
   tiles: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -22,6 +22,7 @@ import type { ListeningPhase } from '@/features/main/types';
 import {
   createBalanceVoiceAnswer,
   isBalanceVoiceQuery,
+  isTransferVoiceQuery,
 } from '@/features/main/voiceQuery';
 
 type View = 'unconfirmed' | 'home' | 'listening' | 'result';
@@ -70,11 +71,21 @@ export default function HomeRoute() {
   const confirmVoiceQuery = async () => {
     if (!recognition.transcript) return;
     setQueryError('');
-    if (isBalanceVoiceQuery(recognition.transcript) || !isApiConfigured()) {
+    if (isBalanceVoiceQuery(recognition.transcript)) {
       const answer = createBalanceVoiceAnswer(selectedAccount);
       setVoiceAnswer(answer);
       setView('result');
       void speakResponse(answer.answerText);
+      return;
+    }
+    if (isTransferVoiceQuery(recognition.transcript)) {
+      const spoken = recognition.transcript;
+      goHome();
+      router.push({ pathname: '/(app)/transfer', params: { transcript: spoken } });
+      return;
+    }
+    if (!isApiConfigured()) {
+      setQueryError('지금은 통장 잔액 조회와 송금만 도와드릴 수 있어요. "잔액 알려줘"나 "○○에게 3만원 보내줘"처럼 말씀해주세요.');
       return;
     }
     try {
