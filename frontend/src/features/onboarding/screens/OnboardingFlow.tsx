@@ -17,8 +17,8 @@ import { PinDots, PinKeypad } from '@/features/auth/components/PinPad';
 import { BankGrid } from '@/features/main/components/BankGrid';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
-import { errorMessage } from '@/lib/api/http';
-import { getJSON, setJSON, StorageKeys } from '@/lib/storage';
+import { ApiError, errorMessage } from '@/lib/api/http';
+import { getJSON, remove, setJSON, StorageKeys } from '@/lib/storage';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import type { OnboardingDestination } from '@/lib/navigation';
 import {
@@ -263,13 +263,32 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     stopReading();
     setStep((current) => Math.min(STEPS.COMPLETE, current + 1) as Step);
   };
+  // 저장된 진행 정보가 이미 사라진 서버 세션(가입/인증서/휴대폰 세션)을 가리키면
+  // — 백엔드 재시작·DB 초기화 등 — 낡은 draft 를 버리고 처음부터 다시 시작한다.
+  const isStaleSessionError = (error: unknown) =>
+    error instanceof ApiError &&
+    error.status === 404 &&
+    /세션을 찾을 수 없습니다|찾을 수 없습니다: (ob_|ci_|pv_)/.test(error.message);
+
+  const recoverFromStaleSession = async () => {
+    stopReading();
+    await remove(StorageKeys.onboardingDraft);
+    state.hardReset();
+    setStep(STEPS.INTRO);
+    setNotice('가입 정보가 만료돼서 처음부터 다시 시작할게요.');
+  };
+
   const runApi = async (task: () => Promise<void>) => {
     if (apiBusy) return;
     setApiBusy(true);
     try {
       await task();
     } catch (error) {
-      setNotice(errorMessage(error));
+      if (isStaleSessionError(error)) {
+        await recoverFromStaleSession();
+      } else {
+        setNotice(errorMessage(error));
+      }
     } finally {
       setApiBusy(false);
     }

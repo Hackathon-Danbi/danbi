@@ -587,6 +587,53 @@ export function useOnboardingState() {
     setOnboardingCompleted(draft.step === 20);
   };
 
+  /**
+   * 서버에 없는 세션(가입/인증서/휴대폰 세션)을 들고 있을 때 처음 상태로 되돌린다.
+   * 저장된 draft 가 지워진 DB 를 가리키는 경우(예: 백엔드 재시작·초기화) 호출한다.
+   */
+  const hardReset = () => {
+    idTimers.current.forEach(clearTimeout);
+    idTimers.current = [];
+    if (faceTimer.current) clearTimeout(faceTimer.current);
+    faceTimer.current = null;
+
+    setPhoneOwnership(null);
+    setIdTypeState(null);
+    setIdScanStatus('idle');
+    setIdInformationConfirmed(false);
+    setUserName('');
+    setCarrier(null);
+    setPhoneNumber('');
+    setRequiredTerms([false]);
+    setOtpSent(false);
+    setOtpSendCount(0);
+    setOtp('');
+    setOtpError('');
+    setOtpVerified(false);
+    setCertificateTerms([false]);
+    setElectronicDocTermAccepted(false);
+    setFaceTermAccepted(false);
+    setFaceStatus('idle');
+    setFaceVerified(false);
+    setBankState(null);
+    setAccountNumber('');
+    setAccountPassword('');
+    setAccountVerificationSent(false);
+    setAccountCode('');
+    setAccountError('');
+    setAccountVerified(false);
+    resetPin();
+    setOnboardingCompleted(false);
+    setIdRecognizedName(MOCK_ID_NAME);
+    setIdMaskedNumber(MOCK_ID_NUMBER);
+    setIdIssueDate(MOCK_ID_ISSUED_DATE);
+
+    idsRef.current = EMPTY_API_IDS;
+    setApiIds(EMPTY_API_IDS);
+    liveRef.current = false;
+    setLiveApi(false);
+  };
+
   return {
     phoneOwnership,
     setPhoneOwnership,
@@ -668,5 +715,6 @@ export function useOnboardingState() {
     verifyAccountPasswordLive,
     requestOneWon,
     confirmOneWon,
+    hardReset,
   };
 }
