@@ -14,11 +14,24 @@ export type AccountHolderResponse = {
   registered: boolean;
 };
 
+/** 백엔드 RiskReason enum 과 1:1. 알 수 없는 값은 무시한다. */
+export type RiskReasonCode =
+  | 'AMOUNT_INVALID'
+  | 'ACCOUNT_NUMBER_INVALID'
+  | 'AMOUNT_EXCEEDS_BALANCE'
+  | 'NEW_RECIPIENT'
+  | 'HIGH_AMOUNT'
+  | 'REPEATED_TRANSFER'
+  | 'IN_CALL'
+  | 'RUSHED'
+  | 'PHISHING_KEYWORD_DETECTED';
+
 export type RiskCheckResponse = {
   risky: boolean;
   blocked: boolean;
   requiresSafetyCheck: boolean;
   recipientIsNew: boolean;
+  reasons?: RiskReasonCode[];
 };
 
 export type TransferExecuteInput = {
