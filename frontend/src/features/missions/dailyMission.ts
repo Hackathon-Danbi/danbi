@@ -16,6 +16,10 @@ const SCENARIO_IDS: readonly RiskScenarioId[] = [
 ];
 const NORMAL_AMOUNTS = [10_000, 30_000, 50_000] as const;
 
+// MVP: 오늘의 송금 연습에서는 위험 상황 시나리오를 생성하지 않는다.
+// 시나리오 관련 코드/타입은 추후 확장을 위해 그대로 유지한다.
+const DAILY_MISSION_SCENARIOS_ENABLED = false;
+
 function pick<T>(items: readonly T[], random: () => number): T {
   const safeRandom = Math.max(0, Math.min(0.999999, random()));
   return items[Math.floor(safeRandom * items.length)];
@@ -27,7 +31,10 @@ export function generateDailyMission(
   random: () => number = Math.random,
 ): DailyMission {
   // 위험 상황은 판단을 돕는 안내 없이 스스로 멈춰보는 solo 미션으로만 만든다.
-  const scenarioId = random() < 0.45 ? pick(SCENARIO_IDS, random) : null;
+  // MVP에서는 비활성화하되, random() 소비 순서는 유지해 조합 규칙을 그대로 둔다.
+  const rolledScenario = random() < 0.45;
+  const scenarioId =
+    DAILY_MISSION_SCENARIOS_ENABLED && rolledScenario ? pick(SCENARIO_IDS, random) : null;
   const assistanceMode: AssistanceMode = scenarioId ? 'solo' : pick(ASSISTANCE_MODES, random);
   const candidateInputMethod = pick(INPUT_METHODS, random);
   const candidateRecipientType: DailyRecipientType = assistanceMode === 'guided'

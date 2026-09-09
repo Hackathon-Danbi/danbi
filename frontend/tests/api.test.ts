@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { API_ENDPOINTS, joinApiUrl } from '../src/api/endpoints';
+import { isApiCircuitOpen, isApiConfigured } from '../src/api/client';
 import {
   PRACTICE_PASSWORD,
   PRACTICE_PASSWORD_LENGTH,
@@ -36,4 +37,9 @@ test('API base URL and endpoint are joined without duplicate slashes', () => {
 test('practice transfer uses the backend practice password contract', () => {
   assert.equal(PRACTICE_PASSWORD, '1234');
   assert.equal(PRACTICE_PASSWORD_LENGTH, 4);
+});
+
+test('api client without a base URL is unconfigured and its circuit starts closed', () => {
+  assert.equal(isApiConfigured(), false);
+  assert.equal(isApiCircuitOpen(), false);
 });
