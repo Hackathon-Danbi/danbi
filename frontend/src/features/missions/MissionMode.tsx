@@ -83,6 +83,10 @@ type View =
       isDailyMission?: boolean;
     };
 
+// 모든 실전 송금 연습에는 "송금 전 확인" 단계가 포함되므로, 완료 시 review-transfer 도 함께 채운다.
+// (MVP 점수 100점: 차근차근 20 + 말로 25 + 혼자 30 + 송금 전 확인 25)
+const REVIEW_BUNDLED_MISSION_IDS: MissionId[] = ['guided-transfer', 'voice-transfer', 'solo-transfer'];
+
 const NEW_RECIPIENT_TARGET: PracticeTarget['recipient'] = {
   id: 'new',
   name: '박지영',
@@ -213,10 +217,11 @@ export function MissionMode({
       ]);
       if (!mounted.current) return;
 
-      const resolvedTodayMission = isDailyMission(storedTodayMission, dateKey)
+      // MVP에서는 위험 시나리오 미션을 노출하지 않으므로, 예전에 저장된 시나리오 미션도 새로 생성한다.
+      const resolvedTodayMission = isDailyMission(storedTodayMission, dateKey) && !storedTodayMission.scenarioId
         ? storedTodayMission
         : generateDailyMission(dateKey);
-      if (!isDailyMission(storedTodayMission, dateKey)) void setJSON(missionKey, resolvedTodayMission);
+      if (resolvedTodayMission !== storedTodayMission) void setJSON(missionKey, resolvedTodayMission);
 
       if (Array.isArray(completed)) setCompletedMissionIds(new Set(completed));
       if (daily && typeof daily === 'object') setDailyPracticeRecord(daily);
@@ -297,10 +302,19 @@ export function MissionMode({
       isDailyMission?: boolean;
       result?: DailyMissionResult;
     }) => {
+      const scoreBefore = calculateFinancialScore(completedMissionIds);
       const missionCompletion = completeMission(completedMissionIds, mission);
-      if (missionCompletion.completedMissionIds !== completedMissionIds) {
-        persistCompleted(missionCompletion.completedMissionIds);
+      let nextCompletedMissionIds = missionCompletion.completedMissionIds;
+      if (
+        REVIEW_BUNDLED_MISSION_IDS.includes(mission.id) &&
+        !nextCompletedMissionIds.has('review-transfer')
+      ) {
+        nextCompletedMissionIds = new Set([...nextCompletedMissionIds, 'review-transfer']);
       }
+      if (nextCompletedMissionIds !== completedMissionIds) {
+        persistCompleted(nextCompletedMissionIds);
+      }
+      const earnedPoints = calculateFinancialScore(nextCompletedMissionIds) - scoreBefore;
 
       if (completingDailyMission && dailyMission) {
         const nextDailyRecord = completePracticeForDate(dailyPracticeRecord, dailyMission.date, mission.id);
@@ -311,7 +325,7 @@ export function MissionMode({
       setView({
         tag: 'complete',
         mission,
-        earnedPoints: missionCompletion.earnedPoints,
+        earnedPoints,
         practiceInitialState,
         dailyMission,
         isDailyMission: completingDailyMission,
@@ -341,6 +355,8 @@ export function MissionMode({
     else setView({ tag: 'phishing-learn', missionId: mission.id, mission });
   };
 
+  // MVP 화면에서는 위험 상황 진입점을 노출하지 않는다. 추후 재노출을 위해 로직은 유지한다.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const startScenarioReplay = (scenarioId: RiskScenarioId) => {
     const scenario = SCENARIO_BY_ID[scenarioId];
     const replayMission: DailyMission = {
@@ -438,9 +454,7 @@ export function MissionMode({
       <Screen background="#fffef9" edges={['top', 'bottom']}>
         <ScreenIn>
           <PracticePickerScreen
-            experiencedScenarios={experiencedScenarios}
             onStartPractice={startLegacyMission}
-            onReplayScenario={startScenarioReplay}
             onBack={() => setView({ tag: 'hub' })}
           />
         </ScreenIn>

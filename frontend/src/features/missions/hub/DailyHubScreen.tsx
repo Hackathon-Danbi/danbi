@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { speak, stop as ttsStop } from '@/lib/speech/tts';
+import { savedRecipients } from '@/features/practice/data/recipients.mock';
 import { colors } from '@/theme/tokens';
 import { MAX_SCORE } from '../data/missions';
 import type { MissionId } from '../data/missions';
@@ -21,6 +22,30 @@ import {
 } from '../transferDifficulty';
 import type { TransferDifficulty } from '../transferDifficulty';
 import type { QuizAnswerResult, TodayDailyActivity } from '@/api';
+
+/** 오늘의 송금 연습 카드 문구. 기존 practice flow 에 전달할 값(받는 사람·금액·방식)만 사용한다. */
+function describeTodayMission(mission: DailyMission): { title: string; description: string } {
+  const recipientName = mission.recipientType === 'saved'
+    ? savedRecipients.find((recipient) => recipient.id === mission.recipientId)?.name ?? '이영희'
+    : '박지영';
+  const amountLabel = `${mission.amount.toLocaleString('ko-KR')}원`;
+  if (mission.inputMethod === 'voice') {
+    return {
+      title: `${recipientName}님에게 ${amountLabel}을 말로 보내보세요.`,
+      description: '받는 사람과 금액을 말해서 보내요.',
+    };
+  }
+  if (mission.assistanceMode === 'guided') {
+    return {
+      title: `${recipientName}님에게 ${amountLabel}을 차근차근 보내보세요.`,
+      description: '화면 안내를 따라 한 단계씩 보내요.',
+    };
+  }
+  return {
+    title: `${recipientName}님에게 ${amountLabel}을 혼자 보내보세요.`,
+    description: '안내 없이 실제처럼 보내요.',
+  };
+}
 
 interface Props {
   completedMissionIds: Set<MissionId>;
@@ -141,6 +166,7 @@ export function DailyHubScreen({
   };
 
   const pct = achieved ? 100 : Math.round((score / MAX_SCORE) * 100);
+  const todayPractice = describeTodayMission(todayMission);
 
   return (
     <View style={styles.root}>
@@ -239,7 +265,7 @@ export function DailyHubScreen({
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <AppText size={13} weight={800} color={colors.yellow}>
-              오늘의 금융 한 문제
+              오늘의 금융 O/X 퀴즈
             </AppText>
             {!todayQuizDone ? (
               <Pressable
@@ -286,20 +312,20 @@ export function DailyHubScreen({
                   <Pressable
                     key={idx}
                     accessibilityRole="button"
+                    accessibilityLabel={idx === 0 ? 'O 맞아요' : 'X 아니에요'}
                     disabled={quizSubmitting}
                     onPress={() => void handleAnswer(idx)}
                     style={[
                       styles.quizBtn,
-                      todayQuestion.type === 'ox' && styles.quizBtnOx,
+                      styles.quizBtnOx,
                       quizSubmitting && styles.quizBtnDisabled,
                     ]}
                   >
-                    <AppText
-                      size={todayQuestion.type === 'ox' ? 26 : 15}
-                      weight={800}
-                      color={colors.ink}
-                    >
+                    <AppText size={32} weight={900} color={colors.ink}>
                       {choice}
+                    </AppText>
+                    <AppText size={15} weight={800} color={colors.muted}>
+                      {idx === 0 ? '맞아요' : '아니에요'}
                     </AppText>
                   </Pressable>
                 ))}
@@ -308,10 +334,10 @@ export function DailyHubScreen({
           )}
         </View>
 
-        {/* 4. 오늘의 미션 카드 — 위험 상황 종류는 시작 전 노출하지 않는다. */}
+        {/* 4. 오늘의 송금 연습 — 기존 practice flow 를 조합한 하루 1개 미션. */}
         <View style={styles.card}>
           <AppText size={13} weight={800} color={colors.yellow}>
-            오늘의 미션
+            오늘의 송금 연습
           </AppText>
           {todayPracticeDone ? (
             <View style={styles.doneContent}>
@@ -322,7 +348,7 @@ export function DailyHubScreen({
                   </AppText>
                 </View>
                 <AppText size={15} weight={700} color={colors.muted}>
-                  오늘의 미션 완료
+                  오늘의 송금 연습 완료
                 </AppText>
               </View>
               <Pressable
@@ -331,39 +357,28 @@ export function DailyHubScreen({
                 style={styles.reviewQuizBtn}
               >
                 <AppText size={13} weight={800} color={colors.accentText}>
-                  오늘 미션 다시 보기
+                  오늘 연습 다시 보기
                 </AppText>
               </Pressable>
             </View>
           ) : (
-            <View style={styles.practiceBody}>
-              <View style={styles.flex1}>
-                <AppText size={16} weight={800} color={colors.ink} lineHeight={21}>
-                  {apiDailyActivity?.mission.title ?? '오늘 새로운 금융 상황을 연습해요'}
+            <>
+              <AppText size={17} weight={800} color={colors.ink} lineHeight={24} style={styles.mt6}>
+                {apiDailyActivity?.mission.title ?? todayPractice.title}
+              </AppText>
+              <AppText size={14} color={colors.muted} lineHeight={20} style={styles.mt3}>
+                {apiDailyActivity?.mission.description ?? todayPractice.description}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => onStartDailyMission(todayMission)}
+                style={styles.todayStartBtn}
+              >
+                <AppText size={17} weight={800} color="#fff">
+                  오늘의 연습 시작
                 </AppText>
-                <AppText size={13} color={colors.muted} lineHeight={18} style={styles.mt3}>
-                  {apiDailyActivity?.mission.description ?? (
-                    `${todayMission.assistanceMode === 'guided' ? '따라하기' : '혼자 해보기'} · ${
-                      todayMission.inputMethod === 'voice' ? '음성으로 송금' : '직접 입력'
-                    }`
-                  )}
-                </AppText>
-              </View>
-              <View style={styles.practiceMeta}>
-                <AppText size={14} weight={800} color={colors.yellow}>
-                  오늘 1회
-                </AppText>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => onStartDailyMission(todayMission)}
-                  style={styles.startBtn}
-                >
-                  <AppText size={14} weight={800} color="#fff">
-                    연습 시작하기
-                  </AppText>
-                </Pressable>
-              </View>
-            </View>
+              </Pressable>
+            </>
           )}
         </View>
 
@@ -406,7 +421,7 @@ export function DailyHubScreen({
                       weight={900}
                       color={quizResultIsCorrect ? '#2e7d32' : '#c62828'}
                     >
-                      {quizResultIsCorrect ? '✓ 정답이에요!' : '✕ 아쉬워요'}
+                      {quizResultIsCorrect ? '✓ 정답이에요!' : '✕ 다시 알아볼까요?'}
                     </AppText>
                   </View>
                   <AppText size={14} color={colors.muted}>
@@ -483,9 +498,9 @@ function DifficultyReviewCard({
   const copy = TRANSFER_DIFFICULTY_COPY[difficulty.step];
   return (
     <View style={[styles.card, styles.difficultyCard]}>
-      <AppText size={13} weight={800} color={colors.yellow}>다시 연습해볼까요?</AppText>
+      <AppText size={13} weight={800} color={colors.yellow}>내가 어려웠던 부분 다시하기</AppText>
       <AppText size={14} color={colors.muted} lineHeight={21} style={styles.difficultyLead}>
-        지난번 송금에서 도움이 필요했던 부분이에요.
+        지난 송금에서 ‘{copy.title}’ 단계가 어려웠어요.
       </AppText>
       <View style={styles.difficultyBody}>
         <View style={styles.flex1}>
@@ -506,7 +521,7 @@ function DifficultyReviewCard({
           style={[styles.reviewStartBtn, difficulty.completed && styles.reviewStartBtnDone]}
         >
           <AppText size={14} weight={850} color={difficulty.completed ? colors.accentText : '#fff'}>
-            {difficulty.completed ? '다시 연습하기' : '연습하기'}
+            다시 연습하기
           </AppText>
         </Pressable>
       </View>
@@ -605,7 +620,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#f7f8fc',
   },
-  quizBtnOx: { minHeight: 54 },
+  quizBtnOx: { minHeight: 84, gap: 2 },
   quizBtnDisabled: { opacity: 0.45 },
   reviewQuizBtn: {
     alignSelf: 'flex-start',
@@ -613,12 +628,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  practiceBody: { marginTop: 8, flexDirection: 'row', gap: 12, alignItems: 'flex-end' },
-  practiceMeta: { alignItems: 'flex-end', gap: 6 },
-  startBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+  todayStartBtn: {
+    marginTop: 14,
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
     backgroundColor: colors.yellow,
   },
   difficultyCard: { backgroundColor: colors.accentSurface },

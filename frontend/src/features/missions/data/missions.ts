@@ -19,41 +19,43 @@ export interface Mission {
   type: MissionType;
 }
 
+// MVP 점수 배분(총 100점): 차근차근 20 · 말로 25 · 혼자 30 · 송금 전 확인 25.
+// 위험 상황(phishing-*) 미션은 MVP 화면에서 숨기므로 0점으로 두되, 확장 대비 목록에는 남긴다.
 export const MISSIONS: Mission[] = [
   {
     id: 'guided-transfer',
     group: '혼자 송금하기',
-    icon: '①',
-    title: '단계별로 송금 따라하기',
-    description: '화면 안내에 따라 차근차근 연습해요',
-    points: 10,
+    icon: '🌱',
+    title: '차근차근 따라하기',
+    description: '처음이라면 단비와 하나씩 해봐요.',
+    points: 20,
     type: 'transfer',
   },
   {
     id: 'voice-transfer',
     group: '혼자 송금하기',
-    icon: '◎',
-    title: '음성으로 송금해보기',
-    description: '말로 받는 사람과 금액을 알려주세요',
-    points: 15,
+    icon: '🎤',
+    title: '말로 송금해보기',
+    description: '받는 사람과 금액을 말해서 보내봐요.',
+    points: 25,
     type: 'transfer',
   },
   {
     id: 'solo-transfer',
     group: '혼자 송금하기',
-    icon: '✓',
+    icon: '💪',
     title: '혼자 송금해보기',
-    description: '안내 없이 직접 입력해서 완료해요',
-    points: 20,
+    description: '안내 없이 실제처럼 해봐요.',
+    points: 30,
     type: 'transfer',
   },
   {
     id: 'review-transfer',
     group: '혼자 송금하기',
     icon: '◉',
-    title: '송금 전 이름·계좌·금액 확인하기',
-    description: '보내기 전에 한 번 더 꼼꼼히 확인해요',
-    points: 15,
+    title: '송금 전 확인하기',
+    description: '보내기 전에 이름·계좌·금액을 다시 확인해요.',
+    points: 25,
     type: 'transfer',
   },
   {
@@ -62,7 +64,7 @@ export const MISSIONS: Mission[] = [
     icon: '⚠',
     title: '최신 보이스피싱 사례 알아보기',
     description: '실제로 일어난 사례를 함께 살펴봐요',
-    points: 10,
+    points: 0,
     type: 'phishing-learn',
   },
   {
@@ -71,7 +73,7 @@ export const MISSIONS: Mission[] = [
     icon: '◈',
     title: '보이스피싱 예방법 익히기',
     description: '피해를 막는 간단한 방법을 배워요',
-    points: 10,
+    points: 0,
     type: 'phishing-learn',
   },
   {
@@ -80,7 +82,7 @@ export const MISSIONS: Mission[] = [
     icon: '◐',
     title: '의심스러운 전화 상황 경험하기',
     description: '실제 상황처럼 연습해 보고 대처해요',
-    points: 20,
+    points: 0,
     type: 'phishing-sim',
   },
 ];
