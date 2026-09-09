@@ -1,6 +1,6 @@
-package com.danbi.domain.agent.entity;
+package com.danbi.domain.agent.model;
 
-import com.danbi.domain.agent.entity.AgentModels.Decision;
+import com.danbi.domain.agent.model.AgentModels.Decision;
 import com.danbi.domain.agent.service.AgentSessions.Session;
 import java.util.Objects;
 

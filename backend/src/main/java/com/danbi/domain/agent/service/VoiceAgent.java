@@ -1,9 +1,8 @@
 package com.danbi.domain.agent.service;
 
 import com.danbi.domain.agent.llm.AiGateway;
-import com.danbi.domain.agent.entity.AgentException;
-import com.danbi.domain.agent.entity.AgentModels.VoiceReply;
-import com.danbi.domain.agent.entity.Screen;
+import com.danbi.domain.agent.model.AgentException;
+import com.danbi.domain.agent.model.AgentModels.VoiceReply;
 import com.danbi.domain.agent.service.AgentSessions.Session;
 import java.io.IOException;
 import java.util.Locale;
@@ -45,26 +44,7 @@ public class VoiceAgent {
                 throw new AgentException(HttpStatus.CONFLICT, "최신 안내를 다시 요청해 주세요.");
             }
             // Only server-generated final text can be spoken; arbitrary client text is not accepted.
-            String text = session.lastReply.text();
-            if (session.lastReply.screen() instanceof Screen.TransferConfirmation transfer) {
-                text = transferSpeech(transfer);
-            }
-            return ai.speech(text);
+            return ai.speech(session.lastReply.text());
         }
     }
-
-    private String transferSpeech(Screen.TransferConfirmation transfer) {
-        String masked = transfer.accountMasked();
-        String ending = masked.length() >= 4 ? masked.substring(masked.length() - 4) : "";
-        String accountNotice = "계좌번호 일부는 표시하지 않아요. ";
-        if (ending.matches("[0-9]{4}")) {
-            String[] digits = {"공", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"};
-            String spoken = ending.chars().mapToObj(c -> digits[c - '0'])
-                    .collect(java.util.stream.Collectors.joining(", "));
-            accountNotice = "계좌번호 끝 네 자리는 " + spoken + "입니다. ";
-        }
-        return transfer.recipientName() + " 님에게 " + String.format(Locale.KOREA, "%,d", transfer.amount())
-                + "원을 보내는 모의 확인 화면이에요. " + accountNotice + "실제 돈은 보내지 않았어요.";
-    }
-
 }

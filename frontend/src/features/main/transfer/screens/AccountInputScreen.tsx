@@ -20,6 +20,7 @@ export function AccountInputScreen({
   helpTarget,
   onActivity,
   onBlockedHelp,
+  error,
 }: {
   bank: string;
   value: string;
@@ -31,6 +32,7 @@ export function AccountInputScreen({
   helpTarget: string;
   onActivity: () => void;
   onBlockedHelp: () => void;
+  error?: string;
 }) {
   const b = bankOf(bank);
   const displayNum = value.replace(/(\d{3})(\d{3})(\d+)/, '$1-$2-$3');
@@ -82,6 +84,12 @@ export function AccountInputScreen({
             )}
           </View>
         </PulseHighlight>
+
+        {error ? (
+          <AppText size={15} weight={800} color="#D94040" lineHeight={22} style={styles.error}>
+            {error}
+          </AppText>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
@@ -160,6 +168,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     justifyContent: 'center',
   },
+  error: { marginTop: -2, marginBottom: 10 },
   photoButton: {
     minHeight: 52,
     flexDirection: 'row',

@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.danbi.domain.agent.llm.AiGateway;
 import com.danbi.domain.agent.llm.Prompts;
-import com.danbi.domain.agent.entity.AgentModels.*;
+import com.danbi.domain.agent.model.AgentModels.*;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

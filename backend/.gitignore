@@ -35,6 +35,3 @@ out/
 
 ### VS Code ###
 .vscode/
-
-# Local database credentials
-/application-local.properties

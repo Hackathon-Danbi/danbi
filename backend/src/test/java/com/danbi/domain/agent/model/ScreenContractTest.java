@@ -2,8 +2,7 @@ package com.danbi.domain.agent.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.danbi.domain.agent.entity.AgentModels.Reply;
-import com.danbi.domain.agent.entity.Screen;
+import com.danbi.domain.agent.model.AgentModels.Reply;
 import com.danbi.domain.agent.tools.BankingData.TransactionData;
 import java.time.LocalDate;
 import java.util.List;

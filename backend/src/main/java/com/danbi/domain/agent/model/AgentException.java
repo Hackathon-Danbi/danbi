@@ -1,4 +1,4 @@
-package com.danbi.domain.agent.entity;
+package com.danbi.domain.agent.model;
 
 import org.springframework.http.HttpStatus;
 

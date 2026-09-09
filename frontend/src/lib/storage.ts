@@ -24,6 +24,8 @@ export const StorageKeys = {
   transactionReviews: 'danbi.transactions.reviews',
   savedRecipients: 'danbi.transfer.saved-recipients',
   transferDifficulties: 'danbi.transfer.difficulties',
+  /** 어려웠던 송금 맞춤 복습에서 얻은 점수. */
+  practiceReviewBonus: 'danbi.practice.review-bonus',
   /** 가입 완료 후 송금·거래 API에 쓰는 userId / accountId. */
   apiIdentity: 'danbi.api.identity',
 } as const;

@@ -1,10 +1,6 @@
 -- 단비 시연영상용 데이터 제거 스크립트.
 -- 로컬 MySQL의 danbi DB에서만 실행한다.
 -- 실행 후 demo-seed.sql을 다시 실행하면 촬영 시작 상태로 돌아간다.
--- CLI: mysql ... danbi < demo-reset.sql / Workbench: 아래 USE 로 스키마를 잡는다.
-
-SET NAMES utf8mb4;
-USE danbi;
 
 START TRANSACTION;
 
@@ -66,21 +62,8 @@ WHERE account_id IN (
 DELETE FROM account_products
 WHERE product_id IN (1001, 1002, 1003);
 
--- user_term_agreements 는 이전 로컬 스키마에만 있으므로, 존재할 때만 지운다.
-SET @demo_has_term_agreements = (
-    SELECT COUNT(*)
-    FROM information_schema.tables
-    WHERE table_schema = DATABASE()
-      AND table_name = 'user_term_agreements'
-);
-SET @demo_term_agreements_delete_sql = IF(
-    @demo_has_term_agreements > 0,
-    'DELETE FROM user_term_agreements WHERE user_id = @demo_user_id',
-    'DO 0'
-);
-PREPARE demo_term_agreements_delete FROM @demo_term_agreements_delete_sql;
-EXECUTE demo_term_agreements_delete;
-DEALLOCATE PREPARE demo_term_agreements_delete;
+DELETE FROM user_term_agreements
+WHERE user_id = @demo_user_id;
 
 -- 가입 촬영을 다시 시작할 수 있도록 온보딩 진행 데이터도 비운다.
 DELETE FROM one_won_verifications;

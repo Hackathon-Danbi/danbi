@@ -81,12 +81,12 @@ export function getWeeklyActivity(
 }
 
 /** 완료 미션 ID만 점수 원본으로 사용하며, 중복 ID와 최대 점수 초과를 방지한다. */
-export function calculateFinancialScore(completedMissionIds: Iterable<MissionId>): number {
+export function calculateFinancialScore(completedMissionIds: Iterable<MissionId>, reviewBonus = 0): number {
   const completed = new Set(completedMissionIds);
   const score = MISSIONS
     .filter((mission) => completed.has(mission.id))
     .reduce((sum, mission) => sum + mission.points, 0);
-  return Math.min(score, MAX_SCORE);
+  return Math.min(score + Math.max(0, reviewBonus), MAX_SCORE);
 }
 
 export function completeMission(
@@ -138,7 +138,7 @@ export function selectFinancialIndependenceState(
   state: FinancialIndependenceState,
   referenceDate: Date = new Date(),
 ) {
-  const score = calculateFinancialScore(state.completedMissionIds);
+  const score = calculateFinancialScore(state.completedMissionIds, state.reviewBonus);
   const achieved = score >= MAX_SCORE;
   const todayKey = getLocalDateKey(referenceDate);
   const weeklyActivity = getWeeklyActivity(

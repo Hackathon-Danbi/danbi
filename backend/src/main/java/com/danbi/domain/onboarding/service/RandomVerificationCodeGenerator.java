@@ -2,15 +2,11 @@ package com.danbi.domain.onboarding.service;
 
 import java.security.SecureRandom;
 import java.util.Locale;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(
-	prefix = "danbi.onboarding",
-	name = "random-phone-code",
-	havingValue = "true"
-)
+@Profile("!dev")
 public class RandomVerificationCodeGenerator implements VerificationCodeGenerator {
 
 	private static final int VERIFICATION_CODE_BOUND = 1_000_000;

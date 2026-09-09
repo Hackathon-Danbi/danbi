@@ -6,9 +6,9 @@ import static org.mockito.Mockito.*;
 
 import com.danbi.domain.agent.AgentTestSupport;
 import com.danbi.domain.agent.llm.AiGateway;
-import com.danbi.domain.agent.entity.AgentException;
-import com.danbi.domain.agent.entity.AgentModels.Reply;
-import com.danbi.domain.agent.entity.Screen;
+import com.danbi.domain.agent.model.AgentException;
+import com.danbi.domain.agent.model.AgentModels.Reply;
+import com.danbi.domain.agent.model.Screen;
 import java.time.Clock;
 import java.util.List;
 import org.junit.jupiter.api.Test;
