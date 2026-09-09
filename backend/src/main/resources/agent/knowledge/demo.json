@@ -1,0 +1,27 @@
+[
+  {
+    "id": "signup-steps", "domain": "signup", "title": "모의 가입 단계 안내", "version": "demo-v1",
+    "reference": "demo://signup/steps",
+    "text": "이 자료는 단비 개발용 예시이며 실제 은행 가입 절차가 아니다. NAME_INPUT 단계에서는 이름 입력란에 이름을 입력한다. PHONE_OWNERSHIP 단계에서는 본인 명의 휴대전화인지 확인한다. TERMS 단계에서는 약관 원문과 필수·선택 동의를 확인한다. 본인인증과 약관 동의의 완료 여부는 서버가 검증해야 한다."
+  },
+  {
+    "id": "signup-terms", "domain": "signup", "title": "모의 약관 안내", "version": "demo-v1",
+    "reference": "demo://signup/terms",
+    "text": "개발용 모의 약관: 필수 동의는 이 모의 서비스 진행에 필요한 항목이다. 선택 동의는 사용자가 선택할 수 있으며 선택 항목에 동의하지 않아도 모의 가입을 진행할 수 있다. 이 설명은 실제 은행 약관을 대체하지 않는다."
+  },
+  {
+    "id": "signup-error", "domain": "signup", "title": "모의 인증 오류 안내", "version": "demo-v1",
+    "reference": "demo://signup/errors",
+    "text": "개발용 모의 오류 안내: AUTH_EXPIRED는 인증 유효시간이 지났다는 뜻이다. 인증번호 다시 받기 버튼으로 새 번호를 요청한다. 인증번호나 비밀번호는 음성으로 말하지 않고 전용 입력란에 직접 입력한다."
+  },
+  {
+    "id": "product-deposit", "domain": "product", "title": "모의 예금 설명서", "version": "demo-v1",
+    "reference": "demo://products/deposit",
+    "text": "단비 모의 예금은 목돈을 한 번 맡기고 정한 기간 동안 보관하는 연습용 상품이다. 실제 판매 상품이 아니며 확정 금리는 제공하지 않는다. 기간 전에 해지할 때 적용되는 조건은 해당 실제 상품의 설명서로 확인해야 한다."
+  },
+  {
+    "id": "product-savings", "domain": "product", "title": "모의 적금 설명서", "version": "demo-v1",
+    "reference": "demo://products/savings",
+    "text": "단비 모의 적금은 정한 기간 동안 돈을 여러 번 나누어 모으는 연습용 상품이다. 매달 정한 금액을 내는 방식이나 자유롭게 내는 방식이 있으며 실제 상품에 따라 다르다. 이 예시에는 금리, 수수료, 가입 조건이 포함되어 있지 않다."
+  }
+]
