@@ -1,4 +1,4 @@
-package com.danbi.domain.agent.model;
+package com.danbi.domain.agent.entity;
 
 /** Business agents selected by the orchestrator; voice and phrasing are shared services. */
 public enum AgentType {

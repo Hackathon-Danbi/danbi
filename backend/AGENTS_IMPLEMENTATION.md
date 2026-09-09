@@ -65,7 +65,7 @@ backend/
 │   ├── model/        # AgentModels, AgentContext, AgentType, AgentOutcome, Screen: 데이터 계약
 │   ├── llm/          # AiGateway, OpenAiGateway, Prompts, Schemas
 │   ├── rag/          # KnowledgeStore: 분할·임베딩·검색
-│   ├── tools/        # BankingTools, BankingData, DemoBankTools: 금융 도구 계약과 모의 구현
+│   ├── tools/        # BankingTools, BankingData, DatabaseBankTools: 금융 도구 계약과 모의 구현
 │   └── service/
 │       ├── DanbiAgent.java          # 업무 Agent 공통 인터페이스
 │       ├── AgentSessions.java       # 세션 토큰, 만료, 대화 상태
@@ -142,7 +142,7 @@ curl http://localhost:8080/api/agents/chat \
 텍스트와 금액 안내는 검증된 값에서 템플릿으로 생성한다. 실제 송금은 일어나지 않는다.
 
 추가 대화 예:
-- `잔액 알려줘` → 고정 모의 잔액 150,000원.
+- `잔액 알려줘` → DB의 모의 잔액(최초 초기값 150,000원).
 - `지난주 거래내역 보여줘` → 서울 시간 기준 날짜 범위 및 모의 내역.
 - `아니 이만 원으로 바꿔줘` → 기존 송금 금액 수정.
 - `취소해` → 입력 중인 수취인·금액 제거.
@@ -217,7 +217,7 @@ curl -X DELETE http://localhost:8080/api/agents/sessions/current \
 쉬운 말 Agent를 별도 LLM 호출로 항상 추가하지 않아 지연을 줄인다.
 금융 금액·상태 안내는 LLM 재서술 없이 코드 템플릿으로 생성한다.
 
-프롬프트의 안전 규칙만으로 권한을 통제하지 않는다. `DemoBankTools`에는 실제 송금 메서드가 없으며,
+프롬프트의 안전 규칙만으로 권한을 통제하지 않는다. `DatabaseBankTools`에는 실제 송금 메서드가 없으며,
 모델이 반환한 임의 함수명이나 클래스명을 reflection/eval로 실행하지 않는다.
 
 ## 8. RAG 동작과 자료 교체
@@ -270,7 +270,7 @@ curl -X DELETE http://localhost:8080/api/agents/sessions/current \
 계약 테스트는 HTTP 요청 형식과 응답 파싱을 검증하며 라이브 모델의 접근 가능성/한국어 품질을 검증하지 않는다.
 
 현재 제한 및 다음 연결 지점:
-- `DemoBankTools`: 실제 인증된 사용자 컨텍스트를 사용하는 기존 계좌/거래 조회 서비스로 교체.
+- `DatabaseBankTools`: 기존 금융 테이블에서 설정된 계좌/소유자 범위로 조회한다. 실사용자별 조회에는 인증된 사용자·계좌 컨텍스트 연결이 추가로 필요하다.
 - `SignupAgent`: 현재 예시 세션의 NAME_INPUT 상태를 안내. 실제 단계 이동/동의/인증은 기존
   `OnboardingSessionService`와 사용자 소유권 검증을 연결해야 한다.
 - `PracticeCoachAgent`: 현재 세션의 수취인/금액 오류와 금액 수정만 집계. 장기 학습 기록과 단계별
@@ -311,7 +311,7 @@ public interface DanbiAgent {
 | PRACTICE, COACH | PRACTICE | PracticeCoachAgent |
 | CANCEL, OTHER, 모호한 요청 | 오케스트레이터 직접 처리 | 입력 취소 또는 안내 |
 
-`FinanceAgent`는 `DemoBankTools` 대신 `BankingTools` 인터페이스에 의존한다.
+`FinanceAgent`는 `DatabaseBankTools` 대신 `BankingTools` 인터페이스에 의존한다.
 
 ```java
 public interface BankingTools {
@@ -323,11 +323,11 @@ public interface BankingTools {
 ```
 
 각 DTO는 `BankingData`에 정의되어 있다. `TransferPreviewRequest`에는 수취인 id와 금액을 넣는다.
-도구는 자체 수취인 데이터와 금액 범위를 다시 검증하고, 검증된 이름·마스킹 계좌·금액으로
+도구는 DB에서 수취인과 현재 잔액을 조회해 금액 범위를 다시 검증하고, 검증된 이름·마스킹 계좌·금액으로
 `TransferPreview`를 반환한다. 사용자 입력 오류는 `BankingValidationException`으로 전달한다.
 금융 Agent는 반환된 미리보기의 값으로 화면과 문장을 함께 만든다.
 
-현재 구현체는 `DemoBankTools` 하나다. 추후 실제 금융·연습 구현체를 추가할 때 같은 계약을 사용하되,
+현재 구현체는 `DatabaseBankTools` 하나다. 추후 실제 금융·연습 구현체를 추가할 때 같은 계약을 사용하되,
 실제 사용자·계좌는 서버에서 검증한 컨텍스트로 바인딩해야 한다. 여러 구현체를 등록한다면
 프로필·Qualifier 또는 서버의 모드별 선택 정책으로 사용할 도구를 명시한다.
 이 변경은 실제 금융 연결이나 DEMO/PRACTICE 모드 정책을 추가하지 않는다.
@@ -377,3 +377,59 @@ public interface BankingTools {
 `VoiceUploadTest`는 2MB 경계와 빈 파일 처리를 검증하고,
 `VoiceMultipartIntegrationTest`는 실제 내장 서버에서 파일 2MB/요청 전체 3MB 제한을 검증한다.
 용량 초과 시 상태 코드뿐 아니라 Content-Type과 `message` 필드의 안내 문구도 검증한다.
+
+## 12. MySQL 데이터 저장 및 조회
+
+금융 데이터는 MySQL의 기존 `accounts`, `saved_recipients`, `transactions`에 저장한다.
+`DatabaseBankTools`는 기존 Repository를 사용하며, Java 초기 데이터 생성 코드나 메모리 금융 도구는 없다.
+서버 시작/재시작으로 데이터가 추가되거나 복구되지 않는다.
+
+기존 스키마가 준비된 MySQL에 `backend/sql/agent-banking-data.sql`을 직접 실행한다.
+SQL 첫 부분의 사용자·계좌·상품 ID를 사용할 DB 레코드에 맞춘다. 기존 행과 잔액은 보존하며,
+없는 사용자/상품/계좌와 수취인 4명·거래 2건만 INSERT한다. 새 사용자 행의 비밀번호는 비활성 값이다.
+기존 계좌의 소유자가 지정한 사용자와 다르면 연결을 바로잡아야 한다.
+
+```dotenv
+AGENT_USER_ID=1
+AGENT_ACCOUNT_ID=1
+```
+
+이 값은 기존 서비스의 사용자 1 기본값에 맞춘 서버 설정이다. `DatabaseBankTools`는
+`findByAccountIdAndUserId`로 소유자를 검사한다. 계좌가 없거나 소유자가 다르면 오류를 반환하며
+가짜 잔액으로 대체하지 않는다. 로그인 사용자별 동적 연결은 별도 작업이다.
+수취인 검색/미리보기 검증은 해당 사용자, 거래내역은 해당 계좌로 한정한다.
+수취인 ID는 DB의 숫자 PK를 문자열로 반환하고 계좌번호는 마지막 4자리만 표시한다.
+DB의 양수 출금 금액은 Agent 응답에서 음수로 변환한다.
+
+```sql
+SELECT account_id,user_id,balance FROM accounts WHERE account_id=1 AND user_id=1;
+SELECT * FROM saved_recipients WHERE user_id=1;
+SELECT * FROM transactions WHERE account_id=1 ORDER BY occurred_at DESC;
+```
+
+테스트도 `agent-banking.sql`로 테이블에 저장한 값을 실제 Repository로 조회한다.
+AI 응답만 테스트 대역을 사용하므로 OpenAI 비용은 발생하지 않는다.
+기본 테스트 DB는 H2이며 `DatabaseBankToolsTest`는 별도의 일회용 MySQL 접속 환경변수로도
+실행할 수 있다. 테스트 DB 설정은 `create-drop`이므로 사용자 데이터를 보관하는 DB에서 테스트하지 않는다.
+
+이전 변경에서 생성한 `agent_demo_*` 테이블이나 별도 데모 계좌가 기존 DB에 남아 있다면
+현재 코드는 자동으로 사용하거나 삭제하지 않는다. 조회 대상은 위 환경변수로 명시한 계좌뿐이다.
+
+### 로컬 MySQL 연결 확인 (2026-09-09)
+
+로컬 `localhost:3306/danbi`에 SQL을 직접 실행하여 사용자/계좌 ID 1, 잔액 150000,
+수취인 4명과 거래 2건을 저장했다. MySQL 9.3 연결 및 서버 시작을 확인했으며,
+수취인 조회 API와 2026년 9월 거래내역 API가 HTTP 200으로 저장 데이터를 반환했다.
+OpenAI 호출은 이 DB 연결 검증에 사용하지 않았다.
+
+DB 사용자/비밀번호는 Git에서 제외한 `backend/application-local.properties`에 저장한다.
+`application.properties`의 `spring.config.import`가 이를 읽고 `DB_USERNAME`, `DB_PASSWORD`를
+적용한다. 환경변수로도 덮어쓸 수 있다. 루트 또는 backend 디렉터리에서 실행할 수 있다.
+
+### 대화/음성 오류 수정 (2026-09-09)
+
+현재 월 조회는 오늘까지로 제한하며 미래 기간만 지정한 경우는 거절한다.
+송금 라우터는 누락 필드와 불명확한 필드를 구분하여 수취인/금액 추가 질문을 지원한다.
+송금 음성은 Screen의 검증된 이름·금액·계좌 끝 4자리로 생성하고 숫자를 한 자리씩 읽는다.
+화면의 마스킹 표시와 실제 미송금 안내는 유지한다.
+자동 테스트 227개와 실제 OpenAI 재검증 16개 항목이 통과했다.

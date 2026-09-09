@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.danbi.domain.agent.llm.AiGateway;
-import com.danbi.domain.agent.model.AgentModels.Decision;
-import com.danbi.domain.agent.model.AgentModels.Intent;
+import com.danbi.domain.agent.entity.AgentModels.Decision;
+import com.danbi.domain.agent.entity.AgentModels.Intent;
 import jakarta.servlet.MultipartConfigElement;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
@@ -35,6 +35,9 @@ class VoiceMultipartIntegrationTest {
     private final JsonMapper json = JsonMapper.builder().build();
 
     @Test
+    @org.springframework.test.context.jdbc.Sql("/agent-banking.sql")
+    @org.springframework.test.context.jdbc.Sql(scripts = "/agent-banking-cleanup.sql",
+            executionPhase = org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void actualServerAcceptsTwoMiBFileIncludingMultipartOverhead() throws Exception {
         assertEquals(2L * 1024 * 1024, config.getMaxFileSize());
         assertEquals(3L * 1024 * 1024, config.getMaxRequestSize());

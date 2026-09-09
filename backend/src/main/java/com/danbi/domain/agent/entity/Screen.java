@@ -1,4 +1,4 @@
-package com.danbi.domain.agent.model;
+package com.danbi.domain.agent.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.danbi.domain.agent.tools.BankingData.TransactionData;

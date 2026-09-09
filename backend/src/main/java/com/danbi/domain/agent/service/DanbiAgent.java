@@ -1,8 +1,8 @@
 package com.danbi.domain.agent.service;
 
-import com.danbi.domain.agent.model.AgentContext;
-import com.danbi.domain.agent.model.AgentOutcome;
-import com.danbi.domain.agent.model.AgentType;
+import com.danbi.domain.agent.entity.AgentContext;
+import com.danbi.domain.agent.entity.AgentOutcome;
+import com.danbi.domain.agent.entity.AgentType;
 
 public interface DanbiAgent {
     AgentType supports();

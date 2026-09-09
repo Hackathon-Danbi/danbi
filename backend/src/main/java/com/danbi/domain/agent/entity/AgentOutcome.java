@@ -1,6 +1,6 @@
-package com.danbi.domain.agent.model;
+package com.danbi.domain.agent.entity;
 
-import com.danbi.domain.agent.model.AgentModels.Source;
+import com.danbi.domain.agent.entity.AgentModels.Source;
 import java.util.List;
 
 public record AgentOutcome(String agent, String text, Screen screen, List<Source> sources) {
