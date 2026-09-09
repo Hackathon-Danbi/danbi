@@ -1,11 +1,15 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { formatWon } from '@/features/shared/data';
+import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 import { BORDER, CREAM, INK, YELLOW } from '../theme';
 import { IconCard } from './icons';
 
-/** danbi_jj main/components.tsx <AccountCard> 이식. */
+/** 현재 앱에서 선택한 통장을 홈에서도 동일하게 보여준다. */
 export function AccountCard() {
+  const { selectedAccount } = useSelectedAccount();
+
   return (
     <View style={styles.card}>
       <View style={styles.row}>
@@ -13,14 +17,21 @@ export function AccountCard() {
           <IconCard />
         </View>
         <View style={styles.flex1}>
-          <AppText size={13} weight={700} color="#888" style={styles.mb3}>
-            KB나라사랑우대통장 (7878)
+          <AppText
+            size={13}
+            weight={700}
+            color="#888"
+            numberOfLines={1}
+            style={styles.mb3}
+          >
+            {selectedAccount.bankName} · {selectedAccount.accountName}
           </AppText>
           <AppText size={26} weight={900} color={INK} letterSpacing={-0.5} style={styles.mb2}>
-            1,250,000원
+            {formatWon(selectedAccount.balance)}
           </AppText>
-          <AppText size={12} color="#AAA">
-            출금 가능 금액 1,250,000원
+          <AppText size={12} color="#AAA" numberOfLines={1}>
+            {selectedAccount.maskedAccountNumber} · 출금 가능{' '}
+            {formatWon(selectedAccount.balance)}
           </AppText>
         </View>
       </View>

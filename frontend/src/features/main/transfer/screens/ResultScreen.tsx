@@ -1,7 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 import { INK, YELLOW } from '../../theme';
+import { isBalanceVoiceQuery } from '../../voiceQuery';
 import { FloatingHomeButton } from '../../components/FloatingHomeButton';
 import { MicIcon } from '../../components/MicIcon';
 import { NavBar } from '../../components/NavBar';
@@ -11,11 +13,24 @@ export function ResultScreen({
   onBack,
   onViewHistory,
   onMic,
+  question,
+  answerText,
+  relatedAccountId,
+  onReplay,
 }: {
   onBack: () => void;
   onViewHistory: () => void;
   onMic: () => void;
+  question: string;
+  answerText: string;
+  relatedAccountId?: number | null;
+  onReplay?: () => void;
 }) {
+  const { accounts, selectedAccount } = useSelectedAccount();
+  const answeredAccount =
+    accounts.find((account) => account.accountId === relatedAccountId) ?? selectedAccount;
+  const showsBalance = isBalanceVoiceQuery(question);
+
   return (
     <View style={styles.root}>
       <NavBar title="단비가 알려드려요" onBack={onBack} />
@@ -26,7 +41,7 @@ export function ResultScreen({
               박옥순님의 말씀
             </AppText>
             <AppText size={15} weight={700} color={INK}>
-              &quot;내 통장에 얼마 있어&quot;
+              &quot;{question}&quot;
             </AppText>
           </View>
         </View>
@@ -43,24 +58,36 @@ export function ResultScreen({
             </AppText>
           </View>
           <View style={styles.answerBody}>
-            <AppText size={15} color="#666" style={styles.mb4}>
-              KB나라사랑우대통장에
-            </AppText>
-            <AppText size={34} weight={900} color={INK} style={styles.mb4}>
-              1,250,000<AppText size={21} weight={900} color={INK}>원</AppText>
-            </AppText>
-            <AppText size={15} color="#666" style={styles.mb12}>
-              있어요.
-            </AppText>
+            {showsBalance ? (
+              <>
+                <AppText size={15} color="#666" style={styles.mb4}>
+                  {answeredAccount.bankName} {answeredAccount.accountName}에
+                </AppText>
+                <AppText size={34} weight={900} color={INK} style={styles.mb4}>
+                  {answeredAccount.balance.toLocaleString('ko-KR')}
+                  <AppText size={21} weight={900} color={INK}>
+                    원
+                  </AppText>
+                </AppText>
+                <AppText size={15} color="#666" style={styles.mb12}>
+                  있어요.
+                </AppText>
+              </>
+            ) : (
+              <AppText size={20} weight={800} color={INK} lineHeight={31} style={styles.mb12}>
+                {answerText}
+              </AppText>
+            )}
             <View style={styles.chip}>
               <AppText size={12} color="#999">
-                확인한 계좌 · 7878
+                확인한 통장 · {answeredAccount.accountName}
               </AppText>
             </View>
           </View>
         </View>
 
         {[
+          ...(onReplay ? [{ label: '🔊  답변 다시 듣기', action: onReplay }] : []),
           { label: '📋  거래내역 보기', action: onViewHistory },
           { label: '✅  그럼 됐어요', action: onBack },
         ].map((item) => (

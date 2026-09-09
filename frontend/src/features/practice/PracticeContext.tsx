@@ -13,6 +13,9 @@ import { savedRecipients } from './data/recipients.mock';
 import { AMOUNT_MAX_DIGITS, appendDigits, formatWon } from './utils';
 import type { ReviewableTransferStep } from '@/features/missions/transferDifficulty';
 import { initialStateForReviewStep, screenForReviewStep } from './reviewMode';
+import { isApiConfigured, practiceApi } from '@/api';
+import type { PracticeSession, RecordedAudio } from '@/api';
+import { PRACTICE_PASSWORD, PRACTICE_PASSWORD_LENGTH } from './practicePassword';
 
 type GoOptions = { replace?: boolean; reset?: boolean };
 export type PracticeFlowMode = 'full' | 'review';
@@ -31,6 +34,8 @@ interface PracticeContextValue {
   practiceVoiceRecipientName: string;
   setPracticeVoiceRecipientName: (value: string) => void;
   practiceRecipientName: string;
+  practiceRecipients: readonly import('./types').SavedRecipient[];
+  recognizePracticeVoice: (audio: RecordedAudio) => Promise<string>;
   practiceAmount: string;
   setPracticeAmount: (value: string) => void;
   formattedPracticeAmount: string;
@@ -72,6 +77,7 @@ export function PracticeProvider({
   initialState,
   mode = 'full',
   reviewStep = null,
+  apiMissionId,
 }: {
   children: ReactNode;
   onComplete?: () => void;
@@ -80,6 +86,7 @@ export function PracticeProvider({
   initialState?: PracticeInitialState;
   mode?: PracticeFlowMode;
   reviewStep?: ReviewableTransferStep | null;
+  apiMissionId?: number;
 }) {
   const [history, setHistory] = useState<PracticeScreen[]>([initialState?.screen ?? 'practiceHub']);
   const screen = history[history.length - 1];
@@ -96,11 +103,57 @@ export function PracticeProvider({
   const [transferMethod, setTransferMethod] = useState<TransferMethod>(initialState?.transferMethod ?? 'voice');
   const [pin, setPin] = useState('');
   const [praise, setPraise] = useState<Praise | null>(null);
+  const [practiceRecipients, setPracticeRecipients] = useState<readonly import('./types').SavedRecipient[]>(savedRecipients);
+  const sessionPromiseRef = useRef<Promise<PracticeSession> | null>(null);
+  const transferSubmittingRef = useRef(false);
   const practiceTarget = useMemo<PracticeTarget>(() => initialState?.target ?? ({
     recipient: savedRecipients[0],
     amount: '30000',
     amountLabel: '30,000원',
   }), [initialState?.target]);
+
+  useEffect(() => {
+    if (!apiMissionId || !isApiConfigured() || mode === 'review') return;
+    let active = true;
+    void practiceApi.getAccounts().then((accounts) => {
+      if (!active || accounts.length === 0) return;
+      setPracticeRecipients(accounts.map((account) => ({
+        id: String(account.accountId),
+        name: account.recipientName,
+        bank: account.bankCode === '004' ? 'KB국민은행' : `은행코드 ${account.bankCode}`,
+        account: account.accountNumber,
+        initials: account.recipientName.slice(0, 1),
+      })));
+    }).catch(() => {
+      // 백엔드 준비 전에는 기존 연습 계좌를 그대로 유지한다.
+    });
+    return () => {
+      active = false;
+    };
+  }, [apiMissionId, mode]);
+
+  const ensureSession = useCallback((inputType: 'VOICE' | 'DIRECT') => {
+    if (!apiMissionId || !isApiConfigured()) return null;
+    if (!sessionPromiseRef.current) {
+      const request = practiceApi.createSession(
+        apiMissionId,
+        practiceStyle === 'guided' ? 'GUIDED' : 'SOLO',
+        inputType,
+      );
+      sessionPromiseRef.current = request;
+      void request.catch(() => {
+        if (sessionPromiseRef.current === request) sessionPromiseRef.current = null;
+      });
+    }
+    return sessionPromiseRef.current;
+  }, [apiMissionId, practiceStyle]);
+
+  const recognizePracticeVoice = useCallback(async (audio: RecordedAudio) => {
+    const session = await ensureSession('VOICE');
+    if (!session) throw new Error('연습 음성 API가 설정되지 않았습니다.');
+    const result = await practiceApi.recognizeVoice(session.sessionId, audio);
+    return result.recognizedText;
+  }, [ensureSession]);
 
   // useState 의 setter 는 참조가 고정이므로 아래 콜백들도 마운트 동안 안정적이다.
   const clearPracticeData = useCallback(() => {
@@ -153,12 +206,14 @@ export function PracticeProvider({
 
   const choosePracticeStyle = useCallback((style: Exclude<PracticeStyle, null>) => {
     clearPracticeData();
+    sessionPromiseRef.current = null;
     setPracticeStyle(style);
     setHistory(['practiceHub', 'practiceMethod']);
   }, [clearPracticeData]);
 
   const beginPractice = useCallback((method: TransferMethod) => {
     clearPracticeData();
+    sessionPromiseRef.current = null;
     setTransferMethod(method);
     setHistory((current) => {
       const base = current[current.length - 1] === 'practiceComplete'
@@ -203,7 +258,7 @@ export function PracticeProvider({
   const practiceRecipientName = practiceVoiceRecipientName || (
     practiceRecipientChoice === 'new'
       ? '새로 입력한 계좌'
-      : savedRecipients.find((recipient) => recipient.id === practiceRecipientChoice)?.name ?? ''
+      : practiceRecipients.find((recipient) => recipient.id === practiceRecipientChoice)?.name ?? ''
   );
 
   const onTransferAttemptRef = useRef(onTransferAttempt);
@@ -212,8 +267,13 @@ export function PracticeProvider({
   });
 
   useEffect(() => {
-    if (screen !== 'practicePin' || pin.length !== 4) return;
+    if (screen !== 'practicePin' || pin.length !== PRACTICE_PASSWORD_LENGTH || transferSubmittingRef.current) return;
     const timer = setTimeout(() => {
+      if (pin !== PRACTICE_PASSWORD) {
+        setPin('');
+        setPracticeMistakeMessage('연습용 비밀번호 1234를 입력해주세요.');
+        return;
+      }
       if (mode === 'review') {
         setHistory(['practiceReviewComplete']);
         return;
@@ -221,14 +281,54 @@ export function PracticeProvider({
         onTransferAttemptRef.current();
         return;
       }
-      if (practiceStyle === 'guided') {
-        setPraise({ text: '송금 연습을 모두 마쳤어요.', next: 'practiceComplete' });
-      } else {
-        setHistory(['practiceComplete']);
+      const completeLocally = () => {
+        if (practiceStyle === 'guided') {
+          setPraise({ text: '송금 연습을 모두 마쳤어요.', next: 'practiceComplete' });
+        } else {
+          setHistory(['practiceComplete']);
+        }
+      };
+      if (!apiMissionId || !isApiConfigured()) {
+        completeLocally();
+        return;
       }
+
+      transferSubmittingRef.current = true;
+      void (async () => {
+        try {
+          const session = await ensureSession(transferMethod === 'voice' ? 'VOICE' : 'DIRECT');
+          const recipient = practiceRecipients.find((item) => (
+            item.id === practiceRecipientChoice || item.account === practiceRecipient
+          ));
+          if (!session || !recipient) throw new Error('연습용 받는 사람을 다시 선택해주세요.');
+          const accountId = Number(recipient.id);
+          if (!Number.isFinite(accountId)) throw new Error('연습용 계좌 정보를 확인하지 못했어요.');
+          const transfer = await practiceApi.transfer(
+            session.sessionId,
+            accountId,
+            Number(practiceAmount),
+            pin,
+          );
+          const result = await practiceApi.getResult(session.sessionId);
+          if (!transfer.practiceCompleted || !result.practiceCompleted || result.actualTransferCreated) {
+            throw new Error('연습 송금 완료 결과를 확인하지 못했어요.');
+          }
+          completeLocally();
+        } catch (cause) {
+          setPin('');
+          setPracticeMistakeMessage(
+            cause instanceof Error ? cause.message : '연습 송금을 완료하지 못했어요. 다시 시도해주세요.',
+          );
+        } finally {
+          transferSubmittingRef.current = false;
+        }
+      })();
     }, 350);
     return () => clearTimeout(timer);
-  }, [mode, pin, practiceStyle, screen]);
+  }, [
+    apiMissionId, ensureSession, mode, pin, practiceAmount, practiceRecipient,
+    practiceRecipientChoice, practiceRecipients, practiceStyle, screen, transferMethod,
+  ]);
 
   useEffect(() => {
     if (!praise) return;
@@ -264,6 +364,8 @@ export function PracticeProvider({
     practiceVoiceRecipientName,
     setPracticeVoiceRecipientName,
     practiceRecipientName,
+    practiceRecipients,
+    recognizePracticeVoice,
     practiceAmount,
     setPracticeAmount,
     formattedPracticeAmount: formatWon(practiceAmount),
@@ -288,10 +390,11 @@ export function PracticeProvider({
     beginPractice,
   }), [
     screen, history.length, practiceStyle, practiceTarget, practiceRecipient, practiceRecipientChoice,
-    practiceVoiceRecipientName, practiceRecipientName, practiceAmount,
+    practiceVoiceRecipientName, practiceRecipientName, practiceRecipients, practiceAmount,
     practiceMistakeMessage, transferMethod, pin, praise,
     mode, reviewStep, go, back, guidedNext, completePracticeStep, startReviewStep,
     restartReview, exitReview, choosePracticeStyle, beginPractice, enterPracticeAmount,
+    recognizePracticeVoice,
   ]);
 
   return <PracticeContext.Provider value={value}>{children}</PracticeContext.Provider>;

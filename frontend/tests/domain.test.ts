@@ -41,6 +41,11 @@ import {
   listHelpTarget,
   reviewDetailVoice,
 } from '../src/features/main/history/historyHelp';
+import { accounts } from '../src/features/shared/data/accounts.mock';
+import {
+  createBalanceVoiceAnswer,
+  isBalanceVoiceQuery,
+} from '../src/features/main/voiceQuery';
 
 test('entry and onboarding destination routes remain distinct', () => {
   assert.equal(resolveEntryRoute(null, false), '/welcome');
@@ -91,6 +96,17 @@ test('transaction records expose detail fields for the history popup', () => {
   assert.equal(convenience?.merchant, 'CU 선릉점');
   assert.equal(convenience?.category, '식비');
   assert.equal(formatTxOccurredAt(convenience!), '8월 29일 오후 2:10');
+});
+
+test('home balance voice answer uses the currently selected account', () => {
+  const savingsAccount = accounts.find((account) => account.accountId === 12)!;
+  const answer = createBalanceVoiceAnswer(savingsAccount);
+
+  assert.equal(isBalanceVoiceQuery('내 통장에 얼마 있어?'), true);
+  assert.equal(isBalanceVoiceQuery('잔액 알려줘'), true);
+  assert.equal(isBalanceVoiceQuery('최근 거래내역 알려줘'), false);
+  assert.equal(answer.answerText, '우체국 저축 통장에 10,000,000원 있어요.');
+  assert.equal(answer.relatedAccountId, 12);
 });
 
 test('saved recipients support aliases and reject duplicate account saves', () => {

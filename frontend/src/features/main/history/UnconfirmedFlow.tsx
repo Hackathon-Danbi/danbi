@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Screen } from '@/components/ui/Screen';
@@ -10,6 +10,8 @@ import { groupUnconfirmedByAccount, summaryLines, totalUnconfirmed } from './unc
 import { UnconfirmedScreen } from './screens/UnconfirmedScreen';
 import { SummaryReadScreen } from './screens/SummaryReadScreen';
 import { AccountBreakdownScreen } from './screens/AccountBreakdownScreen';
+import { isApiConfigured, voiceApi } from '@/api';
+import type { UnreadVoiceSummary } from '@/api';
 
 type FlowScreen = 'intro' | 'summary' | 'breakdown';
 
@@ -32,13 +34,31 @@ export function UnconfirmedFlow() {
   const { accounts } = useSelectedAccount();
   const { transactions } = useTransactions();
   const [screen, setScreen] = useState<FlowScreen>(() => asFlowScreen(view));
+  const [apiSummary, setApiSummary] = useState<UnreadVoiceSummary | null>(null);
+
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    let active = true;
+    void voiceApi.getUnreadSummary().then((summary) => {
+      if (active) setApiSummary(summary);
+    }).catch(() => {
+      // 백엔드 준비 전에는 현재 기기의 거래 요약을 그대로 사용한다.
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const groups = useMemo(
     () => groupUnconfirmedByAccount(accounts, transactions),
     [accounts, transactions],
   );
-  const total = useMemo(() => totalUnconfirmed(groups), [groups]);
-  const lines = useMemo(() => summaryLines(groups), [groups]);
+  const localTotal = useMemo(() => totalUnconfirmed(groups), [groups]);
+  const localLines = useMemo(() => summaryLines(groups), [groups]);
+  const total = apiSummary?.unreadCount ?? localTotal;
+  const lines = apiSummary
+    ? apiSummary.accounts.map((account) => `${account.accountName} ${account.unreadCount}건`)
+    : localLines;
 
   const goHome = () => router.dismissTo('/(app)/home');
   const goIntro = () => setScreen('intro');
@@ -67,6 +87,8 @@ export function UnconfirmedFlow() {
           <SummaryReadScreen
             total={total}
             lines={lines}
+            summaryText={apiSummary?.summaryText}
+            audioUrl={apiSummary?.audioUrl}
             onDetail={() => setScreen('breakdown')}
             onBack={goIntro}
           />

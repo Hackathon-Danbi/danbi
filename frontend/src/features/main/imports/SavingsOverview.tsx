@@ -3,16 +3,24 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { INK } from '../theme';
 import { MoneyBag } from './_shared';
+import type { SavingsProductSummary } from '@/api';
 
 /** danbi_jj app/imports/01SavingsOverview4 (적금 개요 카드) 정보 구조 이식. */
-export function SavingsOverviewCard() {
+export function SavingsOverviewCard({ product }: { product: SavingsProductSummary }) {
+  const payment = product.currentMonthPayment;
+  const paymentAmount = payment?.amount || payment?.scheduledAmount || 0;
+  const paymentLabel = payment?.status === 'PAID'
+    ? `✓ ${paymentAmount.toLocaleString('ko-KR')}원 완료`
+    : payment?.status === 'UNPAID'
+      ? `${paymentAmount.toLocaleString('ko-KR')}원 미납`
+      : `${paymentAmount.toLocaleString('ko-KR')}원 예정`;
   return (
     <View style={styles.card}>
       <View style={styles.top}>
         <MoneyBag />
         <View style={styles.flex1}>
           <AppText size={20} weight={900} color={INK}>
-            KB 국민행복적금
+            {product.productName}
           </AppText>
         </View>
       </View>
@@ -21,7 +29,7 @@ export function SavingsOverviewCard() {
         현재 모은 금액
       </AppText>
       <AppText size={34} weight={900} color={INK} letterSpacing={-1} style={styles.amount}>
-        3,600,000원
+        {product.balance.toLocaleString('ko-KR')}원
       </AppText>
 
       <View style={styles.row}>
@@ -30,7 +38,7 @@ export function SavingsOverviewCard() {
             이번 달 납입
           </AppText>
           <AppText size={20} weight={900} color="#13855f">
-            ✓ 30만원 완료
+            {payment ? paymentLabel : '납입 정보 없음'}
           </AppText>
         </View>
         <View style={styles.stat}>
@@ -38,7 +46,7 @@ export function SavingsOverviewCard() {
             만기까지
           </AppText>
           <AppText size={20} weight={900} color={INK}>
-            약 11개월
+            약 {product.remainingMonths}개월
           </AppText>
         </View>
       </View>

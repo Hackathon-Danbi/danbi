@@ -1,5 +1,5 @@
 import { savedRecipients } from './data/recipients.mock';
-import type { RecipientChoice, SavedRecipient, SavedRecipientId } from './types';
+import type { RecipientChoice, SavedRecipient } from './types';
 
 export type VoiceRecipient = Omit<SavedRecipient, 'id' | 'initials'> & {
   id: string;
@@ -118,7 +118,7 @@ export function parseVoiceTransfer(
   const spokenName = compact.match(/^(.+?)(?:님)?(?:에게|한테)/)?.[1]?.replace(/님$/, '') ?? '';
   const amount = parseSpokenAmount(heard);
   const recipient = spokenName
-    ? findRecipient(spokenName, [...savedRecipients, ...additionalRecipients])
+    ? findRecipient(spokenName, [...additionalRecipients, ...savedRecipients])
     : null;
 
   let issue: VoiceTransferIssue = 'none';
@@ -159,11 +159,7 @@ export function createVoicePracticeStatePatch(
   return {
     ...(result.recipient
       ? {
-          recipientChoice: (
-            result.recipient.id === 'minsu' || result.recipient.id === 'younghee'
-              ? result.recipient.id as SavedRecipientId
-              : 'new'
-          ),
+          recipientChoice: result.recipient.id as RecipientChoice,
           recipientAccount: result.recipient.account,
           recipientName: result.recipient.name,
         }

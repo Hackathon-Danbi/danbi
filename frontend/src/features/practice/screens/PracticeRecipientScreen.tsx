@@ -10,7 +10,6 @@ import { PracticeMistakeFeedback } from '../components/PracticeMistakeFeedback';
 import { PracticeProgress } from '../components/PracticeProgress';
 import { RecipientAccountList } from '../components/RecipientAccountList';
 import { SoloHelp } from '../components/SoloHelp';
-import { savedRecipients } from '../data/recipients.mock';
 import type { SavedRecipient } from '../types';
 import {
   ACCOUNT_NUMBER_MAX_DIGITS,
@@ -24,6 +23,7 @@ export function PracticeRecipientScreen() {
   const {
     practiceStyle,
     practiceTarget,
+    practiceRecipients,
     practiceRecipient,
     setPracticeRecipient,
     practiceRecipientChoice,
@@ -46,7 +46,10 @@ export function PracticeRecipientScreen() {
     : isValidPracticeRecipient(practiceRecipientChoice, practiceRecipient);
 
   const selectSavedRecipient = (recipient: SavedRecipient) => {
-    if (guided && recipient.id !== practiceTarget.recipient.id) {
+    const matchesTarget = recipient.id === practiceTarget.recipient.id
+      || recipient.name === practiceTarget.recipient.name
+      || recipient.account === practiceTarget.recipient.account;
+    if (guided && !matchesTarget) {
       reportPracticeMistake(
         recipientReview
           ? `‘${practiceTarget.recipient.name}’님을 찾아 다시 눌러보세요.`
@@ -105,7 +108,7 @@ export function PracticeRecipientScreen() {
 
         {!accountReview ? (
           <RecipientAccountList
-            recipients={savedRecipients}
+            recipients={practiceRecipients}
             selectedChoice={practiceRecipientChoice}
             onSelectRecipient={selectSavedRecipient}
             onSelectNewRecipient={selectNewRecipient}

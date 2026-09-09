@@ -7,6 +7,7 @@ import { BackHeader } from '../components/BackHeader';
 import { PinNumberPad } from '../components/NumericKeypad';
 import { PracticeMistakeFeedback } from '../components/PracticeMistakeFeedback';
 import { SoloHelp } from '../components/SoloHelp';
+import { PRACTICE_PASSWORD, PRACTICE_PASSWORD_LENGTH } from '../practicePassword';
 
 /** danbi_jj practice/screens/PracticePinScreen.tsx 이식. */
 export function PracticePinScreen() {
@@ -31,11 +32,13 @@ export function PracticePinScreen() {
           <AppText size={28}>▣</AppText>
         </View>
         <AppText size={24} weight={900} color={P.ink} align="center" lineHeight={33}>
-          {guided ? '연습용 비밀번호\n4자리를 입력해보세요' : '연습용 비밀번호를\n입력해 주세요'}
+          {guided
+            ? `연습용 비밀번호\n${PRACTICE_PASSWORD}를 입력해보세요`
+            : '연습용 비밀번호를\n입력해 주세요'}
         </AppText>
 
         <View style={styles.dots}>
-          {[0, 1, 2, 3].map((i) => (
+          {Array.from({ length: PRACTICE_PASSWORD_LENGTH }, (_, i) => i).map((i) => (
             <View key={i} style={[styles.dot, i < pin.length && styles.dotFilled]} />
           ))}
         </View>
@@ -49,18 +52,22 @@ export function PracticePinScreen() {
             <AppText size={14} weight={900} color={P.ink}>
               실제 비밀번호를 입력하지 마세요.
             </AppText>
-            {guided ? '\n아무 숫자나 4개 눌러 연습하세요.' : ''}
+            {guided ? `\n${PRACTICE_PASSWORD}를 입력해 연습하세요.` : ''}
           </AppText>
         </View>
 
         {!guided ? (
-          <SoloHelp key={pin.length} hint="연습용이므로 실제 비밀번호 대신 아무 숫자나 4개 입력하면 돼요." />
+          <SoloHelp
+            key={pin.length}
+            hint={`실제 비밀번호가 아니라 연습용 번호 ${PRACTICE_PASSWORD}를 입력하면 돼요.`}
+          />
         ) : null}
       </ScrollView>
 
       <View style={styles.pad}>
         <PinNumberPad
           value={pin}
+          maxLength={PRACTICE_PASSWORD_LENGTH}
           onChange={(value) => {
             if (guided && value === pin && pin.length === 0) {
               reportPracticeMistake('잘못 눌렀어요.\n아래 숫자 버튼을 눌러주세요.');

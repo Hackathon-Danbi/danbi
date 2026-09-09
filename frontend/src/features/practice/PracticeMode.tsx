@@ -92,6 +92,8 @@ export interface PracticeModeProps {
   initialState?: PracticeInitialState;
   mode?: PracticeFlowMode;
   startStep?: TransferDifficultyStep;
+  /** API 명세의 숫자형 송금 연습 미션 ID. */
+  apiMissionId?: number;
 }
 
 /** danbi_jj practice/PracticeMode.tsx 이식. <PracticeMode /> 하나만 렌더하면 된다. */
@@ -103,6 +105,7 @@ export function PracticeMode({
   initialState,
   mode = 'full',
   startStep = 'recipient',
+  apiMissionId,
 }: PracticeModeProps) {
   const reviewStep = isReviewableTransferStep(startStep) ? startStep : 'recipient';
   const resolvedInitialState = mode === 'review'
@@ -117,6 +120,7 @@ export function PracticeMode({
       initialState={resolvedInitialState}
       mode={mode}
       reviewStep={mode === 'review' ? reviewStep : null}
+      apiMissionId={apiMissionId}
     >
       <PracticeRouter onExit={onExit} />
     </PracticeProvider>

@@ -3,16 +3,17 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { INK } from '../theme';
 import { MoneyBag } from './_shared';
+import type { SavingsProductSummary } from '@/api';
 
 /** danbi_jj app/imports/02DepositOverview1 (예금 개요 카드) 정보 구조 이식. */
-export function DepositOverviewCard() {
+export function DepositOverviewCard({ product }: { product: SavingsProductSummary }) {
   return (
     <View style={styles.card}>
       <View style={styles.top}>
         <MoneyBag />
         <View style={styles.flex1}>
           <AppText size={20} weight={900} color={INK}>
-            KB 국민수퍼정기예금
+            {product.productName}
           </AppText>
         </View>
       </View>
@@ -21,7 +22,7 @@ export function DepositOverviewCard() {
         현재 맡긴 금액
       </AppText>
       <AppText size={34} weight={900} color={INK} letterSpacing={-1} style={styles.amount}>
-        10,000,000원
+        {product.balance.toLocaleString('ko-KR')}원
       </AppText>
 
       <View style={styles.row}>
@@ -30,7 +31,7 @@ export function DepositOverviewCard() {
             적용 금리
           </AppText>
           <AppText size={20} weight={900} color={INK}>
-            연 3.20%
+            연 {product.appliedInterestRate.toFixed(2)}%
           </AppText>
         </View>
         <View style={styles.stat}>
@@ -38,7 +39,7 @@ export function DepositOverviewCard() {
             만기까지
           </AppText>
           <AppText size={20} weight={900} color={INK}>
-            약 5개월
+            약 {product.remainingMonths}개월
           </AppText>
         </View>
       </View>

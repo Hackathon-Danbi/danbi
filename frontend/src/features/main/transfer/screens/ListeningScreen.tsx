@@ -38,6 +38,8 @@ export function ListeningScreen({
   onManualInput,
   helpTarget = '',
   onActivity,
+  recording = false,
+  onFinishRecording,
 }: {
   mode: Mode;
   phase: ListeningPhase;
@@ -51,9 +53,12 @@ export function ListeningScreen({
   onManualInput?: () => void;
   helpTarget?: string;
   onActivity?: () => void;
+  /** 서버 STT용 오디오를 녹음 중인지 여부. */
+  recording?: boolean;
+  onFinishRecording?: () => void;
 }) {
   const copy = COPY[mode];
-  const showButtons = phase !== 'idle' || !!error;
+  const showButtons = phase !== 'idle' || !!error || recording;
   const showRetry = !error || retryable;
 
   return (
@@ -92,9 +97,9 @@ export function ListeningScreen({
             <AppText size={28} weight={900} color={INK} align="center" style={styles.mb28}>
               {phase === 'confirmed' ? '이렇게 들었어요' : '말씀을 듣고 있어요'}
             </AppText>
-            {phase !== 'confirmed' ? <Waveform active={phase === 'heard'} /> : null}
+            {phase !== 'confirmed' ? <Waveform active={recording || phase === 'heard'} /> : null}
 
-            {phase === 'idle' ? (
+            {phase === 'idle' && !recording ? (
               <>
                 <AppText size={14} color="#888" align="center" style={styles.idleHint}>
                   궁금한 내용을 편하게 말씀해주세요.
@@ -116,6 +121,12 @@ export function ListeningScreen({
                   </View>
                 </PulseHighlight>
               </>
+            ) : null}
+
+            {phase === 'idle' && recording ? (
+              <AppText size={14} color="#888" align="center" style={styles.idleHint}>
+                말씀을 마치면 아래 버튼을 눌러주세요.
+              </AppText>
             ) : null}
 
             {phase === 'heard' ? (
@@ -156,26 +167,33 @@ export function ListeningScreen({
       {showButtons ? (
         <PulseHighlight active={helpTarget === 'listenActions'} borderRadius={14}>
           <View style={styles.footer}>
-            {showRetry ? (
+            {recording && onFinishRecording ? (
+              <Pressable accessibilityRole="button" onPress={onFinishRecording} style={[styles.fBtn, styles.fPrimary]}>
+                <AppText size={16} weight={700} color={INK}>
+                  말하기 완료
+                </AppText>
+              </Pressable>
+            ) : null}
+            {!recording && showRetry ? (
               <Pressable accessibilityRole="button" onPress={onRetry} style={[styles.fBtn, styles.fSecondary]}>
                 <AppText size={16} weight={700} color="#555">
                   다시 말하기
                 </AppText>
               </Pressable>
             ) : null}
-            {error && onManualInput ? (
+            {!recording && error && onManualInput ? (
               <Pressable accessibilityRole="button" onPress={onManualInput} style={[styles.fBtn, styles.fPrimary]}>
                 <AppText size={16} weight={700} color={INK}>
                   직접 입력하기
                 </AppText>
               </Pressable>
-            ) : (
+            ) : !recording && !error ? (
               <Pressable accessibilityRole="button" onPress={onConfirm} style={[styles.fBtn, styles.fPrimary]}>
                 <AppText size={16} weight={700} color={INK}>
                   네, 맞아요
                 </AppText>
               </Pressable>
-            )}
+            ) : null}
           </View>
         </PulseHighlight>
       ) : null}

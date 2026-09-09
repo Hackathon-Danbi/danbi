@@ -20,6 +20,7 @@ import {
   TRANSFER_DIFFICULTY_COPY,
 } from '../transferDifficulty';
 import type { TransferDifficulty } from '../transferDifficulty';
+import type { QuizAnswerResult, TodayDailyActivity } from '@/api';
 
 interface Props {
   completedMissionIds: Set<MissionId>;
@@ -27,7 +28,9 @@ interface Props {
   quizRecord: QuizRecord;
   todayMission: DailyMission;
   transferDifficulties: TransferDifficulty[];
-  onQuizComplete: (question: QuizQuestion, answeredIndex: number) => void;
+  apiDailyActivity?: TodayDailyActivity | null;
+  apiError?: string;
+  onQuizComplete: (question: QuizQuestion, answeredIndex: number) => Promise<QuizAnswerResult | void>;
   onStartDailyMission: (mission: DailyMission) => void;
   onOpenPracticePicker: () => void;
   onStartDifficultyReview: (difficulty: TransferDifficulty) => void;
@@ -46,6 +49,8 @@ export function DailyHubScreen({
   onOpenPracticePicker,
   onStartDifficultyReview,
   onExit,
+  apiDailyActivity,
+  apiError,
 }: Props) {
   const referenceDate = new Date();
   const summary = selectFinancialIndependenceState({
@@ -53,7 +58,17 @@ export function DailyHubScreen({
     dailyPracticeRecord,
     quizRecord,
   }, referenceDate);
-  const todayQuestion = getTodayQuestion(referenceDate);
+  const localTodayQuestion = getTodayQuestion(referenceDate);
+  const todayQuestion: QuizQuestion = apiDailyActivity ? {
+    id: apiDailyActivity.question.questionId,
+    type: 'ox',
+    question: apiDailyActivity.question.questionText,
+    choices: ['O', 'X'],
+    // 실제 정답과 해설은 답안 제출 응답으로 교체한다.
+    correctIndex: 0,
+    explanation: '',
+    category: '금융 상식',
+  } : localTodayQuestion;
   const {
     score,
     achieved,
@@ -61,8 +76,10 @@ export function DailyHubScreen({
     weeklyActivity,
     completedWeekdayCount,
   } = summary;
-  const todayQuizDone = todayActivity.quizCompleted;
-  const todayPracticeDone = todayActivity.practiceCompleted;
+  const todayQuizDone = apiDailyActivity
+    ? apiDailyActivity.question.selectedAnswer !== null
+    : todayActivity.quizCompleted;
+  const todayPracticeDone = apiDailyActivity?.practiceCompleted ?? todayActivity.practiceCompleted;
   const completedQuizAnswer = quizRecord[summary.todayKey];
   // 우선순위: 미완료 → 최근 occurredAt → 같은 조건이면 가장 최근에 전달된 항목.
   // reverse() 로 안정 정렬의 동점 처리 순서를 "나중에 전달된 항목이 먼저"로 맞춘다.
@@ -74,8 +91,9 @@ export function DailyHubScreen({
   const [quizResult, setQuizResult] = useState<{
     question: QuizQuestion;
     answeredIndex: number;
-    shouldComplete: boolean;
   } | null>(null);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+  const [quizError, setQuizError] = useState('');
   const quizResultIsCorrect = quizResult
     ? isQuizAnswerCorrect(quizResult.question, quizResult.answeredIndex)
     : false;
@@ -83,10 +101,24 @@ export function DailyHubScreen({
   // 🔊 음성 재생 중 화면을 떠나면(뷰 전환 / MissionMode 언마운트) 즉시 멈춘다.
   useEffect(() => () => ttsStop(), []);
 
-  const handleAnswer = (idx: number) => {
+  const handleAnswer = async (idx: number) => {
     if (todayQuizDone) return;
     ttsStop();
-    setQuizResult({ question: todayQuestion, answeredIndex: idx, shouldComplete: true });
+    setQuizSubmitting(true);
+    setQuizError('');
+    try {
+      const apiResult = await onQuizComplete(todayQuestion, idx);
+      const resolvedQuestion = apiResult ? {
+        ...todayQuestion,
+        correctIndex: (apiResult.correctAnswer ? 0 : 1) as 0 | 1,
+        explanation: apiResult.explanation,
+      } : todayQuestion;
+      setQuizResult({ question: resolvedQuestion, answeredIndex: idx });
+    } catch (cause) {
+      setQuizError(cause instanceof Error ? cause.message : '답안을 제출하지 못했어요. 다시 시도해주세요.');
+    } finally {
+      setQuizSubmitting(false);
+    }
   };
 
   const closeQuizResult = () => {
@@ -94,12 +126,7 @@ export function DailyHubScreen({
     setQuizResult(null);
   };
 
-  // 새로 푼 문제(shouldComplete)는 시트를 어떻게 닫든(버튼·배경 탭·뒤로가기)
-  // 완료로 기록해, 결과·해설까지 본 답이 유실되지 않게 한다. 다시 보기는 그대로 닫기만 한다.
   const completeQuiz = () => {
-    if (quizResult?.shouldComplete) {
-      onQuizComplete(quizResult.question, quizResult.answeredIndex);
-    }
     closeQuizResult();
   };
 
@@ -110,7 +137,6 @@ export function DailyHubScreen({
     setQuizResult({
       question,
       answeredIndex: completedQuizAnswer.answeredIndex,
-      shouldComplete: false,
     });
   };
 
@@ -130,6 +156,13 @@ export function DailyHubScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {apiError || quizError ? (
+          <View style={styles.apiError}>
+            <AppText size={13} weight={700} color="#a7372b" lineHeight={19}>
+              {quizError || apiError}
+            </AppText>
+          </View>
+        ) : null}
         {/* 1. 점수 카드 */}
         <View style={styles.card}>
           <View style={styles.scoreRow}>
@@ -233,7 +266,7 @@ export function DailyHubScreen({
                   오늘 퀴즈 완료
                 </AppText>
               </View>
-              <Pressable
+              {completedQuizAnswer ? <Pressable
                 accessibilityRole="button"
                 onPress={reviewCompletedQuiz}
                 style={styles.reviewQuizBtn}
@@ -241,7 +274,7 @@ export function DailyHubScreen({
                 <AppText size={13} weight={800} color={colors.accentText}>
                   오늘 문제 다시 보기
                 </AppText>
-              </Pressable>
+              </Pressable> : null}
             </View>
           ) : (
             <>
@@ -253,8 +286,13 @@ export function DailyHubScreen({
                   <Pressable
                     key={idx}
                     accessibilityRole="button"
-                    onPress={() => handleAnswer(idx)}
-                    style={[styles.quizBtn, todayQuestion.type === 'ox' && styles.quizBtnOx]}
+                    disabled={quizSubmitting}
+                    onPress={() => void handleAnswer(idx)}
+                    style={[
+                      styles.quizBtn,
+                      todayQuestion.type === 'ox' && styles.quizBtnOx,
+                      quizSubmitting && styles.quizBtnDisabled,
+                    ]}
                   >
                     <AppText
                       size={todayQuestion.type === 'ox' ? 26 : 15}
@@ -301,11 +339,14 @@ export function DailyHubScreen({
             <View style={styles.practiceBody}>
               <View style={styles.flex1}>
                 <AppText size={16} weight={800} color={colors.ink} lineHeight={21}>
-                  오늘 새로운 금융 상황을 연습해요
+                  {apiDailyActivity?.mission.title ?? '오늘 새로운 금융 상황을 연습해요'}
                 </AppText>
                 <AppText size={13} color={colors.muted} lineHeight={18} style={styles.mt3}>
-                  {todayMission.assistanceMode === 'guided' ? '따라하기' : '혼자 해보기'} ·{' '}
-                  {todayMission.inputMethod === 'voice' ? '음성으로 송금' : '직접 입력'}
+                  {apiDailyActivity?.mission.description ?? (
+                    `${todayMission.assistanceMode === 'guided' ? '따라하기' : '혼자 해보기'} · ${
+                      todayMission.inputMethod === 'voice' ? '음성으로 송금' : '직접 입력'
+                    }`
+                  )}
                 </AppText>
               </View>
               <View style={styles.practiceMeta}>
@@ -420,7 +461,7 @@ export function DailyHubScreen({
                   style={styles.resultCloseBtn}
                 >
                   <AppText size={17} weight={800} color="#fff">
-                    {quizResult.shouldComplete ? '완료하고 돌아가기' : '확인했어요'}
+                    확인했어요
                   </AppText>
                 </Pressable>
               </>
@@ -489,6 +530,12 @@ const styles = StyleSheet.create({
   },
   exitBtn: { paddingVertical: 6, paddingHorizontal: 4 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12, gap: 8 },
+  apiError: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#fff0ed',
+  },
   card: {
     borderRadius: 18,
     padding: 14,
@@ -559,6 +606,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f7f8fc',
   },
   quizBtnOx: { minHeight: 54 },
+  quizBtnDisabled: { opacity: 0.45 },
   reviewQuizBtn: {
     alignSelf: 'flex-start',
     minHeight: 44,

@@ -32,6 +32,24 @@ npx expo run:android      # 네이티브 STT가 포함된 Android development bu
 
 `npm run web` / `npm run ios` / `npm run android` 스크립트도 동일하게 동작합니다.
 
+## API 연결
+
+Notion API 명세 중 홈 음성 질의, 나의 금융 독립/OX 퀴즈, 송금 연습 전체,
+예·적금 조회, STT/TTS를 연결했습니다. `.env.example`을 복사해 로컬 환경 파일을
+만들고 백엔드 주소를 지정하세요.
+
+```bash
+cp .env.example .env.local
+# EXPO_PUBLIC_API_BASE_URL=http://localhost:8080
+npx expo start --clear
+```
+
+- 설정값에는 `/api`를 붙이지 않습니다. 각 서비스가 `/api/...` 경로를 사용합니다.
+- 실제 휴대폰에서는 `localhost` 대신 개발 PC의 LAN IP를 사용합니다.
+- 환경 변수가 없으면 기존 로컬 연습 데이터와 기기 STT/TTS로 동작합니다.
+- 명세의 서버 구현 상태가 아직 `구현 전`인 API는 백엔드 배포 전까지 실제 응답을
+  받을 수 없습니다. 주소가 설정된 환경에서는 실패를 숨기지 않고 화면에 안내합니다.
+
 ## 검증
 
 ```bash
@@ -90,6 +108,7 @@ src/
     speech/
       tts.ts               expo-speech 기반 음성 안내 (speak / stop, 큐 모드 지원)
       recognition/          STT 엔진 레이어 (아래 참조)
+  api/                     선택 API 계약 타입, 경로, 공통 fetch 클라이언트, 서비스
   theme/
     tokens.ts, fonts.ts   색상·간격·반경 토큰, 폰트 패밀리 resolver
   global.css               웹 전용 @font-face
@@ -100,7 +119,8 @@ assets/fonts/              Pretendard-{Regular,Medium,SemiBold,Bold,Black}.otf
 
 ## STT (음성 인식) — 플랫폼 차이
 
-STT 는 엔진 레이어로 분리되어 있습니다 (`src/lib/speech/recognition/`).
+API 주소가 설정되면 `expo-audio`로 음성을 녹음해 서버 STT로 전송합니다. 주소가
+없을 때는 기존 엔진 레이어(`src/lib/speech/recognition/`)를 사용합니다.
 
 | 파일 | 대상 | 동작 |
 |---|---|---|
@@ -122,7 +142,7 @@ Metro 가 실행 플랫폼에 맞는 `.web` / `.native` 파일을 자동 선택�
 음성 인식이 불가능하거나 실패했을 때, **연습 모드(`PracticeMode`)에서만** 예시
 문장(또는 미션 목 transcript)을 대신 사용해 흐름을 계속 진행합니다.
 
-- 적용 위치: `src/features/practice/hooks/useSpeechRecognition.ts` 의
+- 적용 위치: `src/lib/speech/useSpeechRecognition.ts` 의
   `fallbackTranscript` 옵션. 이 훅은 `PracticeVoiceScreen` 에서만 사용합니다.
 - 발동 조건: `!supported` / `create() === null` / `onError` / 무음 `onEnd` /
   인식 실패 → `fallbackTranscript` 가 있으면 약 1.2초 뒤 `finish(fallbackTranscript)`.
@@ -185,7 +205,7 @@ Metro 가 실행 플랫폼에 맞는 `.web` / `.native` 파일을 자동 선택�
   → 비밀번호 4자리 → 완료
 - 확인 지점: 신규 계좌 경고, 100만원 이상 경고(`largeAmountThreshold = 1,000,000`),
   통화 중 송금 경고, 보이스피싱 경고, 입금자명 변경
-- 송금 연습 PIN: 4자리
+- 송금 연습 PIN: 서버 연동용 고정 번호 `1234`
 
 선제적 도움(송금 화면): 약 20초 무입력 → 관련 영역 하이라이트 → 음성 안내 →
 상담원 연결 제안. 상담원 연결은 평일 09–18시(`isWithinBusinessHours`) 여부로 분기.
@@ -194,8 +214,8 @@ Metro 가 실행 플랫폼에 맞는 `.web` / `.native` 파일을 자동 선택�
 
 ## 알려진 한계
 
-- **Expo Go 네이티브 STT 미지원** — iOS/Android 음성 인식은 config plugin이 포함된
-  development/release build에서 시험해야 합니다.
+- **기기 내 네이티브 STT는 Expo Go에서 미지원** — API 주소가 없는 iOS/Android 음성
+  인식은 config plugin이 포함된 development/release build에서 시험해야 합니다.
 - **웹 브라우저 STT 호환성** — Chrome / Edge 권장. Safari·Firefox 는 Web Speech
   API 미지원 또는 부분 지원이라 인식이 안 되거나 불안정할 수 있습니다.
 - **fallbackTranscript 는 연습 모드에서만** 사용합니다. 메인 `TransferFlow` 는

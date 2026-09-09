@@ -1,17 +1,27 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { speak } from '@/lib/speech/tts';
 import { AskDanbiButton, HomeBar, SavingsHeader } from '../../imports/_shared';
 import { SavingsDetailBody } from '../../imports/SavingsDetail';
+import type { SavingsInstallmentDetail } from '@/api';
 
 /** danbi_jj main/screens/savings.tsx <SavingsDetailScreen> 이식. */
-export function SavingsDetailScreen({ onBack, onHome }: { onBack: () => void; onHome: () => void }) {
+export function SavingsDetailScreen({
+  onBack,
+  onHome,
+  detail,
+  onAskDanbi,
+}: {
+  onBack: () => void;
+  onHome: () => void;
+  detail: SavingsInstallmentDetail;
+  onAskDanbi: () => void;
+}) {
   return (
     <View style={styles.root}>
       <SavingsHeader title="적금 상세" onBack={onBack} />
       <ScrollView contentContainerStyle={styles.body}>
-        <SavingsDetailBody />
-        <AskDanbiButton onPress={() => speak('적금 납입 일정과 예상 만기 금액을 차근차근 확인해보세요.')} />
+        <SavingsDetailBody detail={detail} />
+        <AskDanbiButton onPress={onAskDanbi} />
       </ScrollView>
       <HomeBar onHome={onHome} />
     </View>

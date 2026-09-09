@@ -46,6 +46,12 @@ import {
   sanitizeTransferDifficulties,
 } from './transferDifficulty';
 import type { TransferDifficulty } from './transferDifficulty';
+import {
+  financialIndependenceApi,
+  isApiConfigured,
+  practiceApi,
+} from '@/api';
+import type { QuizAnswerResult, TodayDailyActivity } from '@/api';
 
 type ScenarioRun = {
   dailyMission: DailyMission;
@@ -160,7 +166,36 @@ export function MissionMode({
   const [dailyMissionRecords, setDailyMissionRecords] = useState<DailyMissionRecords>({});
   const [experiencedScenarios, setExperiencedScenarios] = useState<Set<RiskScenarioId>>(new Set());
   const [transferDifficulties, setTransferDifficulties] = useState<TransferDifficulty[]>([]);
+  const [apiDailyActivity, setApiDailyActivity] = useState<TodayDailyActivity | null>(null);
+  const [apiPracticeMissionId, setApiPracticeMissionId] = useState<number | null>(null);
+  const [apiError, setApiError] = useState('');
   const mounted = useRef(true);
+
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    let active = true;
+    void Promise.allSettled([
+      financialIndependenceApi.getToday(),
+      practiceApi.getMissions(),
+    ]).then(([dailyResult, missionResult]) => {
+      if (!active) return;
+      const errors: string[] = [];
+      if (dailyResult.status === 'fulfilled') {
+        setApiDailyActivity(dailyResult.value);
+      } else {
+        errors.push(dailyResult.reason instanceof Error ? dailyResult.reason.message : '오늘의 금융 활동을 불러오지 못했어요.');
+      }
+      if (missionResult.status === 'fulfilled') {
+        setApiPracticeMissionId(missionResult.value.find((mission) => mission.missionType === 'TRANSFER')?.missionId ?? null);
+      } else {
+        errors.push(missionResult.reason instanceof Error ? missionResult.reason.message : '송금 연습 목록을 불러오지 못했어요.');
+      }
+      setApiError(errors.join('\n'));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -335,12 +370,49 @@ export function MissionMode({
     setView({ tag: 'scenario-feedback', run, detectedRisk, attemptedTransfer });
   };
 
-  const handleQuizComplete = (question: QuizQuestion, answeredIndex: number) => {
+  const handleQuizComplete = async (
+    question: QuizQuestion,
+    answeredIndex: number,
+  ): Promise<QuizAnswerResult | void> => {
+    let apiResult: QuizAnswerResult | undefined;
+    if (apiDailyActivity && isApiConfigured()) {
+      apiResult = await financialIndependenceApi.answerQuiz(
+        apiDailyActivity.dailyActivityId,
+        answeredIndex === 0,
+      );
+      setApiDailyActivity((current) => current ? {
+        ...current,
+        question: { ...current.question, selectedAnswer: apiResult!.selectedAnswer },
+        earnedScore: apiResult!.earnedScore,
+      } : current);
+      setApiError('');
+    }
     const nextQuizRecord = completeQuizForDate(quizRecord, getLocalDateKey(), {
       qId: question.id,
       answeredIndex,
     });
     if (nextQuizRecord !== quizRecord) persistQuiz(nextQuizRecord);
+    return apiResult;
+  };
+
+  const completePracticeRun = async (args: Parameters<typeof handleComplete>[0]) => {
+    if (args.isDailyMission && apiDailyActivity && isApiConfigured()) {
+      try {
+        const result = await financialIndependenceApi.completePractice(
+          apiDailyActivity.dailyActivityId,
+          apiDailyActivity.mission.missionId,
+        );
+        setApiDailyActivity((current) => current ? {
+          ...current,
+          practiceCompleted: result.practiceCompleted,
+          earnedScore: result.earnedScore,
+        } : current);
+        setApiError('');
+      } catch (cause) {
+        setApiError(cause instanceof Error ? cause.message : '오늘의 미션 완료를 서버에 저장하지 못했어요.');
+      }
+    }
+    handleComplete(args);
   };
 
   const exitToHome = () => {
@@ -430,6 +502,11 @@ export function MissionMode({
         <PracticeMode
           missionId={view.mission.id}
           initialState={view.initialState}
+          apiMissionId={view.scenarioRun
+            ? undefined
+            : view.isDailyMission
+              ? apiDailyActivity?.mission.missionId
+              : apiPracticeMissionId ?? undefined}
           onExit={() => {
             if (view.scenarioRun) showScenarioFeedback(view.scenarioRun, true, false);
             else setView({ tag: 'hub' });
@@ -437,7 +514,7 @@ export function MissionMode({
           onTransferAttempt={view.scenarioRun
             ? () => showScenarioFeedback(view.scenarioRun!, false, true)
             : undefined}
-          onComplete={() => handleComplete({
+          onComplete={() => void completePracticeRun({
             mission: view.mission,
             practiceInitialState: view.initialState,
             dailyMission: view.dailyMission,
@@ -495,6 +572,8 @@ export function MissionMode({
           quizRecord={quizRecord}
           todayMission={todayMission}
           transferDifficulties={transferDifficulties}
+          apiDailyActivity={apiDailyActivity}
+          apiError={apiError}
           onQuizComplete={handleQuizComplete}
           onStartDailyMission={startDailyMission}
           onOpenPracticePicker={() => setView({ tag: 'practice-picker' })}
