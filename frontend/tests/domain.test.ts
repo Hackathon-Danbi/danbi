@@ -50,6 +50,7 @@ import { accounts } from '../src/features/shared/data/accounts.mock';
 import {
   createBalanceVoiceAnswer,
   isBalanceVoiceQuery,
+  isTransferVoiceQuery,
 } from '../src/features/main/voiceQuery';
 
 test('entry and onboarding destination routes remain distinct', () => {
@@ -107,8 +108,28 @@ test('home balance voice answer uses the currently selected account', () => {
   assert.equal(isBalanceVoiceQuery('내 통장에 얼마 있어?'), true);
   assert.equal(isBalanceVoiceQuery('잔액 알려줘'), true);
   assert.equal(isBalanceVoiceQuery('최근 거래내역 알려줘'), false);
+  assert.equal(isBalanceVoiceQuery('오늘 날씨 어때?'), false);
+  assert.equal(isBalanceVoiceQuery('안녕하세요'), false);
+  assert.equal(isBalanceVoiceQuery('김민수한테 만원 보내줘'), false);
   assert.equal(answer.answerText, '우체국 저축 통장에 10,000,000원 있어요.');
   assert.equal(answer.relatedAccountId, 12);
+});
+
+test('home mic routes send phrases to the transfer flow, not balance', () => {
+  for (const phrase of [
+    '영희에게 3만원 보내줘',
+    '이영희에게 삼만원 송금해줘',
+    '엄마한테 10만원 부쳐줘',
+    '내 계좌로 5만원 보내줘',
+  ]) {
+    assert.equal(isTransferVoiceQuery(phrase), true, phrase);
+    assert.equal(isBalanceVoiceQuery(phrase), false, phrase);
+  }
+
+  // 잔액/일반 질문은 송금으로 새지 않는다.
+  for (const phrase of ['잔액 알려줘', '내 통장에 얼마 있어?', '최근 거래내역 알려줘', '안녕하세요']) {
+    assert.equal(isTransferVoiceQuery(phrase), false, phrase);
+  }
 });
 
 test('saved recipients support aliases and reject duplicate account saves', () => {

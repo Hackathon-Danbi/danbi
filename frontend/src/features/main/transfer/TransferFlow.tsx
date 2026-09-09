@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
@@ -135,6 +135,8 @@ function parseSpokenTransfer(
  */
 export function TransferFlow() {
   const router = useRouter();
+  // 홈 마이크에서 송금 문장을 인식하면 그 발화를 transcript 파라미터로 넘겨받는다.
+  const { transcript: voiceIntent } = useLocalSearchParams<{ transcript?: string }>();
   const {
     value: savedRecipients,
     setValue: setSavedRecipients,
@@ -182,6 +184,27 @@ export function TransferFlow() {
   const executingRef = useRef(false);
   // 위험 점검 → 안심확인 → 실행을 하나로 잇는 송금 시도 세션. initiateTransfer 마다 새로 발급한다.
   const flowSessionIdRef = useRef('');
+  const voiceIntentHandledRef = useRef(false);
+
+  // ── 홈 마이크 송금 발화 인계: 인트로를 건너뛰고 바로 파싱 결과 화면으로 ──
+  useEffect(() => {
+    if (voiceIntentHandledRef.current || !savedRecipientsHydrated) return;
+    const spoken = typeof voiceIntent === 'string' ? voiceIntent.trim() : '';
+    if (!spoken) return;
+    voiceIntentHandledRef.current = true;
+    riskAcknowledgedRef.current = false;
+    transferMethodRef.current = 'VOICE';
+    setTranscript(spoken);
+    const parsed = parseSpokenTransfer(spoken, savedRecipients);
+    if (parsed) {
+      setTxInfo(parsed.txInfo);
+      setIsNew(false);
+      setScreen('voiceconfirm');
+    } else {
+      // 수취인/금액을 확실히 해석하지 못하면 자동으로 채우지 않고 직접 입력으로.
+      setScreen('recipient');
+    }
+  }, [voiceIntent, savedRecipients, savedRecipientsHydrated]);
 
   useEffect(() => {
     screenRef.current = screen;

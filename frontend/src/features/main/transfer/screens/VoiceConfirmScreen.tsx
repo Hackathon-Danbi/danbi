@@ -48,19 +48,17 @@ export function VoiceConfirmScreen({
             {'아니요,\n다시 말하기'}
           </AppText>
         </Pressable>
-        <View style={styles.flex1}>
-          <PulseHighlight active={helpTarget === 'confirmBtn'} borderRadius={14}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onConfirm}
-              style={[styles.btn, styles.primary, styles.confirmBtn]}
-            >
-              <AppText size={16} weight={900} color={INK} align="center">
-                송금하기
-              </AppText>
-            </Pressable>
-          </PulseHighlight>
-        </View>
+        <PulseHighlight active={helpTarget === 'confirmBtn'} borderRadius={14} style={styles.flex1}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onConfirm}
+            style={[styles.btn, styles.primary, styles.fill]}
+          >
+            <AppText size={16} weight={900} color={INK} align="center">
+              송금하기
+            </AppText>
+          </Pressable>
+        </PulseHighlight>
       </View>
     </View>
   );
@@ -86,6 +84,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 12,
     paddingHorizontal: 20,
     paddingBottom: 24,
@@ -105,8 +104,9 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: YELLOW,
   },
-  confirmBtn: {
+  // 노란 강조 링 래퍼(PulseHighlight) 안에서 버튼이 좌측 '다시 말하기'와 같은 높이로 늘어나도록.
+  fill: {
     width: '100%',
-    flex: 0,
+    height: '100%',
   },
 });
