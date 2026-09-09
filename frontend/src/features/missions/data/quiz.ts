@@ -41,17 +41,22 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   { id: 21, type: 'choice', question: '지출 한도를 스스로 관리하려면\n어떤 카드가 더 적합할까요?', choices: ['신용카드', '체크카드'], correctIndex: 1, explanation: '정답은 "체크카드"예요. 잔액 이상 쓸 수 없어서 과소비를 예방할 수 있어요.', category: '카드 결제' },
 ];
 
+/** 나의 금융독립 메인에서 노출하는 "오늘의 금융 O/X 퀴즈"는 OX 문항만 하루 1개씩 돌려 쓴다. */
+export const OX_QUIZ_QUESTIONS: QuizQuestion[] = QUIZ_QUESTIONS.filter(
+  (question) => question.type === 'ox',
+);
+
 export function getTodayString(date: Date = new Date()): string {
   return getLocalDateKey(date);
 }
 
 export function getQuizQuestionIndex(date: Date = new Date()): number {
   const dayIndex = getLocalCalendarDayIndex(date);
-  return Math.abs(dayIndex) % QUIZ_QUESTIONS.length;
+  return Math.abs(dayIndex) % OX_QUIZ_QUESTIONS.length;
 }
 
 export function getTodayQuestion(date: Date = new Date()): QuizQuestion {
-  return QUIZ_QUESTIONS[getQuizQuestionIndex(date)];
+  return OX_QUIZ_QUESTIONS[getQuizQuestionIndex(date)];
 }
 
 export function getQuizQuestionById(id: number): QuizQuestion | undefined {

@@ -13,7 +13,8 @@ export const MISSION_PRACTICE_PRESETS: Partial<Record<MissionId, PracticeInitial
   'guided-transfer': {
     screen: 'practiceMethod',
     practiceStyle: 'guided',
-    transferMethod: 'voice',
+    // "차근차근 따라하기"는 단계별 안내 + 직접 입력을 기본으로 한다. (말로 송금은 voice-transfer)
+    transferMethod: 'manual',
   },
   'voice-transfer': {
     screen: 'practiceVoice',
