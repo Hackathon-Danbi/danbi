@@ -35,6 +35,9 @@ public class Transaction {
 	@Column(nullable = false)
 	private TransactionType transactionType;
 
+	@Enumerated(EnumType.STRING)
+	private PaymentMethod paymentMethod;
+
 	@Column(nullable = false, length = 100)
 	private String description;
 

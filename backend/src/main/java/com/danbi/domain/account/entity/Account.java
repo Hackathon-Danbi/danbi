@@ -33,6 +33,11 @@ public class Account {
     @Column(name = "account_name", nullable = false, length = 50)
     private String accountName;
 
+    @Builder.Default
+    @ColumnDefault("'은행 정보 없음'")
+    @Column(name = "bank_name", nullable = false, length = 50)
+    private String bankName = "은행 정보 없음";
+
     @Column(name = "account_number", nullable = false, length = 30)
     private String accountNumber;
 
@@ -52,7 +57,7 @@ public class Account {
     @Column(name = "account_status", nullable = false)
     private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("CURRENT_TIMESTAMP(6)")
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
