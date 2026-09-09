@@ -17,6 +17,7 @@ import { PinDots, PinKeypad } from '@/features/auth/components/PinPad';
 import { BankGrid } from '@/features/main/components/BankGrid';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
+import { errorMessage } from '@/lib/api/http';
 import { getJSON, setJSON, StorageKeys } from '@/lib/storage';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import type { OnboardingDestination } from '@/lib/navigation';
@@ -37,9 +38,6 @@ import {
 } from '../components/OnboardingComponents';
 import {
   MOCK_ACCOUNT_CODE,
-  MOCK_ID_ISSUED_DATE,
-  MOCK_ID_NAME,
-  MOCK_ID_NUMBER,
   MOCK_OTP,
   useOnboardingState,
 } from '../hooks/useOnboardingState';
@@ -135,7 +133,7 @@ const voiceGuides: Record<Step, string> = {
   [STEPS.ID_SCAN]: '신분증 전체가 화면 안에 들어오도록 놓아주세요.',
   [STEPS.ID_CONFIRM]: '신분증에서 읽은 이름, 주민등록번호, 발급일자가 맞는지 확인해주세요.',
   [STEPS.FACE_TERMS]: '얼굴 인증 약관을 확인하고 동의해주세요.',
-  [STEPS.FACE_CHECK]: '휴대폰을 눈높이에 들고 화면을 바라봐주세요.',
+  [STEPS.FACE_CHECK]: '정면, 오른쪽, 왼쪽, 다시 정면 순서로 찍어주세요. 노란 선에 귀와 턱을 맞춰주세요.',
   [STEPS.ACCOUNT_BANK]: '가입에 사용할 계좌의 은행을 선택해주세요.',
   [STEPS.ACCOUNT_NUMBER]: '계좌번호를 천천히 입력해주세요.',
   [STEPS.ACCOUNT_PASSWORD]: '계좌 비밀번호 네 자리를 입력해주세요.',
@@ -157,6 +155,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   const [showExit, setShowExit] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
+  const [apiBusy, setApiBusy] = useState(false);
   const state = useOnboardingState();
   const [title, progress] = pageMeta[step];
   const requiredTermsComplete = state.requiredTerms.every(Boolean);
@@ -209,7 +208,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
       phoneOwnership: state.phoneOwnership,
       carrier: state.carrier,
       requiredTerms: [Boolean(state.requiredTerms[0])],
-      marketingTermAccepted: state.marketingTermAccepted,
       phoneVerified: state.otpVerified,
       certificateTerms: [Boolean(state.certificateTerms[0])],
       electronicDocTermAccepted: state.electronicDocTermAccepted,
@@ -220,24 +218,40 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
       faceVerified: state.faceVerified,
       bank: state.bank as OnboardingDraft['bank'],
       accountVerified: state.accountVerified,
+      userName: state.userName || undefined,
+      onboardingSessionId: state.apiIds.session || undefined,
+      issuanceId: state.apiIds.issuance || undefined,
+      scanId: state.apiIds.scan || undefined,
+      verificationSessionId: state.apiIds.verification || undefined,
+      accountVerificationTargetId: state.apiIds.accountTarget || undefined,
+      oneWonVerificationId: state.apiIds.oneWon || undefined,
+      idRecognizedName: state.idRecognizedName,
+      idMaskedNumber: state.idMaskedNumber,
+      idIssueDate: state.idIssueDate,
+      liveApi: state.liveApi,
     };
     void setJSON(StorageKeys.onboardingDraft, draft);
   }, [
     draftReady,
     state.accountVerified,
+    state.apiIds,
     state.bank,
     state.certificateTerms,
     state.faceVerified,
     state.idInformationConfirmed,
+    state.idIssueDate,
+    state.idMaskedNumber,
+    state.idRecognizedName,
     state.idScanStatus,
     state.idType,
-    state.marketingTermAccepted,
     state.electronicDocTermAccepted,
     state.faceTermAccepted,
+    state.liveApi,
     state.otpVerified,
     state.phoneOwnership,
     state.requiredTerms,
     state.carrier,
+    state.userName,
     step,
   ]);
 
@@ -248,6 +262,17 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   const next = () => {
     stopReading();
     setStep((current) => Math.min(STEPS.COMPLETE, current + 1) as Step);
+  };
+  const runApi = async (task: () => Promise<void>) => {
+    if (apiBusy) return;
+    setApiBusy(true);
+    try {
+      await task();
+    } catch (error) {
+      setNotice(errorMessage(error));
+    } finally {
+      setApiBusy(false);
+    }
   };
   const back = () => {
     stopReading();
@@ -445,7 +470,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     state.faceTermAccepted,
     state.phoneOwnership,
     state.electronicDocTermAccepted,
-    state.marketingTermAccepted,
     agreementDetail,
     showExit,
   ].join('|');
@@ -632,7 +656,18 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               ) : null}
             </>
           ),
-          actions: <BottomActionArea primary="가입 시작하기" onPrimary={next} />,
+          actions: (
+            <BottomActionArea
+              primary={apiBusy ? '준비하고 있어요' : '가입 시작하기'}
+              onPrimary={() => {
+                void runApi(async () => {
+                  await state.ensureSession();
+                  next();
+                });
+              }}
+              primaryDisabled={apiBusy}
+            />
+          ),
         };
 
       case STEPS.PREPARE:
@@ -725,13 +760,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                   onToggle={() => state.toggleRequiredTerm(0)}
                   onDetail={() => setAgreementDetail('phone-auth')}
                 />
-                <AgreementCard
-                  title="혜택 및 이벤트 안내 [선택]"
-                  description="새로운 혜택과 서비스 소식"
-                  checked={state.marketingTermAccepted}
-                  onToggle={() => state.setMarketingTermAccepted(!state.marketingTermAccepted)}
-                  onDetail={() => setAgreementDetail('marketing')}
-                />
               </View>
               {!requiredTermsComplete ? (
                 <InlineError text="핸드폰 인증 약관에 동의해주세요." />
@@ -765,9 +793,14 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           ),
           actions: (
             <BottomActionArea
-              primary="다음"
-              onPrimary={next}
-              primaryDisabled={!state.userName.trim()}
+              primary={apiBusy ? '저장하고 있어요' : '다음'}
+              onPrimary={() => {
+                void runApi(async () => {
+                  await state.submitName();
+                  next();
+                });
+              }}
+              primaryDisabled={apiBusy || !state.userName.trim()}
             />
           ),
         };
@@ -891,12 +924,14 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           ),
           actions: (
             <BottomActionArea
-              primary="인증번호 받기"
+              primary={apiBusy ? '보내고 있어요' : '인증번호 받기'}
               onPrimary={() => {
-                state.sendOtp();
-                next();
+                void runApi(async () => {
+                  await state.requestOtp();
+                  next();
+                });
               }}
-              primaryDisabled={state.phoneNumber.length !== 11}
+              primaryDisabled={apiBusy || state.phoneNumber.length !== 11}
             />
           ),
         };
@@ -917,7 +952,18 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                   </View>
                 </>
               ),
-              actions: <BottomActionArea primary="신분증 확인하기" onPrimary={next} />,
+              actions: (
+                <BottomActionArea
+                  primary={apiBusy ? '준비하고 있어요' : '신분증 확인하기'}
+                  onPrimary={() => {
+                    void runApi(async () => {
+                      await state.startCertificate();
+                      next();
+                    });
+                  }}
+                  primaryDisabled={apiBusy}
+                />
+              ),
             }
           : {
               body: (
@@ -932,22 +978,30 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                     inputMode="numeric"
                     maxLength={6}
                     error={state.otpError}
-                    support={`프로토타입에서는 ${MOCK_OTP}를 입력하면 확인이 끝나요.`}
+                    support={
+                      state.liveApi
+                        ? '문자로 받은 숫자 6자리를 입력해주세요.'
+                        : `프로토타입에서는 ${MOCK_OTP}를 입력하면 확인이 끝나요.`
+                    }
                   />
                 </>
               ),
               actions: (
                 <BottomActionArea
-                  primary="인증번호 확인"
+                  primary={apiBusy ? '확인하고 있어요' : '인증번호 확인'}
                   onPrimary={() => {
                     stopReading();
-                    state.verifyOtp();
+                    void runApi(async () => {
+                      await state.confirmOtp();
+                    });
                   }}
-                  primaryDisabled={!state.otpSent || state.otp.length !== 6}
+                  primaryDisabled={apiBusy || !state.otpSent || state.otp.length !== 6}
                   secondary="인증번호 다시 받기"
                   onSecondary={() => {
-                    state.sendOtp();
-                    setNotice('새 인증번호를 보냈어요.');
+                    void runApi(async () => {
+                      await state.resendOtp();
+                      setNotice('새 인증번호를 보냈어요.');
+                    });
                   }}
                 />
               ),
@@ -992,8 +1046,13 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           body: (
             <IdCaptureExperience
               initiallyCaptured={state.idScanStatus === 'success'}
-              onCaptured={state.completeIdScan}
-              onAccepted={next}
+              onCaptured={() => {}}
+              onAccepted={(uri) => {
+                void runApi(async () => {
+                  await state.scanIdPhoto(uri);
+                  next();
+                });
+              }}
               onRetake={state.resetIdVerification}
               onNeedEscalation={() => {
                 setEscalationDismissed(false);
@@ -1015,20 +1074,23 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               <ReadResult
                 idType={state.idType ?? ''}
                 rows={[
-                  ['이름', MOCK_ID_NAME],
-                  ['주민등록번호', MOCK_ID_NUMBER],
-                  ['발급일자', MOCK_ID_ISSUED_DATE],
+                  ['이름', state.idRecognizedName],
+                  ['주민등록번호', state.idMaskedNumber],
+                  ['발급일자', state.idIssueDate],
                 ]}
               />
             </>
           ),
           actions: (
             <BottomActionArea
-              primary="네, 맞아요"
+              primary={apiBusy ? '확인하고 있어요' : '네, 맞아요'}
               onPrimary={() => {
-                state.confirmIdInformation();
-                next();
+                void runApi(async () => {
+                  await state.confirmIdCard();
+                  next();
+                });
               }}
+              primaryDisabled={apiBusy}
               secondary="다시 촬영할게요"
               onSecondary={() => {
                 stopReading();
@@ -1083,9 +1145,9 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               success={success}
               userName={state.userName}
               matchFailCount={faceFailCount}
-              onCaptured={() => {
+              onCapturePose={async (uri, stage) => {
                 stopReading();
-                state.startFaceCheck();
+                return state.verifyFacePose(uri, stage);
               }}
               onRetry={() => {
                 stopReading();
@@ -1149,16 +1211,19 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           ),
           actions: (
             <BottomActionArea
-              primary="다음"
+              primary={apiBusy ? '확인하고 있어요' : '다음'}
               onPrimary={() => {
-                if (state.isKbAccount) {
-                  setStep(STEPS.ACCOUNT_PASSWORD);
-                } else {
-                  state.sendAccountVerification();
+                void runApi(async () => {
+                  const method = await state.saveAccountTarget();
+                  if (method === 'ACCOUNT_PASSWORD') {
+                    setStep(STEPS.ACCOUNT_PASSWORD);
+                    return;
+                  }
+                  await state.requestOneWon();
                   setStep(STEPS.ACCOUNT_CODE);
-                }
+                });
               }}
-              primaryDisabled={!accountNumberValid}
+              primaryDisabled={apiBusy || !accountNumberValid}
             />
           ),
         };
@@ -1180,18 +1245,24 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 placeholder="숫자 4자리"
                 inputMode="numeric"
                 maxLength={4}
-                support="프로토타입에서는 숫자 4자리를 입력하면 확인이 끝나요."
+                support={
+                  state.liveApi
+                    ? '계좌 비밀번호 숫자 4자리를 입력해주세요.'
+                    : '프로토타입에서는 숫자 4자리를 입력하면 확인이 끝나요.'
+                }
               />
             </>
           ),
           actions: (
             <BottomActionArea
-              primary="계좌 확인 완료"
+              primary={apiBusy ? '확인하고 있어요' : '계좌 확인 완료'}
               onPrimary={() => {
-                state.verifyAccountPassword();
-                setStep(STEPS.PIN);
+                void runApi(async () => {
+                  await state.verifyAccountPasswordLive();
+                  setStep(STEPS.PIN);
+                });
               }}
-              primaryDisabled={!passwordValid}
+              primaryDisabled={apiBusy || !passwordValid}
             />
           ),
         };
@@ -1215,7 +1286,9 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                 error={state.accountError}
                 support={
                   state.accountVerificationSent
-                    ? `1원을 보냈어요. 프로토타입 입금자명은 KB ${MOCK_ACCOUNT_CODE}예요.`
+                    ? state.liveApi
+                      ? '1원을 보냈어요. 입금자명에서 KB 뒤의 숫자 4자리를 입력해주세요.'
+                      : `1원을 보냈어요. 프로토타입 입금자명은 KB ${MOCK_ACCOUNT_CODE}예요.`
                     : '입금자명에 표시된 숫자만 입력해주세요.'
                 }
               />
@@ -1223,11 +1296,16 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           ),
           actions: (
             <BottomActionArea
-              primary="계좌 확인 완료"
+              primary={apiBusy ? '확인하고 있어요' : '계좌 확인 완료'}
               onPrimary={() => {
-                if (state.verifyAccountCode()) setStep(STEPS.PIN);
+                void runApi(async () => {
+                  await state.confirmOneWon();
+                  setStep(STEPS.PIN);
+                });
               }}
-              primaryDisabled={!state.accountVerificationSent || state.accountCode.length !== 4}
+              primaryDisabled={
+                apiBusy || !state.accountVerificationSent || state.accountCode.length !== 4
+              }
               secondary="입금 내역 찾는 법"
               onSecondary={() => setNotice('거래내역에서 가장 최근의 1원 입금을 열어보세요.')}
             />
@@ -1288,12 +1366,14 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           ),
           actions: success ? (
             <BottomActionArea
-              primary="가입 마치기"
+              primary={apiBusy ? '저장하고 있어요' : '가입 마치기'}
               onPrimary={() => {
-                state.completeOnboarding();
-                next();
+                void runApi(async () => {
+                  await state.completeOnboarding();
+                  next();
+                });
               }}
-              primaryDisabled={!state.pinCreated || !state.accountVerified}
+              primaryDisabled={apiBusy || !state.pinCreated || !state.accountVerified}
             />
           ) : null,
         };

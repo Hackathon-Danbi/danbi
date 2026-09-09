@@ -1,7 +1,7 @@
 /**
  * 폰트 중앙 관리.
  *
- * 우선순위: Pretendard(로컬 OTF) → 시스템 한글 폰트.
+ * 우선순위: SUIT(로컬 TTF) → 시스템 한글 폰트.
  *
  * RN 코드에 CSS 식 fallback 문자열을
  * 넣지 않는다. `useAppFonts()` 로 로드를 시도하고, `fontFamily(weight)` 가 그 시점에
@@ -14,20 +14,20 @@ import { isLoaded, useFonts } from 'expo-font';
 
 export type FontWeightToken = 'regular' | 'medium' | 'semibold' | 'bold' | 'black';
 
-const PRETENDARD_FAMILY: Record<FontWeightToken, string> = {
-  regular: 'Pretendard-Regular',
-  medium: 'Pretendard-Medium',
-  semibold: 'Pretendard-SemiBold',
-  bold: 'Pretendard-Bold',
-  black: 'Pretendard-Black',
+const SUIT_FAMILY: Record<FontWeightToken, string> = {
+  regular: 'SUIT-Regular',
+  medium: 'SUIT-Medium',
+  semibold: 'SUIT-SemiBold',
+  bold: 'SUIT-Bold',
+  black: 'SUIT-Heavy',
 };
 
 export const fontAssets: Record<string, number> = {
-  [PRETENDARD_FAMILY.regular]: require('@/assets/fonts/Pretendard-Regular.otf'),
-  [PRETENDARD_FAMILY.medium]: require('@/assets/fonts/Pretendard-Medium.otf'),
-  [PRETENDARD_FAMILY.semibold]: require('@/assets/fonts/Pretendard-SemiBold.otf'),
-  [PRETENDARD_FAMILY.bold]: require('@/assets/fonts/Pretendard-Bold.otf'),
-  [PRETENDARD_FAMILY.black]: require('@/assets/fonts/Pretendard-Black.otf'),
+  [SUIT_FAMILY.regular]: require('@/assets/fonts/SUIT-Regular.ttf'),
+  [SUIT_FAMILY.medium]: require('@/assets/fonts/SUIT-Medium.ttf'),
+  [SUIT_FAMILY.semibold]: require('@/assets/fonts/SUIT-SemiBold.ttf'),
+  [SUIT_FAMILY.bold]: require('@/assets/fonts/SUIT-Bold.ttf'),
+  [SUIT_FAMILY.black]: require('@/assets/fonts/SUIT-Heavy.ttf'),
 };
 
 /**
@@ -41,8 +41,8 @@ export function useAppFonts(): { fontsReady: boolean; fontsError: Error | null }
 
 /** 주어진 굵기에 대해 현재 실제 사용할 수 있는 폰트 패밀리명. 없으면 undefined(시스템). */
 export function fontFamily(weight: FontWeightToken = 'regular'): string | undefined {
-  const pretendard = PRETENDARD_FAMILY[weight];
-  if (isLoaded(pretendard)) return pretendard;
+  const suit = SUIT_FAMILY[weight];
+  if (isLoaded(suit)) return suit;
   return undefined;
 }
 

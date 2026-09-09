@@ -10,6 +10,19 @@ import { recognitionEngine } from '@/lib/speech/recognition';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
+import { errorMessage, isOffline } from '@/lib/api/http';
+import { getApiIdentity } from '@/lib/api/identity';
+import { tryBackend } from '@/lib/api/live';
+import { bankCodeOf, digitsOnly } from '@/lib/api/map';
+import {
+  addSavedRecipient,
+  executeTransfer,
+  listSavedRecipients,
+  lookupAccountHolder,
+  mapSavedRecipient,
+  riskCheckTransfer,
+  type TransferMethod,
+} from '@/lib/api/transfer';
 import { StorageKeys, usePersistentState } from '@/lib/storage';
 import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
 
@@ -158,6 +171,9 @@ export function TransferFlow() {
   const advisorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttSessionRef = useRef<{ start: () => void; abort: () => void } | null>(null);
   const ocrRequestRef = useRef(0);
+  const transferMethodRef = useRef<TransferMethod>('MANUAL');
+  const riskAcknowledgedRef = useRef(false);
+  const executingRef = useRef(false);
 
   useEffect(() => {
     screenRef.current = screen;
@@ -171,6 +187,22 @@ export function TransferFlow() {
   useEffect(() => {
     helpStepRef.current = helpState.step;
   }, [helpState.step]);
+
+  useEffect(() => {
+    if (!savedRecipientsHydrated) return;
+    let active = true;
+    void (async () => {
+      const identity = await getApiIdentity();
+      const remote = await tryBackend(() => listSavedRecipients(identity.userId));
+      if (!active || !remote || remote.length === 0) return;
+      setSavedRecipients(
+        remote.map((row, index) => mapSavedRecipient(row, -(index + 1))),
+      );
+    })();
+    return () => {
+      active = false;
+    };
+  }, [savedRecipientsHydrated, setSavedRecipients]);
 
   const clearPhaseTimer = () => {
     if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
@@ -369,16 +401,54 @@ export function TransferFlow() {
     setHelpState((prev) => (prev.target === nextTarget ? prev : { ...prev, target: nextTarget }));
   }, [phase, sttError, screen]);
 
-  // ── 비밀번호 4자리 → 완료 ────────────────────────────────
+  // ── 비밀번호 4자리 → 송금 실행 ────────────────────────────
   useEffect(() => {
-    if (screen === 'password' && pinValue.length === 4) {
-      const t = setTimeout(() => {
-        setPinValue('');
-        setScreen('transferdone');
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [pinValue, screen]);
+    if (screen !== 'password' || pinValue.length !== 4 || executingRef.current) return;
+    executingRef.current = true;
+    let cancelled = false;
+    let started = false;
+    const timer = setTimeout(() => {
+      started = true;
+      void (async () => {
+        try {
+          const identity = await getApiIdentity();
+          const amount = parseInt(txInfo.amount || '0', 10);
+          const matched = savedRecipients.find(
+            (item) =>
+              item.recipientAccountNumber.replace(/\D/g, '') === digitsOnly(txInfo.account) &&
+              item.recipientBankCode === bankCodeOf(txInfo.bank),
+          );
+          await tryBackend(() =>
+            executeTransfer({
+              accountId: identity.accountId,
+              savedRecipientId: matched && matched.savedRecipientId > 0 ? matched.savedRecipientId : undefined,
+              recipientBankCode: bankCodeOf(txInfo.bank),
+              recipientAccountNumber: txInfo.account,
+              recipientName: txInfo.recipient || '수취인',
+              amount,
+              transferMethod: transferMethodRef.current,
+              accountPassword: pinValue,
+              riskAcknowledged: riskAcknowledgedRef.current,
+            }),
+          );
+          if (cancelled) return;
+          setPinValue('');
+          setScreen('transferdone');
+        } catch (error) {
+          if (cancelled) return;
+          Alert.alert('송금에 실패했어요', errorMessage(error));
+          setPinValue('');
+        } finally {
+          executingRef.current = false;
+        }
+      })();
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (!started) executingRef.current = false;
+    };
+  }, [pinValue, savedRecipients, screen, txInfo]);
 
   // ── 메인 송금 STT (엔진 레이어) ──────────────────────────
   useEffect(() => {
@@ -448,6 +518,7 @@ export function TransferFlow() {
     setPhase('idle');
     setTranscript('');
     setSttNonce((n) => n + 1);
+    transferMethodRef.current = 'VOICE';
     setScreen('listening');
   };
 
@@ -482,17 +553,31 @@ export function TransferFlow() {
     doResolveHelp();
     setSttError('');
     abortStt();
+    transferMethodRef.current = 'MANUAL';
     setScreen('recipient');
   };
 
   const confirmNewAccountNumber = (accountNumber: string) => {
     doResolveHelp();
-    setTxInfo((current) => ({
-      ...current,
-      account: accountNumber,
-      recipient: current.recipient || `${current.bank} 계좌 ${accountNumber.slice(-4)}`,
-    }));
-    setScreen('amountinput');
+    void (async () => {
+      let recipientName = '';
+      const bank = txInfo.bank;
+      try {
+        const holder = await tryBackend(() => lookupAccountHolder(bankCodeOf(bank), accountNumber));
+        if (holder?.recipientName) recipientName = holder.recipientName;
+      } catch {
+        /* 예금주 조회 실패해도 번호만으로 진행 */
+      }
+      setTxInfo((current) => ({
+        ...current,
+        account: accountNumber,
+        recipient:
+          current.recipient ||
+          recipientName ||
+          `${current.bank} 계좌 ${accountNumber.slice(-4)}`,
+      }));
+      setScreen('amountinput');
+    })();
   };
 
   const returnToAccountInput = () => {
@@ -562,12 +647,38 @@ export function TransferFlow() {
 
   const initiateTransfer = () => {
     const amt = parseInt(txInfo.amount || '0', 10);
-    if (isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
-      setShowPopup(true);
-    } else {
+    void (async () => {
+      try {
+        const identity = await getApiIdentity();
+        const risk = await tryBackend(() =>
+          riskCheckTransfer({
+            accountId: identity.accountId,
+            amount: amt,
+            recipientAccountNumber: txInfo.account,
+            isNewAccount,
+          }),
+        );
+        if (risk?.blocked) {
+          Alert.alert('지금은 보낼 수 없어요', '안전을 위해 이 송금은 막혀 있어요. 고객센터에 문의해주세요.');
+          return;
+        }
+        if (risk?.requiresSafetyCheck || isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
+          setShowPopup(true);
+          return;
+        }
+      } catch (error) {
+        if (!isOffline(error)) {
+          Alert.alert('확인하지 못했어요', errorMessage(error));
+          return;
+        }
+        if (isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
+          setShowPopup(true);
+          return;
+        }
+      }
       setPinValue('');
       setScreen('password');
-    }
+    })();
   };
 
   const isLargeAmount = parseInt(txInfo.amount || '0', 10) >= LARGE_AMOUNT_THRESHOLD;
@@ -647,6 +758,7 @@ export function TransferFlow() {
             onGoHome={goHome}
             onDirect={() => {
               doResolveHelp();
+              transferMethodRef.current = 'MANUAL';
               setScreen('recipient');
             }}
             onSavedAccounts={() => {
@@ -663,7 +775,33 @@ export function TransferFlow() {
             recipients={savedRecipients}
             recentCandidates={RECENT_RECIPIENT_CANDIDATES}
             onBack={() => setScreen('transfer')}
-            onSave={(input) => setSavedRecipients((current) => saveRecipient(current, input))}
+            onSave={(input) => {
+              setSavedRecipients((current) => saveRecipient(current, input));
+              void (async () => {
+                try {
+                  const identity = await getApiIdentity();
+                  const saved = await tryBackend(() =>
+                    addSavedRecipient({
+                      userId: identity.userId,
+                      recipientBankCode: input.recipientBankCode,
+                      recipientAccountNumber: input.recipientAccountNumber,
+                      recipientName: input.recipientName,
+                      nickname: input.nickname,
+                    }),
+                  );
+                  if (!saved) return;
+                  setSavedRecipients((current) => saveRecipient(current, {
+                    ...input,
+                    recipientBankCode: saved.recipientBankCode,
+                    recipientAccountNumber: saved.recipientAccountNumber,
+                    recipientName: saved.recipientName,
+                    nickname: saved.nickname,
+                  }));
+                } catch {
+                  /* 로컬 저장은 이미 반영 */
+                }
+              })();
+            }}
             onNicknameChange={(savedRecipientId, nickname) =>
               setSavedRecipients((current) =>
                 updateRecipientNickname(current, savedRecipientId, nickname),
@@ -854,6 +992,7 @@ export function TransferFlow() {
         isNewAccount={isNewAccount}
         isLargeAmount={isLargeAmount}
         onConfirm={() => {
+          riskAcknowledgedRef.current = true;
           setShowPopup(false);
           setPinValue('');
           setScreen('password');

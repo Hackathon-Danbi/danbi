@@ -6,7 +6,7 @@ import { PulseHighlight } from '@/components/anim/PulseHighlight';
 import { ScanLine } from '@/components/anim/ScanLine';
 import { AppText } from '@/components/ui/AppText';
 import { Sheet } from '@/components/ui/Sheet';
-import { BORDER, CREAM, INK } from '@/features/main/theme';
+import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import {
   BottomActionArea,
@@ -29,6 +29,14 @@ import {
   useCameraCapture,
   useOnboardingCamera,
 } from '../camera/LiveCameraPreview';
+import { FaceGuideOverlay } from './FaceGuideOverlay';
+import {
+  FACE_CAPTURE_STAGES,
+  FACE_POSE_COPY,
+  faceCaptureStepNumber,
+  nextFaceCaptureStage,
+  type FaceCaptureStage,
+} from './faceStages';
 
 type Coach = { kind: FaceHelpKind; step: number } | null;
 
@@ -38,7 +46,7 @@ type Props = {
   success: boolean;
   userName: string;
   matchFailCount?: number;
-  onCaptured: () => void;
+  onCapturePose: (uri: string, stage: FaceCaptureStage) => Promise<'advance' | 'success' | 'failure'>;
   onRetry: () => void;
   onContinue: () => void;
   onNeedEscalation?: () => void;
@@ -50,7 +58,7 @@ export function FaceCaptureExperience({
   success,
   userName,
   matchFailCount = 0,
-  onCaptured,
+  onCapturePose,
   onRetry,
   onContinue,
   onNeedEscalation,
@@ -58,12 +66,13 @@ export function FaceCaptureExperience({
   const cameraRef = useRef<CameraView>(null);
   const takePhoto = useCameraCapture(cameraRef);
   const camera = useOnboardingCamera();
+  const [pose, setPose] = useState<FaceCaptureStage>('FRONT_INITIAL');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState('');
   const [busy, setBusy] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [coach, setCoach] = useState<Coach>(null);
+  const [coach, setCoach] = useState<Coach | null>(null);
   const [coachCompleted, setCoachCompleted] = useState(false);
   const [forcePulse, setForcePulse] = useState(false);
   const escalatedRef = useRef(false);
@@ -71,6 +80,8 @@ export function FaceCaptureExperience({
   const permissionSpokenRef = useRef(false);
   const openedForFailRef = useRef(0);
 
+  const poseCopy = FACE_POSE_COPY[pose];
+  const poseNumber = faceCaptureStepNumber(pose);
   const waiting = !checking && !failed && !success;
   const permissionDenied = !camera.loading && !camera.granted;
   const permissionBlocked = permissionDenied && !camera.canAskAgain;
@@ -90,11 +101,21 @@ export function FaceCaptureExperience({
     if (spoken) ttsSpeak(FACE_CAPTURE_HELP.openCoach);
   }, []);
 
+  const restartPoses = useCallback(() => {
+    setPose('FRONT_INITIAL');
+    setPhotoUri(null);
+    setCaptureError('');
+    setCameraReady(false);
+    setCoachCompleted(false);
+    setForcePulse(false);
+    bump();
+  }, [bump]);
+
   useEffect(() => {
     if (!waiting || !camera.granted || coach) return;
-    ttsSpeak(FACE_CAPTURE_HELP.entry);
+    ttsSpeak(poseCopy.voice);
     return () => ttsStop();
-  }, [camera.granted, coach, waiting]);
+  }, [camera.granted, coach, poseCopy.voice, waiting]);
 
   useEffect(() => {
     if (!permissionDenied || !waiting || permissionSpokenRef.current) return;
@@ -168,8 +189,8 @@ export function FaceCaptureExperience({
     bump();
     setBusy(true);
     const uri = await takePhoto();
-    setBusy(false);
     if (!uri) {
+      setBusy(false);
       setCaptureError('얼굴을 찍지 못했어요. 다시 눌러주세요.');
       setForcePulse(true);
       ttsSpeak(FACE_CAPTURE_HELP.captureFail);
@@ -177,8 +198,17 @@ export function FaceCaptureExperience({
     }
     setPhotoUri(uri);
     setCoachCompleted(false);
-    onCaptured();
-  }, [bump, onCaptured, takePhoto]);
+    const result = await onCapturePose(uri, pose);
+    setBusy(false);
+    if (result === 'advance') {
+      const next = nextFaceCaptureStage(pose);
+      if (next) {
+        setPose(next);
+        setPhotoUri(null);
+      }
+      return;
+    }
+  }, [bump, onCapturePose, pose, takePhoto]);
 
   const startCoach = (kind: FaceHelpKind) => {
     setShowHelp(false);
@@ -195,14 +225,14 @@ export function FaceCaptureExperience({
       ? '얼굴이 잘 보이지 않았어요'
       : success
         ? '얼굴을 확인했어요'
-        : '얼굴을 찍어주세요';
+        : poseCopy.title;
   const guide = failed
-    ? '밝은 곳에서 다시 맞춰주세요.'
+    ? '밝은 곳에서 네 장을 다시 맞춰주세요.'
     : success
       ? `${userName || '고객'}님으로 확인했어요.`
       : coach
         ? coachingText
-        : '화면 안에 얼굴이 잘 보이게 해주세요.';
+        : poseCopy.guide;
 
   const showPhoto = Boolean(photoUri) && (checking || success || failed);
   const primary = success
@@ -231,9 +261,19 @@ export function FaceCaptureExperience({
       <View style={styles.sheetBody}>
         <View style={styles.heading}>
           <CertProgress current={2} />
-          <StepBadge icon="face">2/4 얼굴</StepBadge>
+          <StepBadge icon="face">{`2/4 얼굴 · ${poseNumber}/4`}</StepBadge>
           <PageTitle>{title}</PageTitle>
           <GuideText>{guide}</GuideText>
+          {waiting ? (
+            <View style={styles.dots} accessibilityLabel={`얼굴 촬영 ${poseNumber}분의 4`}>
+              {FACE_CAPTURE_STAGES.map((item) => (
+                <View
+                  key={item}
+                  style={[styles.dot, item === pose ? styles.dotOn : styles.dotOff]}
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
         <View style={styles.frame} accessibilityLabel="얼굴 촬영 영역" collapsable={false}>
           {showPhoto && photoUri ? (
@@ -251,11 +291,13 @@ export function FaceCaptureExperience({
               ) : null}
             </>
           ) : camera.granted ? (
-            <LiveCameraPreview
-              facing="front"
-              cameraRef={cameraRef}
-              onReady={() => setCameraReady(true)}
-            />
+            <FaceGuideOverlay focus={poseCopy.focus}>
+              <LiveCameraPreview
+                facing="front"
+                cameraRef={cameraRef}
+                onReady={() => setCameraReady(true)}
+              />
+            </FaceGuideOverlay>
           ) : (
             <CameraPermissionGate
               granted={camera.granted}
@@ -275,10 +317,10 @@ export function FaceCaptureExperience({
             {checking
               ? '움직이지 말고 기다려주세요'
               : failed
-                ? '다시 확인할 수 있어요'
+                ? '처음부터 다시 확인할 수 있어요'
                 : success
                   ? '확인이 끝났어요'
-                  : '정면을 바라봐 주세요'}
+                  : poseCopy.hint}
           </AppText>
         )}
       </View>
@@ -298,9 +340,7 @@ export function FaceCaptureExperience({
               return;
             }
             if (failed) {
-              setPhotoUri(null);
-              setCaptureError('');
-              setCameraReady(false);
+              restartPoses();
               onRetry();
               return;
             }
@@ -344,11 +384,20 @@ const styles = StyleSheet.create({
   sheetBody: { flex: 1, minHeight: 0, paddingHorizontal: 18, paddingTop: 14 },
   heading: { flexShrink: 0 },
   flex1: { flex: 1 },
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  dotOn: { backgroundColor: YELLOW },
+  dotOff: { backgroundColor: '#E6E0D4' },
   frame: {
     position: 'relative',
     flex: 1,
     minHeight: 0,
-    marginTop: 16,
+    marginTop: 12,
     borderRadius: 16,
     borderWidth: 1.8,
     borderColor: BORDER,

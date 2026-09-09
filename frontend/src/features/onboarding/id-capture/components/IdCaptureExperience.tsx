@@ -77,8 +77,8 @@ export function IdCaptureExperience({
   onNeedEscalation,
 }: {
   initiallyCaptured: boolean;
-  onCaptured: () => void;
-  onAccepted: () => void;
+  onCaptured: (uri: string) => void;
+  onAccepted: (uri?: string) => void;
   onRetake: () => void;
   onNeedEscalation?: () => void;
 }) {
@@ -214,7 +214,7 @@ export function IdCaptureExperience({
     setPhotoUri(uri);
     setPhase('review');
     setCoachCompleted(false);
-    onCaptured();
+    onCaptured(uri);
   }, [bump, onCaptured, takePhoto]);
 
   const startCoach = (kind: HelpKind) => {
@@ -310,7 +310,7 @@ export function IdCaptureExperience({
         <PulseHighlight active={pulsePrimary} borderRadius={16}>
           <BottomActionArea
             primary="네, 잘 보여요"
-            onPrimary={onAccepted}
+            onPrimary={() => onAccepted(photoUri ?? undefined)}
             secondary="다시 찍을게요"
             onSecondary={retake}
           />

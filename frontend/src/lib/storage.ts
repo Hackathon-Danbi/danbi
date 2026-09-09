@@ -24,6 +24,8 @@ export const StorageKeys = {
   transactionReviews: 'danbi.transactions.reviews',
   savedRecipients: 'danbi.transfer.saved-recipients',
   transferDifficulties: 'danbi.transfer.difficulties',
+  /** 가입 완료 후 송금·거래 API에 쓰는 userId / accountId. */
+  apiIdentity: 'danbi.api.identity',
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

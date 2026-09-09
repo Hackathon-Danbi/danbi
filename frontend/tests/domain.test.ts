@@ -34,6 +34,11 @@ import {
   FACE_HELP_OPTIONS,
   ID_CAPTURE_HELP,
 } from '../src/features/onboarding/help/captureHelp';
+import {
+  FACE_CAPTURE_STAGES,
+  FACE_POSE_COPY,
+  nextFaceCaptureStage,
+} from '../src/features/onboarding/face-capture/faceStages';
 import { SCREEN_HELP, TRANSFER_SCREENS } from '../src/features/main/proactiveHelp';
 import {
   HISTORY_HELP,
@@ -266,6 +271,18 @@ test('onboarding capture help covers permission, idle, and coaching', () => {
   assert.match(ID_CAPTURE_HELP.idle, /촬영하기/);
   assert.match(FACE_CAPTURE_HELP.idle, /얼굴 찍기/);
   assert.equal(FACE_HELP_OPTIONS.length, 4);
+});
+
+test('face capture follows the four backend verification poses', () => {
+  assert.deepEqual(FACE_CAPTURE_STAGES, ['FRONT_INITIAL', 'RIGHT', 'LEFT', 'FRONT_FINAL']);
+  assert.equal(nextFaceCaptureStage('FRONT_INITIAL'), 'RIGHT');
+  assert.equal(nextFaceCaptureStage('RIGHT'), 'LEFT');
+  assert.equal(nextFaceCaptureStage('LEFT'), 'FRONT_FINAL');
+  assert.equal(nextFaceCaptureStage('FRONT_FINAL'), null);
+  assert.match(FACE_POSE_COPY.FRONT_INITIAL.guide, /귀와 턱/);
+  assert.match(FACE_POSE_COPY.RIGHT.guide, /오른쪽 귀/);
+  assert.match(FACE_POSE_COPY.LEFT.guide, /왼쪽 귀/);
+  assert.match(FACE_POSE_COPY.FRONT_FINAL.guide, /턱선/);
 });
 
 test('transfer proactive help covers voice, ocr, and pin screens', () => {

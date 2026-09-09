@@ -18,7 +18,6 @@ export type OnboardingDraft = {
   phoneOwnership: boolean | null;
   carrier: DraftCarrier;
   requiredTerms: [boolean];
-  marketingTermAccepted: boolean;
   phoneVerified: boolean;
   certificateTerms: [boolean];
   electronicDocTermAccepted: boolean;
@@ -29,6 +28,17 @@ export type OnboardingDraft = {
   faceVerified: boolean;
   bank: DraftBank;
   accountVerified: boolean;
+  userName?: string;
+  onboardingSessionId?: string;
+  issuanceId?: string;
+  scanId?: string;
+  verificationSessionId?: string;
+  accountVerificationTargetId?: string;
+  oneWonVerificationId?: string;
+  idRecognizedName?: string;
+  idMaskedNumber?: string;
+  idIssueDate?: string;
+  liveApi?: boolean;
 };
 
 const CARRIERS = new Set<Exclude<DraftCarrier, null>>(['SKT', 'KT', 'LG U+', '알뜰폰']);
@@ -78,7 +88,6 @@ export function sanitizeOnboardingDraft(value: unknown): OnboardingDraft | null 
     phoneOwnership: typeof record.phoneOwnership === 'boolean' ? record.phoneOwnership : null,
     carrier,
     requiredTerms: booleanFlag(record.requiredTerms),
-    marketingTermAccepted: record.marketingTermAccepted === true,
     phoneVerified: record.phoneVerified === true,
     certificateTerms: firstFlag(record.certificateTerms),
     electronicDocTermAccepted: record.electronicDocTermAccepted === true,
@@ -89,7 +98,24 @@ export function sanitizeOnboardingDraft(value: unknown): OnboardingDraft | null 
     faceVerified: record.faceVerified === true,
     bank,
     accountVerified: record.accountVerified === true,
+    userName: optionalText(record.userName),
+    onboardingSessionId: optionalText(record.onboardingSessionId),
+    issuanceId: optionalText(record.issuanceId),
+    scanId: optionalText(record.scanId),
+    verificationSessionId: optionalText(record.verificationSessionId),
+    accountVerificationTargetId: optionalText(record.accountVerificationTargetId),
+    oneWonVerificationId: optionalText(record.oneWonVerificationId),
+    idRecognizedName: optionalText(record.idRecognizedName),
+    idMaskedNumber: optionalText(record.idMaskedNumber),
+    idIssueDate: optionalText(record.idIssueDate),
+    liveApi: record.liveApi === true,
   };
+}
+
+function optionalText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 /** 민감 입력이 필요한 경계를 건너뛰지 않도록 재개 위치를 뒤로 조정한다. */

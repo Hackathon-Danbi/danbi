@@ -17,7 +17,7 @@ export type AppTextProps = TextProps & {
 
 /**
  * 모든 텍스트의 단일 진입점. 폰트 패밀리는 theme/fonts.ts 가 중앙에서 결정한다
- * (Pretendard → 시스템). 커스텀 패밀리가 로드된 경우 fontWeight 를
+ * (SUIT → 시스템). 커스텀 패밀리가 로드된 경우 fontWeight 를
  * 지정하지 않고(패밀리 자체가 굵기), 시스템 폰트로 내려간 경우에만 fontWeight 를 준다.
  */
 export function AppText({
