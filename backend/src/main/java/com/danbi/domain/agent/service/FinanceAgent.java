@@ -1,10 +1,10 @@
 package com.danbi.domain.agent.service;
 
-import com.danbi.domain.agent.model.AgentModels.Decision;
-import com.danbi.domain.agent.model.AgentOutcome;
-import com.danbi.domain.agent.model.AgentContext;
-import com.danbi.domain.agent.model.AgentType;
-import com.danbi.domain.agent.model.Screen;
+import com.danbi.domain.agent.entity.AgentModels.Decision;
+import com.danbi.domain.agent.entity.AgentOutcome;
+import com.danbi.domain.agent.entity.AgentContext;
+import com.danbi.domain.agent.entity.AgentType;
+import com.danbi.domain.agent.entity.Screen;
 import com.danbi.domain.agent.rag.KnowledgeStore;
 import com.danbi.domain.agent.service.AgentSessions.Session;
 import com.danbi.domain.agent.tools.BankingTools;
@@ -56,9 +56,11 @@ public class FinanceAgent implements DanbiAgent {
             // No date supplied means the current calendar month, explicitly displayed below.
             LocalDate from = decision.startDate() == null ? now.withDayOfMonth(1) : LocalDate.parse(decision.startDate());
             LocalDate to = decision.endDate() == null ? now : LocalDate.parse(decision.endDate());
-            if (from.isAfter(to) || from.plusYears(1).isBefore(to) || to.isAfter(now)) {
+            if (from.isAfter(to) || from.plusYears(1).isBefore(to) || from.isAfter(now)) {
                 return AgentOutcome.message("finance", "오늘까지의 기간을 1년 이내로 지정해 주세요.");
             }
+            // A month-wide request can include its future month end; query only elapsed dates.
+            if (to.isAfter(now)) to = now;
             var rows = tools.getTransactions(new DateRange(from, to));
             return new AgentOutcome("finance", from + "부터 " + to + "까지 모의 거래내역 " + rows.size() + "건이에요.",
                     new Screen.Transactions(from, to, rows), List.of());
@@ -77,8 +79,8 @@ public class FinanceAgent implements DanbiAgent {
         if (recipients.size() != 1) {
             if (s.practice) s.inputErrors++;
             return AgentOutcome.message("finance", recipients.isEmpty()
-                    ? "등록된 모의 수취인이 없어요. 민수 또는 지영으로 연습해 주세요."
-                    : "같은 이름이 여러 명이에요. 박영희 또는 김영희처럼 성과 이름을 말씀해 주세요.");
+                    ? "등록된 모의 수취인이 없어요. 저장된 수취인의 이름이나 별칭을 확인해 주세요."
+                    : "같은 이름이 여러 명이에요. 성과 이름을 모두 말씀해 주세요.");
         }
         if (s.amount == null) return AgentOutcome.message("finance", "얼마를 보낼까요?");
         try {
