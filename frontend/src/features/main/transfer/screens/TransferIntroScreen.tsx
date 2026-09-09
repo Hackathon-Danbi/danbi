@@ -35,12 +35,12 @@ export function TransferIntroScreen({
     <View style={styles.root} onTouchStart={onActivity}>
       <View style={styles.top}>
         <View style={styles.header}>
-          <AppText size={16} weight={800} color={INK}>
+          <AppText size={18} weight={800} color={INK}>
             안녕하세요, 박옥순님
           </AppText>
           <Pressable accessibilityRole="button" onPress={onSavedAccounts} style={styles.savedButton}>
             <IconCard />
-            <AppText size={12} weight={800} color={INK}>
+            <AppText size={14} weight={800} color={INK}>
               저장된 계좌 ›
             </AppText>
           </Pressable>

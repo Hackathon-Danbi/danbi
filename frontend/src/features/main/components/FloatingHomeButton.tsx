@@ -11,7 +11,7 @@ export function FloatingHomeButton({ onGoHome, bg = '#fff' }: { onGoHome: () => 
         <Svg width={22} height={25} viewBox="0 0 22 25" fill="none">
           <Path d="M0 9L11 0L22 9V25H15V16H7V25H0V9Z" fill="#FFCC00" />
         </Svg>
-        <AppText size={12} weight={700} color="#7A6000">
+        <AppText size={14} weight={700} color="#7A6000">
           홈
         </AppText>
       </Pressable>

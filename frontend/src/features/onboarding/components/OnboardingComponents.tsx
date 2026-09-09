@@ -8,9 +8,10 @@ import {
   View,
   type KeyboardTypeOptions,
 } from 'react-native';
-import Svg, { Circle, Path, Polyline, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
+import { BackButton } from '@/components/ui/BackButton';
 import { Sheet } from '@/components/ui/Sheet';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
 import { getTerm, type TermId } from '../terms';
@@ -18,7 +19,7 @@ import { getTerm, type TermId } from '../terms';
 /**
  * 가입·인증 화면의 공통 부품. 크기/색/간격은 메인(홈) 화면 규격을 그대로 따른다:
  * 흰 배경 + 크림(#FFFDF8) 카드 + 금색 테두리 1.8 + radius 16, 본문 좌우 여백 18,
- * 제목 24/900, 소제목 17/900, 본문 15, 보조문구 13.
+ * 제목 28/900, 소제목 19/900, 본문 19, 보조문구 17.
  *
  * 화면마다 배율을 다르게 축소하면 화면 간 글자 크기가 튀므로, 여기서는 고정 크기만
  * 쓰고 대신 한 화면에 담는 내용을 줄인다.
@@ -141,50 +142,36 @@ export function OnboardingHeader({
   return (
     <View>
       <View style={s.header}>
-        {showBack ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="이전"
-            onPress={onBack}
-            style={s.headerBack}
-            hitSlop={10}
-          >
-            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-              <Polyline
-                points="15 18 9 12 15 6"
-                stroke={INK}
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </Pressable>
-        ) : null}
-        <AppText size={17} weight={900} color={INK}>
+        <View style={s.headerSide}>
+          {showBack ? <BackButton onPress={onBack} color={INK} /> : null}
+        </View>
+        <AppText size={19} weight={900} color={INK} align="center" numberOfLines={1} style={s.headerTitle}>
           {title}
         </AppText>
-        {onVoice ? (
+        <View style={[s.headerSide, s.headerSideRight]}>
+          {onVoice ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isReading ? '읽어주는 중, 멈추기' : '이 화면 읽어주기'}
+              onPress={onVoice}
+              style={s.headerIconBtn}
+              hitSlop={10}
+            >
+              <OnboardingIcon name="volume" size={20} color={isReading ? INK : '#888'} />
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={isReading ? '읽어주는 중, 멈추기' : '이 화면 읽어주기'}
-            onPress={onVoice}
-            style={s.headerVoice}
+            accessibilityLabel="가입 그만하기"
+            onPress={onExit}
+            style={s.headerIconBtn}
             hitSlop={10}
           >
-            <OnboardingIcon name="volume" size={20} color={isReading ? INK : '#888'} />
+            <AppText size={19} weight={700} color="#999">
+              ✕
+            </AppText>
           </Pressable>
-        ) : null}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="가입 그만하기"
-          onPress={onExit}
-          style={s.headerExit}
-          hitSlop={10}
-        >
-          <AppText size={19} weight={700} color="#999">
-            ✕
-          </AppText>
-        </Pressable>
+        </View>
       </View>
       <View style={s.progressTrack}>
         <View style={[s.progressFill, { width: `${pct}%` }]} />
@@ -202,7 +189,7 @@ export function VoiceGuideButton({ onClick, isReading }: { onClick: () => void; 
       style={[s.voiceGuide, isReading && s.voiceGuideOn]}
     >
       <OnboardingIcon name="volume" size={19} color={INK} />
-      <AppText size={14} weight={800} color={INK}>
+      <AppText size={17} weight={800} color={INK}>
         {isReading ? '읽어주는 중 · 멈추기' : '이 화면 읽어주기'}
       </AppText>
     </Pressable>
@@ -216,7 +203,7 @@ export function StepBadge({ icon, children }: { icon: string; children: string }
   return (
     <View style={s.stepBadge}>
       <OnboardingIcon name={icon} size={14} color={INK} />
-      <AppText size={12} weight={700} color={INK}>
+      <AppText size={16} weight={700} color={INK}>
         {children}
       </AppText>
     </View>
@@ -225,7 +212,7 @@ export function StepBadge({ icon, children }: { icon: string; children: string }
 
 export function PageTitle({ children }: { children: string }) {
   return (
-    <AppText size={24} weight={900} color={INK} lineHeight={33} style={s.title}>
+    <AppText size={28} weight={900} color={INK} lineHeight={38} style={s.title}>
       {children}
     </AppText>
   );
@@ -233,7 +220,7 @@ export function PageTitle({ children }: { children: string }) {
 
 export function GuideText({ children }: { children: string }) {
   return (
-    <AppText size={15} weight={400} color="#888" lineHeight={22} style={s.guide}>
+    <AppText size={19} weight={400} color="#888" lineHeight={28} style={s.guide}>
       {children}
     </AppText>
   );
@@ -254,7 +241,7 @@ export function CertProgress({ current }: { current: 0 | 1 | 2 | 3 | 4 }) {
             key={label}
             style={[s.certChip, (done || active) && s.certChipOn, active && s.certChipActive]}
           >
-            <AppText size={12} weight={800} color={INK} numberOfLines={1}>
+            <AppText size={15} weight={800} color={INK} numberOfLines={1}>
               {label}
             </AppText>
           </View>
@@ -290,10 +277,10 @@ export function OnboardingInfoCard({
         <OnboardingIcon name={icon} size={24} color={INK} />
       </View>
       <View style={s.flex1}>
-        <AppText size={17} weight={900} color={INK}>
+        <AppText size={19} weight={900} color={INK}>
           {title}
         </AppText>
-        <AppText size={13} color="#888" lineHeight={19} style={s.mt3}>
+        <AppText size={17} color="#888" lineHeight={25} style={s.mt3}>
           {description}
         </AppText>
       </View>
@@ -327,11 +314,11 @@ export function LargeSelectionCard({
         </View>
       ) : null}
       <View style={s.flex1}>
-        <AppText size={17} weight={900} color={INK}>
+        <AppText size={19} weight={900} color={INK}>
           {title}
         </AppText>
         {description ? (
-          <AppText size={13} color="#888" lineHeight={19} style={s.mt3}>
+          <AppText size={17} color="#888" lineHeight={25} style={s.mt3}>
             {description}
           </AppText>
         ) : null}
@@ -376,7 +363,7 @@ export function SeniorTextInput({
 }) {
   return (
     <View style={s.field}>
-      <AppText size={13} weight={700} color="#888">
+      <AppText size={17} weight={700} color="#888">
         {label}
       </AppText>
       <View style={[s.fieldBox, error ? s.fieldBoxError : null]}>
@@ -394,7 +381,7 @@ export function SeniorTextInput({
         {value && !error ? <OnboardingIcon name="check" size={17} color="#2F8B5D" /> : null}
       </View>
       {error || support ? (
-        <AppText size={13} weight={error ? 700 : 400} lineHeight={19} color={error ? '#E05050' : '#AAA'}>
+        <AppText size={17} weight={error ? 700 : 400} lineHeight={24} color={error ? '#E05050' : '#AAA'}>
           {error || support}
         </AppText>
       ) : null}
@@ -424,7 +411,7 @@ export function AgreementAllToggle({
       <View style={[s.check, s.checkLarge, checked && s.checkOn]}>
         {checked ? <OnboardingIcon name="check" size={17} color={INK} /> : null}
       </View>
-      <AppText size={17} weight={900} color={INK} style={s.flex1}>
+      <AppText size={19} weight={900} color={INK} style={s.flex1}>
         {label}
       </AppText>
     </Pressable>
@@ -456,10 +443,10 @@ export function AgreementCard({
           {checked ? <OnboardingIcon name="check" size={15} color={INK} /> : null}
         </View>
         <View style={s.flex1}>
-          <AppText size={15} weight={800} color={INK}>
+          <AppText size={17} weight={800} color={INK}>
             {title}
           </AppText>
-          <AppText size={12} color="#AAA" lineHeight={17} style={s.mt2}>
+          <AppText size={16} color="#AAA" lineHeight={23} style={s.mt2}>
             {description}
           </AppText>
         </View>
@@ -471,7 +458,7 @@ export function AgreementCard({
         style={s.agreeDetail}
         hitSlop={6}
       >
-        <AppText size={13} weight={700} color="#888">
+        <AppText size={16} weight={700} color="#888">
           전체 보기
         </AppText>
       </Pressable>
@@ -494,11 +481,11 @@ export function GuideBox({
   const fg = tone === 'success' ? '#20674A' : tone === 'error' ? '#A33B2E' : '#7A6000';
   return (
     <View style={[s.notice, box]}>
-      <AppText size={14} weight={600} color={fg} lineHeight={21}>
+      <AppText size={17} weight={600} color={fg} lineHeight={25}>
         {title}
       </AppText>
       {description ? (
-        <AppText size={13} weight={400} color={fg} lineHeight={19} style={s.mt3}>
+        <AppText size={17} weight={400} color={fg} lineHeight={25} style={s.mt3}>
           {description}
         </AppText>
       ) : null}
@@ -538,7 +525,7 @@ export function BottomActionArea({
           pressed && !primaryDisabled && s.pressed,
         ]}
       >
-        <AppText size={17} weight={900} color={primaryDisabled ? '#AAA' : INK} numberOfLines={1} style={s.btnLabel}>
+        <AppText size={20} weight={900} color={primaryDisabled ? '#AAA' : INK} numberOfLines={1} style={s.btnLabel}>
           {primary}
         </AppText>
       </Pressable>
@@ -548,14 +535,14 @@ export function BottomActionArea({
           onPress={onSecondary}
           style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}
         >
-          <AppText size={17} weight={900} color={INK} numberOfLines={1} style={s.btnLabel}>
+          <AppText size={20} weight={900} color={INK} numberOfLines={1} style={s.btnLabel}>
             {secondary}
           </AppText>
         </Pressable>
       ) : null}
       {quiet && onQuiet ? (
         <Pressable accessibilityRole="button" onPress={onQuiet} style={s.quietBtn}>
-          <AppText size={14} weight={700} color="#888" style={s.underline}>
+          <AppText size={17} weight={700} color="#888" style={s.underline}>
             {quiet}
           </AppText>
         </Pressable>
@@ -579,15 +566,15 @@ export function AgreementDetail({
     <Sheet visible={visible} onClose={onClose} title={title} a11yLabel={`${title} 상세 내용`} tall>
       {term?.summary ? (
         <View style={[s.notice, s.noticeNeutral, s.summaryBox]}>
-          <AppText size={13} weight={800} color="#7A6000">
+          <AppText size={17} weight={800} color="#7A6000">
             쉬운 설명
           </AppText>
-          <AppText size={16} weight={600} color={INK} lineHeight={24} style={s.mt3}>
+          <AppText size={18} weight={600} color={INK} lineHeight={27} style={s.mt3}>
             {term.summary}
           </AppText>
         </View>
       ) : null}
-      <AppText size={13} weight={700} color="#888" style={s.fullTermsLabel}>
+      <AppText size={17} weight={700} color="#888" style={s.fullTermsLabel}>
         전체 약관
       </AppText>
       <ScrollView
@@ -598,13 +585,13 @@ export function AgreementDetail({
         showsVerticalScrollIndicator
         bounces
       >
-        <AppText size={15} lineHeight={24} color={INK}>
+        <AppText size={17} lineHeight={26} color={INK}>
           {term?.body ?? ''}
         </AppText>
       </ScrollView>
       <View style={s.detailFooter}>
         <Pressable accessibilityRole="button" onPress={onClose} style={s.primaryBtn}>
-          <AppText size={17} weight={900} color={INK}>
+          <AppText size={20} weight={900} color={INK}>
             확인했어요
           </AppText>
         </Pressable>
@@ -624,15 +611,18 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 16,
     paddingBottom: 14,
     backgroundColor: '#fff',
   },
-  headerBack: { position: 'absolute', left: 16, padding: 6 },
-  headerVoice: { position: 'absolute', right: 48, padding: 6 },
-  headerExit: { position: 'absolute', right: 16, padding: 6 },
+  headerSide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerSideRight: { justifyContent: 'flex-end' },
+  headerTitle: { flex: 1 },
+  headerIconBtn: { padding: 6 },
   certProgress: { flexDirection: 'row', gap: 6, marginTop: 4, marginBottom: 4 },
   certChip: {
     flex: 1,
@@ -748,7 +738,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minHeight: 56,
+    minHeight: 68,
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1.5,
@@ -760,7 +750,7 @@ const s = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: INK,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     paddingVertical: 10,
   },
@@ -834,7 +824,7 @@ const s = StyleSheet.create({
   btnLabel: { includeFontPadding: false },
   primaryBtn: {
     width: '100%',
-    minHeight: 56,
+    minHeight: 60,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
@@ -845,7 +835,7 @@ const s = StyleSheet.create({
   primaryBtnOff: { backgroundColor: '#F0F0F0' },
   secondaryBtn: {
     width: '100%',
-    minHeight: 56,
+    minHeight: 60,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,

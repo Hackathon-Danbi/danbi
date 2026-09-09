@@ -175,7 +175,7 @@ export function DailyHubScreen({
           나의 금융 독립
         </AppText>
         <Pressable accessibilityRole="button" onPress={onExit} style={styles.exitBtn}>
-          <AppText size={13} weight={700} color={colors.muted}>
+          <AppText size={15} weight={700} color={colors.muted}>
             연습 그만하기
           </AppText>
         </Pressable>
@@ -184,7 +184,7 @@ export function DailyHubScreen({
       <ScrollView contentContainerStyle={styles.content}>
         {apiError || quizError ? (
           <View style={styles.apiError}>
-            <AppText size={13} weight={700} color="#a7372b" lineHeight={19}>
+            <AppText size={15} weight={700} color="#a7372b" lineHeight={21}>
               {quizError || apiError}
             </AppText>
           </View>
@@ -209,16 +209,16 @@ export function DailyHubScreen({
             )}
           </View>
           <ProgressBar value={pct} height={8} />
-          <AppText size={12} color={colors.muted} lineHeight={17} style={styles.scoreNote}>
+          <AppText size={14} color={colors.muted} lineHeight={20} style={styles.scoreNote}>
             금융 연습을 완료할 때마다 쌓여요 · 실제 신용점수와는 무관해요.
           </AppText>
 
           <View style={styles.stampsSection}>
             <View style={styles.stampsHeader}>
-              <AppText size={12} weight={700} color={colors.muted}>
+              <AppText size={14} weight={700} color={colors.muted}>
                 이번 주 안심 도장
               </AppText>
-              <AppText size={12} weight={800} color={colors.yellow}>
+              <AppText size={14} weight={800} color={colors.yellow}>
                 {completedWeekdayCount}/{weeklyActivity.length}
               </AppText>
             </View>
@@ -264,7 +264,7 @@ export function DailyHubScreen({
         {/* 3. 퀴즈 카드 */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <AppText size={13} weight={800} color={colors.yellow}>
+            <AppText size={15} weight={800} color={colors.yellow}>
               오늘의 금융 O/X 퀴즈
             </AppText>
             {!todayQuizDone ? (
@@ -274,7 +274,7 @@ export function DailyHubScreen({
                 onPress={() => speak(todayQuestion.question)}
                 style={styles.voiceBtn}
               >
-                <AppText size={12} weight={700} color={colors.accentText}>
+                <AppText size={14} weight={700} color={colors.accentText}>
                   🔊 문제 듣기
                 </AppText>
               </Pressable>
@@ -297,7 +297,7 @@ export function DailyHubScreen({
                 onPress={reviewCompletedQuiz}
                 style={styles.reviewQuizBtn}
               >
-                <AppText size={13} weight={800} color={colors.accentText}>
+                <AppText size={15} weight={800} color={colors.accentText}>
                   오늘 문제 다시 보기
                 </AppText>
               </Pressable> : null}
@@ -336,7 +336,7 @@ export function DailyHubScreen({
 
         {/* 4. 오늘의 송금 연습 — 기존 practice flow 를 조합한 하루 1개 미션. */}
         <View style={styles.card}>
-          <AppText size={13} weight={800} color={colors.yellow}>
+          <AppText size={15} weight={800} color={colors.yellow}>
             오늘의 송금 연습
           </AppText>
           {todayPracticeDone ? (
@@ -356,7 +356,7 @@ export function DailyHubScreen({
                 onPress={() => onStartDailyMission(todayMission)}
                 style={styles.reviewQuizBtn}
               >
-                <AppText size={13} weight={800} color={colors.accentText}>
+                <AppText size={15} weight={800} color={colors.accentText}>
                   오늘 연습 다시 보기
                 </AppText>
               </Pressable>
@@ -389,7 +389,7 @@ export function DailyHubScreen({
           style={styles.pickerButton}
         >
           <View style={styles.flex1}>
-            <AppText size={13} weight={800} color={colors.yellow}>다른 연습도 해보기</AppText>
+            <AppText size={15} weight={800} color={colors.yellow}>다른 연습도 해보기</AppText>
             <AppText size={18} weight={900} color={colors.ink} style={styles.mt3}>
               원하는 연습 골라보기
             </AppText>
@@ -498,7 +498,7 @@ function DifficultyReviewCard({
   const copy = TRANSFER_DIFFICULTY_COPY[difficulty.step];
   return (
     <View style={[styles.card, styles.difficultyCard]}>
-      <AppText size={13} weight={800} color={colors.yellow}>내가 어려웠던 부분 다시하기</AppText>
+      <AppText size={15} weight={800} color={colors.yellow}>내가 어려웠던 부분 다시하기</AppText>
       <AppText size={14} color={colors.muted} lineHeight={21} style={styles.difficultyLead}>
         지난 송금에서 ‘{copy.title}’ 단계가 어려웠어요.
       </AppText>

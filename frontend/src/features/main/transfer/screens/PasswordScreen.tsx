@@ -61,7 +61,7 @@ export function PasswordScreen({
             />
           ))}
         </View>
-        <AppText size={13} color="#AAA" align="center">
+        <AppText size={15} color="#AAA" align="center">
           비밀번호는 다른 사람에게 보이지 않게 입력해 주세요.
         </AppText>
       </View>

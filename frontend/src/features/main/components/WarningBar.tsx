@@ -8,7 +8,7 @@ export function WarningBar({ text }: { text: string }) {
   return (
     <View style={styles.bar}>
       <AppText size={18}>⚠️</AppText>
-      <AppText size={14} weight={600} lineHeight={21} color="#7A6000" style={styles.text}>
+      <AppText size={15} weight={600} lineHeight={22} color="#7A6000" style={styles.text}>
         {text}
       </AppText>
     </View>

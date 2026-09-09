@@ -37,7 +37,7 @@ export function ResultScreen({
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.userRow}>
           <View style={styles.userBubble}>
-            <AppText size={12} weight={700} color="#7A6000" style={styles.mb4}>
+            <AppText size={14} weight={700} color="#7A6000" style={styles.mb4}>
               박옥순님의 말씀
             </AppText>
             <AppText size={15} weight={700} color={INK}>
@@ -49,7 +49,7 @@ export function ResultScreen({
         <View style={styles.answer}>
           <View style={styles.answerHead}>
             <View style={styles.avatar}>
-              <AppText size={13} weight={900} color={INK}>
+              <AppText size={15} weight={900} color={INK}>
                 단
               </AppText>
             </View>
@@ -79,7 +79,7 @@ export function ResultScreen({
               </AppText>
             )}
             <View style={styles.chip}>
-              <AppText size={12} color="#999">
+              <AppText size={14} color="#999">
                 확인한 통장 · {answeredAccount.accountName}
               </AppText>
             </View>

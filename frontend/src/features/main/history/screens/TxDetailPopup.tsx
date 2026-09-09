@@ -76,7 +76,7 @@ export function TxDetailPopup({
               <View style={styles.detailCard}>
                 {rows.map((row, i) => (
                   <View key={row.label} style={[styles.detailRow, i > 0 && styles.detailRowBorder]}>
-                    <AppText size={13} weight={700} color="#888">
+                    <AppText size={15} weight={700} color="#888">
                       {row.label}
                     </AppText>
                     <AppText size={15} weight={900} color={INK} style={styles.detailValue}>

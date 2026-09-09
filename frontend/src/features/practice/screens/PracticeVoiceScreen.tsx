@@ -151,7 +151,7 @@ export function PracticeVoiceScreen() {
           <View style={styles.center}>
             {guided ? (
               <View style={styles.scriptCard}>
-                <AppText size={13} weight={700} color={P.accentText}>
+                <AppText size={15} weight={700} color={P.accentText}>
                   이렇게 말해보세요
                 </AppText>
                 <AppText size={20} weight={900} color={P.ink} style={styles.mt6}>
@@ -213,7 +213,7 @@ export function PracticeVoiceScreen() {
                 {guidedResultMismatch ? '이번 미션과\n다르게 들었어요.' : '조금 더\n확인이 필요해요.'}
               </AppText>
               <View style={styles.mismatchCard}>
-                <AppText size={13} color={P.muted}>
+                <AppText size={15} color={P.muted}>
                   이렇게 들었어요
                 </AppText>
                 <AppText size={18} weight={900} color={P.ink} style={styles.mt6}>
@@ -251,7 +251,7 @@ export function PracticeVoiceScreen() {
             </View>
           ) : (
             <View style={styles.center}>
-              <AppText size={13} weight={800} color={P.accentText}>
+              <AppText size={15} weight={800} color={P.accentText}>
                 이렇게 들었어요
               </AppText>
               {guided ? (
@@ -262,20 +262,20 @@ export function PracticeVoiceScreen() {
                 </View>
               ) : (
                 <View style={styles.resultCard}>
-                  <AppText size={13} color={P.muted}>
+                  <AppText size={15} color={P.muted}>
                     받는 사람
                   </AppText>
                   <AppText size={20} weight={900} color={P.ink} style={styles.mt4}>
                     {resultName || '확인되지 않음'}
                   </AppText>
                   <View style={styles.hr} />
-                  <AppText size={13} color={P.muted}>
+                  <AppText size={15} color={P.muted}>
                     보낼 금액
                   </AppText>
                   <AppText size={22} weight={900} color={P.ink} style={styles.mt4}>
                     {resultAmount ? `${formatWon(resultAmount)}원` : '확인되지 않음'}
                   </AppText>
-                  <AppText size={13} color={P.muted} style={styles.mt6}>
+                  <AppText size={15} color={P.muted} style={styles.mt6}>
                     “{transcript}”
                   </AppText>
                 </View>

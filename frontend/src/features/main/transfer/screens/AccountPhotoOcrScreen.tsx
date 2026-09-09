@@ -44,7 +44,7 @@ export function AccountPhotoOcrScreen({
           <AppText size={25} weight={900} color={INK} align="center">
             계좌번호를 찾고 있어요
           </AppText>
-          <AppText size={14} color="#777" align="center" lineHeight={21}>
+          <AppText size={16} color="#777" align="center" lineHeight={23}>
             사진 속 숫자를 꼼꼼히 확인하고 있어요.
           </AppText>
         </View>

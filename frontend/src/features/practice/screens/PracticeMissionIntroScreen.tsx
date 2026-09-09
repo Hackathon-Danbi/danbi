@@ -26,7 +26,7 @@ export function PracticeMissionIntroScreen() {
         </AppText>
 
         <View style={styles.missionCard}>
-          <AppText size={13} weight={700} color={P.muted}>
+          <AppText size={15} weight={700} color={P.muted}>
             받는 사람
           </AppText>
           <AppText size={23} weight={900} color={P.ink} style={styles.mt4}>
@@ -38,7 +38,7 @@ export function PracticeMissionIntroScreen() {
 
           <View style={styles.divider} />
 
-          <AppText size={13} weight={700} color={P.muted}>
+          <AppText size={15} weight={700} color={P.muted}>
             보낼 금액
           </AppText>
           <AppText size={26} weight={900} color={P.accentText} style={styles.mt4}>

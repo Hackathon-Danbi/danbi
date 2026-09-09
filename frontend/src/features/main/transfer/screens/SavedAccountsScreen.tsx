@@ -57,7 +57,7 @@ export function SavedAccountsScreen({
           <AppText size={28} weight={900} color={INK} lineHeight={36}>
             {'자주 보내는 계좌를\n모아두세요'}
           </AppText>
-          <AppText size={14} color="#777" lineHeight={21}>
+          <AppText size={16} color="#777" lineHeight={23}>
             별칭으로 쉽게 찾고, 음성 송금에도 사용할 수 있어요.
           </AppText>
         </View>
@@ -70,7 +70,7 @@ export function SavedAccountsScreen({
 
         <View style={styles.sectionHead}>
           <AppText size={18} weight={900} color={INK}>저장된 계좌</AppText>
-          <AppText size={13} weight={700} color="#888">{recipients.length}개</AppText>
+          <AppText size={15} weight={700} color="#888">{recipients.length}개</AppText>
         </View>
 
         <View style={styles.list}>
@@ -87,11 +87,11 @@ export function SavedAccountsScreen({
                 <View style={styles.flex1}>
                   <AppText size={17} weight={900} color={INK}>{displayName}</AppText>
                   {recipient.nickname ? (
-                    <AppText size={12} color="#999" style={styles.mt3}>
+                    <AppText size={14} color="#999" style={styles.mt3}>
                       받는 분 {recipient.recipientName}
                     </AppText>
                   ) : null}
-                  <AppText size={13} color="#777" style={styles.mt3}>
+                  <AppText size={15} color="#777" style={styles.mt3}>
                     {recipient.recipientBankName} · {recipient.recipientAccountNumber}
                   </AppText>
                 </View>
@@ -104,7 +104,7 @@ export function SavedAccountsScreen({
                   }}
                   style={styles.editButton}
                 >
-                  <AppText size={13} weight={800} color="#666">별칭 변경</AppText>
+                  <AppText size={15} weight={800} color="#666">별칭 변경</AppText>
                 </Pressable>
               </View>
             );
@@ -122,14 +122,14 @@ export function SavedAccountsScreen({
           <View style={styles.plusCircle}><AppText size={22} weight={900} color={INK}>+</AppText></View>
           <View style={styles.flex1}>
             <AppText size={16} weight={900} color={INK}>계좌번호 직접 저장</AppText>
-            <AppText size={13} color="#777" style={styles.mt3}>은행과 계좌번호를 입력해요</AppText>
+            <AppText size={15} color="#777" style={styles.mt3}>은행과 계좌번호를 입력해요</AppText>
           </View>
         </Pressable>
 
         {recommendations.length > 0 ? (
           <View style={styles.recommendSection}>
             <AppText size={18} weight={900} color={INK}>최근 자주 보낸 계좌</AppText>
-            <AppText size={13} color="#777" lineHeight={20} style={styles.mt5}>
+            <AppText size={15} color="#777" lineHeight={22} style={styles.mt5}>
               최근 송금 횟수가 많은 계좌예요. 필요한 계좌만 저장하세요.
             </AppText>
             <View style={[styles.list, styles.mt12]}>
@@ -147,10 +147,10 @@ export function SavedAccountsScreen({
                     </View>
                     <View style={styles.flex1}>
                       <AppText size={16} weight={900} color={INK}>{candidate.recipientName}</AppText>
-                      <AppText size={13} color="#777" style={styles.mt3}>
+                      <AppText size={15} color="#777" style={styles.mt3}>
                         {candidate.recipientBankName} · {candidate.recipientAccountNumber}
                       </AppText>
-                      <AppText size={12} weight={700} color="#947000" style={styles.mt5}>
+                      <AppText size={14} weight={700} color="#947000" style={styles.mt5}>
                         최근 {candidate.recentTransferCount}회 · 마지막 {candidate.lastTransferredAt}
                       </AppText>
                     </View>
@@ -289,7 +289,7 @@ function AccountEditorModal({
             style={styles.input}
           />
           {editor?.mode === 'nickname' ? (
-            <AppText size={13} color="#777" lineHeight={20}>
+            <AppText size={15} color="#777" lineHeight={22}>
               비워서 저장하면 기존 별칭이 삭제돼요.
             </AppText>
           ) : null}

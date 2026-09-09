@@ -13,7 +13,7 @@ interface EscalationSheetProps {
 export function EscalationSheet({ visible, onDismiss }: EscalationSheetProps) {
   return (
     <Sheet visible={visible} onClose={onDismiss} title="도움이 필요하신가요?" a11yLabel="도움이 필요하신가요?">
-      <AppText size={17} lineHeight={26} color="#5d584f" style={styles.body}>
+      <AppText size={19} lineHeight={28} color="#5d584f" style={styles.body}>
         계속 어려우시면 상담원이나 영업점에서 도와드릴 수 있어요.
       </AppText>
 
@@ -24,15 +24,15 @@ export function EscalationSheet({ visible, onDismiss }: EscalationSheetProps) {
           style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
         >
           <View style={styles.optionIcon}>
-            <AppText size={11} weight={700} color="#555" align="center">
+            <AppText size={14} weight={700} color="#555" align="center">
               전화
             </AppText>
           </View>
           <View style={styles.optionInfo}>
-            <AppText size={16} weight={700} color="#1a1a1a">
+            <AppText size={18} weight={700} color="#1a1a1a">
               전화 상담받기
             </AppText>
-            <AppText size={13} color="#888">
+            <AppText size={16} color="#888">
               1588-9999 · 평일 오전 9시 ~ 오후 6시
             </AppText>
           </View>
@@ -50,15 +50,15 @@ export function EscalationSheet({ visible, onDismiss }: EscalationSheetProps) {
           style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
         >
           <View style={styles.optionIcon}>
-            <AppText size={11} weight={700} color="#555" align="center">
+            <AppText size={14} weight={700} color="#555" align="center">
               영업점
             </AppText>
           </View>
           <View style={styles.optionInfo}>
-            <AppText size={16} weight={700} color="#1a1a1a">
+            <AppText size={18} weight={700} color="#1a1a1a">
               영업점에서 도움받기
             </AppText>
-            <AppText size={13} color="#888">
+            <AppText size={16} color="#888">
               신분증 지참 필수 · 방문 전 영업 시간을 확인해주세요
             </AppText>
           </View>

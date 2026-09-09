@@ -29,7 +29,7 @@ export function BankSelectScreen({
         <AppText size={24} weight={900} color={INK} lineHeight={31} style={styles.mb8}>
           {'어느 은행으로\n보내시나요?'}
         </AppText>
-        <AppText size={14} color="#888" style={styles.mb20}>
+        <AppText size={16} color="#888" style={styles.mb20}>
           받는 분의 은행을 먼저 선택해주세요.
         </AppText>
 

@@ -27,7 +27,7 @@ export function VoiceConfirmScreen({
       <NavBar title="내용을 확인해 주세요" onBack={onBack} />
       <View style={styles.body}>
         <View style={styles.card}>
-          <AppText size={13} weight={700} color="#AAA" align="center" style={styles.mb14}>
+          <AppText size={15} weight={700} color="#AAA" align="center" style={styles.mb14}>
             음성으로 인식한 내용
           </AppText>
           <AppText size={30} weight={900} color={INK} align="center" lineHeight={41}>

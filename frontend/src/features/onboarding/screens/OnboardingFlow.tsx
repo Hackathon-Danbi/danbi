@@ -606,11 +606,11 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
       />
 
       <Sheet visible={showExit} onClose={() => setShowExit(false)} title="가입을 그만하시겠어요?">
-        <AppText size={14} lineHeight={21} color="#888" style={st.exitBody}>
+        <AppText size={17} lineHeight={25} color="#888" style={st.exitBody}>
           인증번호와 비밀번호는 저장하지 않아요. 나중에 안전한 단계부터 이어서 가입할 수 있어요.
         </AppText>
         <Pressable accessibilityRole="button" onPress={() => setShowExit(false)} style={st.exitPrimary}>
-          <AppText size={17} weight={900} color={INK}>
+          <AppText size={20} weight={900} color={INK}>
             계속 가입할게요
           </AppText>
         </Pressable>
@@ -622,7 +622,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
           }}
           style={st.exitQuiet}
         >
-          <AppText size={14} weight={700} color="#888" style={st.underline}>
+          <AppText size={16} weight={700} color="#888" style={st.underline}>
             그만하기
           </AppText>
         </Pressable>
@@ -830,7 +830,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                     onPress={() => Linking.openURL('tel:15889999')}
                     style={st.helpExitBtn}
                   >
-                    <AppText size={17} weight={900} color={INK}>
+                    <AppText size={20} weight={900} color={INK}>
                       전화로 상담받기 (1588-9999)
                     </AppText>
                   </Pressable>
@@ -841,7 +841,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                     }
                     style={st.helpExitBtn}
                   >
-                    <AppText size={17} weight={900} color={INK}>
+                    <AppText size={20} weight={900} color={INK}>
                       영업점에서 도움받기
                     </AppText>
                   </Pressable>
@@ -850,7 +850,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                     onPress={() => setShowExit(true)}
                     style={st.quietInline}
                   >
-                    <AppText size={14} weight={700} color="#888" style={st.underline}>
+                    <AppText size={16} weight={700} color="#888" style={st.underline}>
                       나중에 다시 할게요
                     </AppText>
                   </Pressable>
@@ -946,7 +946,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                   <GuideText>이제 신분증을 확인할게요.</GuideText>
                   <View style={st.centerBlock}>
                     <SuccessMark />
-                    <AppText size={15} weight={800} color={INK} align="center">
+                    <AppText size={17} weight={800} color={INK} align="center">
                       인증번호를 확인했어요
                     </AppText>
                   </View>
@@ -1333,7 +1333,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               {success ? (
                 <View style={st.heroCard}>
                   <HeroMark icon="check" />
-                  <AppText size={15} weight={800} color={INK} style={st.mt12}>
+                  <AppText size={17} weight={800} color={INK} style={st.mt12}>
                     두 번 입력한 번호가 같아요
                   </AppText>
                 </View>
@@ -1356,7 +1356,7 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
                   {state.pinError ? (
                     <InlineError text={state.pinError} />
                   ) : (
-                    <AppText size={13} color="#AAA" align="center" style={st.pinHint}>
+                    <AppText size={17} color="#AAA" align="center" style={st.pinHint}>
                       비밀번호는 다른 사람에게 보이지 않게 입력해 주세요.
                     </AppText>
                   )}
@@ -1386,10 +1386,10 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
               <View style={st.mb18}>
                 <SuccessMark />
               </View>
-              <AppText size={24} weight={900} color={INK} align="center" lineHeight={33}>
+              <AppText size={28} weight={900} color={INK} align="center" lineHeight={38}>
                 가입이 끝났어요!
               </AppText>
-              <AppText size={15} color="#888" align="center" lineHeight={22} style={st.mt8}>
+              <AppText size={18} color="#888" align="center" lineHeight={26} style={st.mt8}>
                 이제 단비와 함께 천천히 은행 업무를 시작해볼 수 있어요.
               </AppText>
             </View>
@@ -1418,15 +1418,15 @@ function StepList({ rows }: { rows: [string, string][] }) {
       {rows.map(([label, detail], i) => (
         <View key={label} style={st.stepRow}>
           <View style={st.stepNum}>
-            <AppText size={13} weight={900} color={INK}>
+            <AppText size={17} weight={900} color={INK}>
               {i + 1}
             </AppText>
           </View>
           <View style={st.flex1}>
-            <AppText size={16} weight={900} color={INK}>
+            <AppText size={18} weight={900} color={INK}>
               {label}
             </AppText>
-            <AppText size={13} lineHeight={19} color="#888" style={st.mt2}>
+            <AppText size={17} lineHeight={25} color="#888" style={st.mt2}>
               {detail}
             </AppText>
           </View>
@@ -1440,16 +1440,16 @@ function ReadResult({ idType, rows }: { idType: string; rows: [string, string][]
   return (
     <View style={st.readResult}>
       <View style={st.idTypeChip}>
-        <AppText size={12} weight={800} color={INK}>
+        <AppText size={16} weight={800} color={INK}>
           {idType}
         </AppText>
       </View>
       {rows.map(([label, value], i) => (
         <View key={label} style={[st.readRow, i > 0 && st.readRowBorder]}>
-          <AppText size={13} weight={700} color="#888" style={st.readLabel}>
+          <AppText size={17} weight={700} color="#888" style={st.readLabel}>
             {label}
           </AppText>
-          <AppText size={17} weight={900} color={INK} style={st.flex1}>
+          <AppText size={19} weight={900} color={INK} style={st.flex1}>
             {value}
           </AppText>
         </View>
@@ -1464,7 +1464,7 @@ function SuccessMark() {
 
 function InlineError({ text }: { text: string }) {
   return (
-    <AppText size={13} weight={700} lineHeight={19} color="#E05050" style={st.inlineError}>
+    <AppText size={17} weight={700} lineHeight={24} color="#E05050" style={st.inlineError}>
       {text}
     </AppText>
   );

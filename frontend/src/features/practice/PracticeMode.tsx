@@ -74,7 +74,7 @@ function PracticeRouter({ onExit }: { onExit?: () => void }) {
       <GuidedPraiseOverlay />
       {onExit ? (
         <Pressable accessibilityRole="button" onPress={onExit} style={styles.exit}>
-          <AppText size={13} weight={700} color={P.accentText}>
+          <AppText size={15} weight={700} color={P.accentText}>
             연습 그만하기
           </AppText>
         </Pressable>

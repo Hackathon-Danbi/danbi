@@ -50,7 +50,7 @@ export function AmountEntry({
       <View style={styles.page}>
         {children}
         <View style={[styles.display, highlighted && styles.displayHighlight]}>
-          <AppText size={13} color={P.muted}>
+          <AppText size={15} color={P.muted}>
             {label}
           </AppText>
           <AppText
@@ -75,7 +75,7 @@ export function AmountEntry({
               onPress={() => onSelectQuickAmount(q.value)}
               style={[styles.quickBtn, q.suggested && styles.quickSuggested]}
             >
-              <AppText size={14} weight={700} color={P.ink}>
+              <AppText size={15} weight={700} color={P.ink}>
                 {q.label}
               </AppText>
             </Pressable>

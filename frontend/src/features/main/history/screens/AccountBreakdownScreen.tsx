@@ -63,7 +63,7 @@ export function AccountBreakdownScreen({
                     <AppText size={16} weight={900} color={INK}>
                       {account.accountName}
                     </AppText>
-                    <AppText size={12} color="#AAA">
+                    <AppText size={14} color="#AAA">
                       {account.bankName} · {account.maskedAccountNumber}
                     </AppText>
                   </View>
@@ -71,7 +71,7 @@ export function AccountBreakdownScreen({
                   {count > 0 ? (
                     <>
                       <View style={styles.countPill}>
-                        <AppText size={13} weight={900} color="#8A6D00">
+                        <AppText size={14} weight={900} color="#8A6D00">
                           {count}건
                         </AppText>
                       </View>
@@ -86,7 +86,7 @@ export function AccountBreakdownScreen({
                       </Svg>
                     </>
                   ) : (
-                    <AppText size={13} weight={800} color="#B4B4B4">
+                    <AppText size={15} weight={800} color="#B4B4B4">
                       확인 완료
                     </AppText>
                   )}
@@ -97,13 +97,13 @@ export function AccountBreakdownScreen({
                     {pending.map((tx) => (
                       <View key={tx.id} style={styles.txRow}>
                         <View style={styles.flex1}>
-                          <AppText size={12} color="#AAA" style={styles.txWhen}>
+                          <AppText size={14} color="#AAA" style={styles.txWhen}>
                             {tx.date} · {tx.time}
                           </AppText>
                           <AppText size={15} weight={900} color={INK}>
                             {tx.name}
                           </AppText>
-                          <AppText size={12} weight={700} color="#C08A00">
+                          <AppText size={14} weight={700} color="#C08A00">
                             {tx.type} · 확인 필요
                           </AppText>
                         </View>
@@ -120,7 +120,7 @@ export function AccountBreakdownScreen({
           })}
         </View>
 
-        <AppText size={13} color="#999" align="center" style={styles.note}>
+        <AppText size={15} color="#999" align="center" style={styles.note}>
           노란색 숫자는 아직 확인하지 않은 거래 건수예요.
         </AppText>
       </ScrollView>

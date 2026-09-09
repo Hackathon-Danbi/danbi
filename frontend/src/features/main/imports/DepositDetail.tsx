@@ -19,7 +19,7 @@ export function DepositDetailBody({ detail }: { detail: SavingsDepositDetail }) 
             </AppText>
           </View>
           <View style={styles.badge}>
-            <AppText size={12} weight={700} color="#66625b">
+            <AppText size={14} weight={700} color="#66625b">
               정기예금
             </AppText>
           </View>
@@ -40,7 +40,7 @@ export function DepositDetailBody({ detail }: { detail: SavingsDepositDetail }) 
         <AppText size={31} weight={900} color={INK} letterSpacing={-0.5} style={styles.mt6}>
           약 {detail.expectedMaturityAmount.toLocaleString('ko-KR')}원
         </AppText>
-        <AppText size={12} color="#725600" style={styles.mt6}>
+        <AppText size={14} color="#725600" style={styles.mt6}>
           가입 금리 연 {detail.appliedInterestRate.toFixed(2)}% 기준
         </AppText>
       </View>

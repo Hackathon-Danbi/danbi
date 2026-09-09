@@ -7,7 +7,7 @@ export function RealTxBadge() {
   return (
     <View style={styles.badge}>
       <View style={styles.dot} />
-      <AppText size={12} weight={800} color="#8A6D00">
+      <AppText size={14} weight={800} color="#8A6D00">
         실제 거래내역
       </AppText>
     </View>

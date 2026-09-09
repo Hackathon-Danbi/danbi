@@ -19,7 +19,7 @@ export function AccountNumberEntry({
     <View style={styles.wrap}>
       <View style={styles.bankChoice}>
         <View style={styles.bankMark}>
-          <AppText size={13} weight={900} color="#fff">
+          <AppText size={15} weight={900} color="#fff">
             KB
           </AppText>
         </View>
@@ -27,7 +27,7 @@ export function AccountNumberEntry({
           <AppText size={16} weight={800} color={P.ink}>
             KB국민은행
           </AppText>
-          <AppText size={13} color={P.muted}>
+          <AppText size={15} color={P.muted}>
             {bankDescription}
           </AppText>
         </View>
@@ -36,7 +36,7 @@ export function AccountNumberEntry({
         </AppText>
       </View>
       <View style={styles.display}>
-        <AppText size={13} color={P.muted}>
+        <AppText size={15} color={P.muted}>
           {accountLabel}
         </AppText>
         <AppText size={22} weight={800} color={value ? P.ink : '#aaa'} letterSpacing={1}>

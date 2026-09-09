@@ -39,7 +39,7 @@ export function PracticeCompleteScreen() {
                 →
               </AppText>
             ) : null}
-            <AppText size={13} weight={700} color={P.ink}>
+            <AppText size={15} weight={700} color={P.ink}>
               {step}
             </AppText>
           </View>

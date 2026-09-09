@@ -193,10 +193,10 @@ export function SummaryReadScreen({
             <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
           </View>
           <View style={styles.timeRow}>
-            <AppText size={12} weight={700} color="#999">
+            <AppText size={14} weight={700} color="#999">
               {Math.round(elapsed)}초
             </AppText>
-            <AppText size={12} weight={700} color="#999">
+            <AppText size={14} weight={700} color="#999">
               {Math.round(totalSec)}초
             </AppText>
           </View>
@@ -214,7 +214,7 @@ export function SummaryReadScreen({
                 fill="none"
               />
             </Svg>
-            <AppText size={13} weight={800} color={INK}>
+            <AppText size={15} weight={800} color={INK}>
               다시 듣기
             </AppText>
           </Pressable>
@@ -246,13 +246,13 @@ export function SummaryReadScreen({
                 strokeLinecap="round"
               />
             </Svg>
-            <AppText size={13} weight={800} color={INK}>
+            <AppText size={15} weight={800} color={INK}>
               자세히 보기
             </AppText>
           </Pressable>
         </View>
 
-        <AppText size={13} color="#999" align="center" style={styles.hint}>
+        <AppText size={15} color="#999" align="center" style={styles.hint}>
           가운데 버튼으로 재생과 잠시 멈춤을 할 수 있어요.
         </AppText>
       </View>

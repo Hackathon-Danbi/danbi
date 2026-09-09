@@ -81,7 +81,7 @@ export function CameraPermissionGate({
   if (loading) {
     return (
       <View style={styles.gate}>
-        <AppText size={16} weight={800} color={INK} align="center" lineHeight={24}>
+        <AppText size={19} weight={800} color={INK} align="center" lineHeight={28}>
           카메라를 준비하고 있어요
         </AppText>
       </View>
@@ -89,10 +89,10 @@ export function CameraPermissionGate({
   }
   return (
     <View style={styles.gate}>
-      <AppText size={16} weight={800} color={INK} align="center" lineHeight={24}>
+      <AppText size={19} weight={800} color={INK} align="center" lineHeight={28}>
         {message}
       </AppText>
-      <AppText size={14} color="#888" align="center" lineHeight={21} style={styles.gateHint}>
+      <AppText size={17} color="#888" align="center" lineHeight={25} style={styles.gateHint}>
         {canAskAgain
           ? '아래 버튼을 눌러 카메라를 켜주세요.'
           : '설정에서 단비의 카메라 권한을 켜주세요.'}
@@ -107,7 +107,7 @@ export function CameraPermissionGate({
           }}
           style={styles.gateBtn}
         >
-          <AppText size={17} weight={900} color={INK}>
+          <AppText size={20} weight={900} color={INK}>
             카메라 허용하기
           </AppText>
         </Pressable>

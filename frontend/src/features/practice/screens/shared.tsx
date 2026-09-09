@@ -90,7 +90,7 @@ export function SafetyNote({ text }: { text: string }) {
   return (
     <View style={styles.safety}>
       <View style={styles.safetyMark}>
-        <AppText size={13} weight={900} color="#fff">
+        <AppText size={15} weight={900} color="#fff">
           ✓
         </AppText>
       </View>

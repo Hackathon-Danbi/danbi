@@ -16,7 +16,7 @@ export function PracticeMethodScreen() {
       <BackHeader title="연습 방법 선택" onBack={back} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.missionCard}>
-          <AppText size={13} weight={700} color={P.accentText}>
+          <AppText size={15} weight={700} color={P.accentText}>
             {solo ? '오늘의 송금 미션' : '이번 연습 미션'}
           </AppText>
           <AppText size={18} weight={900} color={P.ink} style={styles.mt4}>

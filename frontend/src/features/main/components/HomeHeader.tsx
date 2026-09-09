@@ -19,14 +19,14 @@ export function HomeHeader({
 
   return (
     <View style={styles.row}>
-      <AppText size={16} weight={800} color={INK}>
+      <AppText size={18} weight={800} color={INK} numberOfLines={1} style={styles.greeting}>
         안녕하세요, 박옥순님
       </AppText>
       <View style={styles.right}>
         {alertCount > 0 ? (
           <Pressable accessibilityRole="button" onPress={onHistory} style={styles.alert}>
             <IconBell size={15} />
-            <AppText size={12} weight={700} color={INK}>
+            <AppText size={14} weight={700} color={INK}>
               {alertLabel}
             </AppText>
           </Pressable>
@@ -45,6 +45,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     paddingHorizontal: 20,
   },
+  greeting: { flexShrink: 1, marginRight: 8 },
   right: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -41,21 +41,21 @@ export function ConfirmPopup({
           <AppText size={22} weight={900} color={INK} align="center" lineHeight={30} style={styles.mb8}>
             {title}
           </AppText>
-          <AppText size={14} color="#888" align="center" lineHeight={21} style={styles.mb22}>
+          <AppText size={15} color="#888" align="center" lineHeight={22} style={styles.mb22}>
             {subtitle}
           </AppText>
 
           <View style={[styles.info, { marginBottom: isLargeAmount ? 14 : 22 }]}>
-            <AppText size={13} weight={700} color="#AAA" style={styles.mb4}>
+            <AppText size={15} weight={700} color="#AAA" style={styles.mb4}>
               받는 사람
             </AppText>
             <AppText size={22} weight={900} color={INK} style={styles.mb4}>
               {txInfo.recipient || '수취인'}
             </AppText>
-            <AppText size={14} color="#999" style={styles.mb16}>
+            <AppText size={15} color="#999" style={styles.mb16}>
               {txInfo.bank}
             </AppText>
-            <AppText size={13} weight={700} color="#AAA" style={styles.mb4}>
+            <AppText size={15} weight={700} color="#AAA" style={styles.mb4}>
               보낼 금액
             </AppText>
             <AppText size={28} weight={900} color={INK}>

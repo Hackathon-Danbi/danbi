@@ -75,7 +75,7 @@ export function TransactionsScreen({
               <AppText size={16} weight={900} color="#9B1C1C" style={styles.mb4}>
                 모르는 거래 {unknownCount}건을 확인해주세요
               </AppText>
-              <AppText size={13} color="#8A3D3D" lineHeight={20}>
+              <AppText size={15} color="#8A3D3D" lineHeight={22}>
                 실제 모르는 거래라면 은행이나 카드사에 바로 신고해주세요.
               </AppText>
               <PulseHighlight active={helpTarget === 'reportBtn'} borderRadius={12}>
@@ -96,7 +96,7 @@ export function TransactionsScreen({
                   <AppText size={16} weight={900} color={INK} style={styles.mb4}>
                     확인하지 않은 거래 {needCheckCount}건이 있어요
                   </AppText>
-                  <AppText size={13} color="#888" lineHeight={20}>
+                  <AppText size={15} color="#888" lineHeight={22}>
                     아직 확인하지 않은 거래를 하나씩 확인해주세요.
                   </AppText>
                 </View>
@@ -115,7 +115,7 @@ export function TransactionsScreen({
             <PulseHighlight active={helpTarget === 'prevMonth'} borderRadius={14}>
               <Pressable accessibilityRole="button" onPress={onPrevMonth} style={styles.monthBtn}>
                 <IconCalendar size={20} />
-                <AppText size={13} weight={800} color={INK}>
+                <AppText size={15} weight={800} color={INK}>
                   이전 달
                 </AppText>
               </Pressable>
@@ -134,7 +134,7 @@ export function TransactionsScreen({
               onPress={onNextMonth}
               style={[styles.monthBtn, !canGoNext && styles.monthBtnDisabled]}
             >
-              <AppText size={13} weight={800} color={canGoNext ? INK : '#AAA'}>
+              <AppText size={15} weight={800} color={canGoNext ? INK : '#AAA'}>
                 다음 달
               </AppText>
               <IconCalendar size={20} />
@@ -143,7 +143,7 @@ export function TransactionsScreen({
 
           {dates.map((date) => (
             <View key={date} style={styles.dateGroup}>
-              <AppText size={14} weight={800} color="#888" style={styles.dateLabel}>
+              <AppText size={15} weight={800} color="#888" style={styles.dateLabel}>
                 {date}
               </AppText>
               <View style={styles.list}>
@@ -164,19 +164,19 @@ export function TransactionsScreen({
                         </AppText>
                         {tx.reviewStatus === 'pending' ? (
                           <View style={styles.checkPill}>
-                            <AppText size={11} weight={700} color="#9A7200">
+                            <AppText size={13} weight={700} color="#9A7200">
                               확인 필요
                             </AppText>
                           </View>
                         ) : tx.reviewStatus === 'unknown' ? (
                           <View style={styles.dangerPill}>
-                            <AppText size={11} weight={700} color="#9B1C1C">
+                            <AppText size={13} weight={700} color="#9B1C1C">
                               신고 필요
                             </AppText>
                           </View>
                         ) : null}
                       </View>
-                      <AppText size={12} color="#AAA">
+                      <AppText size={14} color="#AAA">
                         {tx.time} · {tx.type}
                       </AppText>
                     </View>

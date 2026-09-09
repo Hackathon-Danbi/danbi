@@ -44,7 +44,7 @@ export function TransferDoneScreen({ txInfo, onHome }: { txInfo: TxInfo; onHome:
         <View style={styles.summary}>
           {rows.map((row, i) => (
             <View key={row.label} style={[styles.summaryRow, i > 0 && styles.summaryRowBorder]}>
-              <AppText size={14} weight={600} color="#999">
+              <AppText size={15} weight={600} color="#999">
                 {row.label}
               </AppText>
               <AppText size={17} weight={900} color={INK}>

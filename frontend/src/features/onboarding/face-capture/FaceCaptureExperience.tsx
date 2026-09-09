@@ -309,11 +309,11 @@ export function FaceCaptureExperience({
           )}
         </View>
         {captureError ? (
-          <AppText size={13} weight={700} color="#E05050" style={styles.error}>
+          <AppText size={17} weight={700} color="#E05050" style={styles.error}>
             {captureError}
           </AppText>
         ) : (
-          <AppText size={15} weight={800} color={INK} align="center" style={styles.hint}>
+          <AppText size={17} weight={800} color={INK} align="center" style={styles.hint}>
             {checking
               ? '움직이지 말고 기다려주세요'
               : failed
@@ -361,12 +361,12 @@ export function FaceCaptureExperience({
       </PulseHighlight>
 
       <Sheet visible={showHelp} onClose={() => setShowHelp(false)} title="촬영이 조금 어려우신가요?">
-        <AppText size={14} lineHeight={21} color="#888" style={styles.sheetGuide}>
+        <AppText size={17} lineHeight={25} color="#888" style={styles.sheetGuide}>
           괜찮아요. 단비가 하나씩 알려드릴게요.
         </AppText>
         {FACE_HELP_OPTIONS.map(([kind, label]) => (
           <Pressable key={kind} accessibilityRole="button" onPress={() => startCoach(kind)} style={styles.helpRow}>
-            <AppText size={15} weight={800} color={INK} style={styles.flex1}>
+            <AppText size={17} weight={800} color={INK} style={styles.flex1}>
               {label}
             </AppText>
             <AppText size={16} color="#888">

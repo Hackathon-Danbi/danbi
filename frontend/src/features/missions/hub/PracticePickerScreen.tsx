@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { BackButton } from '@/components/ui/BackButton';
 import { colors } from '@/theme/tokens';
 import { MISSIONS } from '../data/missions';
 import type { Mission } from '../data/missions';
@@ -28,19 +29,12 @@ export function PracticePickerScreen({ onStartPractice, onBack }: Props) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="뒤로가기"
-          onPress={onBack}
-          style={styles.backBtn}
-        >
-          <AppText size={17} weight={800} color={colors.ink}>‹ 연습 선택</AppText>
-        </Pressable>
+        <BackButton onPress={onBack} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <AppText size={22} weight={900} color={colors.ink}>원하는 연습 골라보기</AppText>
-        <AppText size={14} color={colors.muted} lineHeight={20}>
+        <AppText size={16} color={colors.muted} lineHeight={23}>
           연습하고 싶은 방법을 골라 눌러보세요.
         </AppText>
 
@@ -59,7 +53,7 @@ export function PracticePickerScreen({ onStartPractice, onBack }: Props) {
                 <AppText size={18} weight={800} color={colors.ink}>
                   {option.title}
                 </AppText>
-                <AppText size={14} color={colors.muted} lineHeight={19} style={styles.mt3}>
+                <AppText size={15} color={colors.muted} lineHeight={21} style={styles.mt3}>
                   {option.description}
                 </AppText>
               </View>
@@ -82,7 +76,6 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 6,
   },
-  backBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 28, gap: 8 },
   list: { gap: 12, marginTop: 10 },
   optionCard: {

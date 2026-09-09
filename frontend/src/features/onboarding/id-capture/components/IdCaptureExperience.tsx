@@ -269,7 +269,7 @@ export function IdCaptureExperience({
 
   const helpSheet = (
     <Sheet visible={showHelp} onClose={() => setShowHelp(false)} title="촬영이 조금 어려우신가요?">
-      <AppText size={14} lineHeight={21} color="#888" style={s.sheetGuide}>
+      <AppText size={17} lineHeight={25} color="#888" style={s.sheetGuide}>
         괜찮아요. 단비가 하나씩 알려드릴게요.
       </AppText>
       {(
@@ -281,7 +281,7 @@ export function IdCaptureExperience({
         ] as [HelpKind, string][]
       ).map(([kind, label]) => (
         <Pressable key={kind} accessibilityRole="button" onPress={() => startCoach(kind)} style={s.helpRow}>
-          <AppText size={15} weight={800} color={INK} style={s.flex1}>
+          <AppText size={17} weight={800} color={INK} style={s.flex1}>
             {label}
           </AppText>
           <AppText size={16} color="#888">
@@ -301,7 +301,7 @@ export function IdCaptureExperience({
             photoUri ? (
               <Image source={{ uri: photoUri }} style={s.photo} accessibilityLabel="찍은 신분증 사진" />
             ) : (
-              <AppText size={15} color="#888">
+              <AppText size={17} color="#888">
                 사진이 없어요. 다시 찍어주세요.
               </AppText>
             ),
@@ -325,7 +325,7 @@ export function IdCaptureExperience({
       <View style={s.sheetBody}>
         <View style={s.heading}>{heading}</View>
         {captureError ? (
-          <AppText size={13} weight={700} color="#E05050" style={s.error}>
+          <AppText size={17} weight={700} color="#E05050" style={s.error}>
             {captureError}
           </AppText>
         ) : null}

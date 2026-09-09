@@ -25,7 +25,7 @@ export function SavingsDetailBody({ detail }: { detail: SavingsInstallmentDetail
             </AppText>
           </View>
           <View style={styles.badge}>
-            <AppText size={12} weight={700} color="#66625b">
+            <AppText size={14} weight={700} color="#66625b">
               {detail.productType === 'FIXED_SAVINGS' ? '정기적금' : '자유적금'}
             </AppText>
           </View>
@@ -45,7 +45,7 @@ export function SavingsDetailBody({ detail }: { detail: SavingsInstallmentDetail
             세전 예상 만기금액
           </AppText>
           <View style={styles.expectBadge}>
-            <AppText size={12} weight={900} color={INK}>
+            <AppText size={14} weight={900} color={INK}>
               예상
             </AppText>
           </View>
@@ -53,7 +53,7 @@ export function SavingsDetailBody({ detail }: { detail: SavingsInstallmentDetail
         <AppText size={31} weight={900} color={INK} style={styles.mt6}>
           약 {detail.expectedMaturityAmount.toLocaleString('ko-KR')}원
         </AppText>
-        <AppText size={12} color="#725600" style={styles.mt6}>
+        <AppText size={14} color="#725600" style={styles.mt6}>
           가입 금리 연 {detail.appliedInterestRate.toFixed(2)}% 기준
         </AppText>
       </View>

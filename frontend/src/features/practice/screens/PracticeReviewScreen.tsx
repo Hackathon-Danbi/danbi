@@ -69,7 +69,7 @@ export function PracticeReviewScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <PracticeProgress current={3} label="송금 내용 확인" />
         <View style={styles.titleWrap}>
-          <AppText size={13} weight={700} color={P.accentText}>
+          <AppText size={15} weight={700} color={P.accentText}>
             송금 내용 확인
           </AppText>
           <AppText size={30} weight={900} color={P.ink} lineHeight={38}>
@@ -84,25 +84,25 @@ export function PracticeReviewScreen() {
 
         <View style={[styles.card, guided && !reviewError && styles.cardGuided, reviewError === 'both' && styles.cardError]}>
           <View style={reviewError === 'recipient' ? styles.fieldError : undefined}>
-            <AppText size={13} color={P.muted}>
+            <AppText size={15} color={P.muted}>
               받는 사람
             </AppText>
             <AppText size={22} weight={900} color={P.ink} style={styles.mt4}>
               {practiceRecipientName || '확인되지 않음'}
             </AppText>
-            <AppText size={13} color={P.muted} style={styles.mt2}>
+            <AppText size={15} color={P.muted} style={styles.mt2}>
               {recipientDetails}
             </AppText>
           </View>
           <View style={styles.hr} />
           <View style={reviewError === 'amount' ? styles.fieldError : undefined}>
-            <AppText size={13} color={P.muted}>
+            <AppText size={15} color={P.muted}>
               보낼 금액
             </AppText>
             <AppText size={22} weight={900} color={P.ink} style={styles.mt4}>
               {practiceAmount ? `${formattedPracticeAmount}원` : '확인되지 않음'}
             </AppText>
-            <AppText size={13} color={P.muted} style={styles.mt2}>
+            <AppText size={15} color={P.muted} style={styles.mt2}>
               연습용 금액
             </AppText>
           </View>
