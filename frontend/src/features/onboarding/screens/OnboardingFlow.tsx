@@ -18,7 +18,7 @@ import { BankGrid } from '@/features/main/components/BankGrid';
 import { BORDER, CREAM, INK, YELLOW } from '@/features/main/theme';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { ApiError, errorMessage } from '@/lib/api/http';
-import { getJSON, remove, setJSON, StorageKeys } from '@/lib/storage';
+import { remove, StorageKeys } from '@/lib/storage';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import type { OnboardingDestination } from '@/lib/navigation';
 import {
@@ -51,11 +51,6 @@ import {
   isFullBleedHelpStep,
   ONBOARDING_IDLE_MS,
 } from '../help/onboardingHelp';
-import {
-  resolveOnboardingResumeStep,
-  sanitizeOnboardingDraft,
-  type OnboardingDraft,
-} from '../onboardingDraft';
 import type { TermId } from '../terms';
 
 export type { OnboardingDestination } from '@/lib/navigation';
@@ -154,7 +149,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
   const [agreementDetail, setAgreementDetail] = useState<TermId | ''>('');
   const [showExit, setShowExit] = useState(false);
   const [isReading, setIsReading] = useState(false);
-  const [draftReady, setDraftReady] = useState(false);
   const [apiBusy, setApiBusy] = useState(false);
   const state = useOnboardingState();
   const [title, progress] = pageMeta[step];
@@ -179,81 +173,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     if (isFullBleedHelpStep(step)) return;
     setCaptureHelpEscalation(false);
   }, [step]);
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      const stored = sanitizeOnboardingDraft(
-        await getJSON<unknown>(StorageKeys.onboardingDraft),
-      );
-      if (!active) return;
-      if (stored) {
-        state.restoreDraft(stored);
-        setStep(resolveOnboardingResumeStep(stored) as Step);
-      }
-      setDraftReady(true);
-    })();
-    return () => {
-      active = false;
-    };
-    // 최초 마운트에서 저장된 체크포인트를 한 번만 복원한다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!draftReady) return;
-    const draft: OnboardingDraft = {
-      version: 2,
-      step,
-      phoneOwnership: state.phoneOwnership,
-      carrier: state.carrier,
-      requiredTerms: [Boolean(state.requiredTerms[0])],
-      phoneVerified: state.otpVerified,
-      certificateTerms: [Boolean(state.certificateTerms[0])],
-      electronicDocTermAccepted: state.electronicDocTermAccepted,
-      faceTermAccepted: state.faceTermAccepted,
-      idType: state.idType,
-      idScanCompleted: state.idScanStatus === 'success',
-      idInformationConfirmed: state.idInformationConfirmed,
-      faceVerified: state.faceVerified,
-      bank: state.bank as OnboardingDraft['bank'],
-      accountVerified: state.accountVerified,
-      userName: state.userName || undefined,
-      onboardingSessionId: state.apiIds.session || undefined,
-      issuanceId: state.apiIds.issuance || undefined,
-      scanId: state.apiIds.scan || undefined,
-      verificationSessionId: state.apiIds.verification || undefined,
-      accountVerificationTargetId: state.apiIds.accountTarget || undefined,
-      oneWonVerificationId: state.apiIds.oneWon || undefined,
-      idRecognizedName: state.idRecognizedName,
-      idMaskedNumber: state.idMaskedNumber,
-      idIssueDate: state.idIssueDate,
-      liveApi: state.liveApi,
-    };
-    void setJSON(StorageKeys.onboardingDraft, draft);
-  }, [
-    draftReady,
-    state.accountVerified,
-    state.apiIds,
-    state.bank,
-    state.certificateTerms,
-    state.faceVerified,
-    state.idInformationConfirmed,
-    state.idIssueDate,
-    state.idMaskedNumber,
-    state.idRecognizedName,
-    state.idScanStatus,
-    state.idType,
-    state.electronicDocTermAccepted,
-    state.faceTermAccepted,
-    state.liveApi,
-    state.otpVerified,
-    state.phoneOwnership,
-    state.requiredTerms,
-    state.carrier,
-    state.userName,
-    step,
-  ]);
 
   const stopReading = () => {
     ttsStop();
@@ -569,8 +488,6 @@ export function OnboardingFlow({ onComplete, onCancel, onDevHome }: Props) {
     onReplay: help.replay,
     onToggleVoice: help.toggleVoice,
   };
-
-  if (!draftReady) return <Screen background="#fff" edges={['top']}>{null}</Screen>;
 
   const page = buildPage();
 
