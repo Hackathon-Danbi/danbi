@@ -33,7 +33,7 @@ public class IdCardScanController {
 	public ScanIdCardResponse scan(
 		@RequestParam @NotBlank String issuanceId,
 		@RequestParam IdCardType idCardType,
-		@RequestPart("image") MultipartFile image
+		@RequestPart(value = "image", required = false) MultipartFile image
 	) {
 		return idCardScanService.scan(issuanceId, idCardType, image);
 	}
