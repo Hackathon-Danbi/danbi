@@ -31,7 +31,7 @@ export function HomeScreen({
   const tiles: { label: string; icon: ReactNode; action: () => void }[] = [
     { label: '거래 내역', icon: <IconHistory />, action: onHistory },
     { label: '돈 보내기', icon: <IconSend />, action: onTransfer },
-    { label: '나의 금융독립', icon: <IconPractice />, action: onFinancialIndependence },
+    { label: '금융 연습', icon: <IconPractice />, action: onFinancialIndependence },
     { label: '예적금', icon: <IconSavings />, action: onSavings },
   ];
 

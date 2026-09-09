@@ -23,6 +23,16 @@ import {
 import type { TransferDifficulty } from '../transferDifficulty';
 import type { QuizAnswerResult, TodayDailyActivity } from '@/api';
 
+/**
+ * "금융 연습" 화면 전용 강조색. 전역 노란색 토큰(colors.yellow 계열) 대신
+ * 이 화면만 파란색(#5379EE)으로 쓴다.
+ */
+const ACCENT = '#5379EE';
+const ACCENT_TEXT = '#2C40A8';
+const ACCENT_BORDER = '#3A5AD4';
+const ACCENT_SOFT = '#E7EDFD';
+const ACCENT_SURFACE = '#F4F7FF';
+
 /** 오늘의 송금 연습 카드 문구. 기존 practice flow 에 전달할 값(받는 사람·금액·방식)만 사용한다. */
 function describeTodayMission(mission: DailyMission): { title: string; description: string } {
   const recipientName = mission.recipientType === 'saved'
@@ -172,7 +182,7 @@ export function DailyHubScreen({
     <View style={styles.root}>
       <View style={styles.header}>
         <AppText size={20} weight={900} color={colors.ink}>
-          나의 금융 독립
+          금융 연습
         </AppText>
         <Pressable accessibilityRole="button" onPress={onExit} style={styles.exitBtn}>
           <AppText size={15} weight={700} color={colors.muted}>
@@ -193,15 +203,15 @@ export function DailyHubScreen({
         <View style={styles.card}>
           <View style={styles.scoreRow}>
             <AppText size={14} weight={700} color={colors.muted}>
-              나의 금융 독립 점수
+              금융 연습 점수
             </AppText>
             {achieved ? (
-              <AppText size={16} weight={900} color={colors.yellow}>
+              <AppText size={16} weight={900} color={ACCENT}>
                 100점 달성!
               </AppText>
             ) : (
               <AppText size={18} weight={700} color={colors.ink}>
-                <AppText size={22} weight={900} color={colors.yellow}>
+                <AppText size={22} weight={900} color={ACCENT}>
                   {score}
                 </AppText>
                 /{MAX_SCORE}점
@@ -218,7 +228,7 @@ export function DailyHubScreen({
               <AppText size={14} weight={700} color={colors.muted}>
                 이번 주 안심 도장
               </AppText>
-              <AppText size={14} weight={800} color={colors.yellow}>
+              <AppText size={14} weight={800} color={ACCENT}>
                 {completedWeekdayCount}/{weeklyActivity.length}
               </AppText>
             </View>
@@ -242,7 +252,7 @@ export function DailyHubScreen({
                     <AppText
                       size={11}
                       weight={700}
-                      color={isToday ? colors.yellow : earned ? colors.muted : '#bbb'}
+                      color={isToday ? ACCENT : earned ? colors.muted : '#bbb'}
                     >
                       {label}
                     </AppText>
@@ -264,7 +274,7 @@ export function DailyHubScreen({
         {/* 3. 퀴즈 카드 */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <AppText size={15} weight={800} color={colors.yellow}>
+            <AppText size={15} weight={800} color={ACCENT}>
               오늘의 금융 O/X 퀴즈
             </AppText>
             {!todayQuizDone ? (
@@ -274,7 +284,7 @@ export function DailyHubScreen({
                 onPress={() => speak(todayQuestion.question)}
                 style={styles.voiceBtn}
               >
-                <AppText size={14} weight={700} color={colors.accentText}>
+                <AppText size={14} weight={700} color={ACCENT_TEXT}>
                   🔊 문제 듣기
                 </AppText>
               </Pressable>
@@ -297,7 +307,7 @@ export function DailyHubScreen({
                 onPress={reviewCompletedQuiz}
                 style={styles.reviewQuizBtn}
               >
-                <AppText size={15} weight={800} color={colors.accentText}>
+                <AppText size={15} weight={800} color={ACCENT_TEXT}>
                   오늘 문제 다시 보기
                 </AppText>
               </Pressable> : null}
@@ -336,7 +346,7 @@ export function DailyHubScreen({
 
         {/* 4. 오늘의 송금 연습 — 기존 practice flow 를 조합한 하루 1개 미션. */}
         <View style={styles.card}>
-          <AppText size={15} weight={800} color={colors.yellow}>
+          <AppText size={15} weight={800} color={ACCENT}>
             오늘의 송금 연습
           </AppText>
           {todayPracticeDone ? (
@@ -356,7 +366,7 @@ export function DailyHubScreen({
                 onPress={() => onStartDailyMission(todayMission)}
                 style={styles.reviewQuizBtn}
               >
-                <AppText size={15} weight={800} color={colors.accentText}>
+                <AppText size={15} weight={800} color={ACCENT_TEXT}>
                   오늘 연습 다시 보기
                 </AppText>
               </Pressable>
@@ -389,7 +399,7 @@ export function DailyHubScreen({
           style={styles.pickerButton}
         >
           <View style={styles.flex1}>
-            <AppText size={15} weight={800} color={colors.yellow}>다른 연습도 해보기</AppText>
+            <AppText size={15} weight={800} color={ACCENT}>다른 연습도 해보기</AppText>
             <AppText size={18} weight={900} color={colors.ink} style={styles.mt3}>
               원하는 연습 골라보기
             </AppText>
@@ -455,7 +465,7 @@ export function DailyHubScreen({
                     onPress={() => speak(quizResult.question.question)}
                     style={styles.resultVoiceBtn}
                   >
-                    <AppText size={14} weight={800} color={colors.accentText}>
+                    <AppText size={14} weight={800} color={ACCENT_TEXT}>
                       🔊 문제 듣기
                     </AppText>
                   </Pressable>
@@ -465,7 +475,7 @@ export function DailyHubScreen({
                     onPress={() => speak(quizResult.question.explanation)}
                     style={styles.resultVoiceBtn}
                   >
-                    <AppText size={14} weight={800} color={colors.accentText}>
+                    <AppText size={14} weight={800} color={ACCENT_TEXT}>
                       🔊 해설 듣기
                     </AppText>
                   </Pressable>
@@ -498,7 +508,7 @@ function DifficultyReviewCard({
   const copy = TRANSFER_DIFFICULTY_COPY[difficulty.step];
   return (
     <View style={[styles.card, styles.difficultyCard]}>
-      <AppText size={15} weight={800} color={colors.yellow}>내가 어려웠던 부분 다시하기</AppText>
+      <AppText size={15} weight={800} color={ACCENT}>내가 어려웠던 부분 다시하기</AppText>
       <AppText size={14} color={colors.muted} lineHeight={21} style={styles.difficultyLead}>
         지난 송금에서 ‘{copy.title}’ 단계가 어려웠어요.
       </AppText>
@@ -506,7 +516,7 @@ function DifficultyReviewCard({
         <View style={styles.flex1}>
           <AppText size={19} weight={900} color={colors.ink}>{copy.title}</AppText>
           {difficulty.completed ? (
-            <AppText size={14} weight={850} color={colors.accentText} style={styles.difficultyDone}>
+            <AppText size={14} weight={850} color={ACCENT_TEXT} style={styles.difficultyDone}>
               연습 완료 ✓
             </AppText>
           ) : (
@@ -520,7 +530,7 @@ function DifficultyReviewCard({
           onPress={onStart}
           style={[styles.reviewStartBtn, difficulty.completed && styles.reviewStartBtnDone]}
         >
-          <AppText size={14} weight={850} color={difficulty.completed ? colors.accentText : '#fff'}>
+          <AppText size={14} weight={850} color={difficulty.completed ? ACCENT_TEXT : '#fff'}>
             다시 연습하기
           </AppText>
         </Pressable>
@@ -583,8 +593,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stampDotEarned: { backgroundColor: colors.yellow, borderColor: colors.yellow },
-  stampDotToday: { borderColor: colors.yellow },
+  stampDotEarned: { backgroundColor: ACCENT, borderColor: ACCENT },
+  stampDotToday: { borderColor: ACCENT },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -604,7 +614,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.yellow,
+    backgroundColor: ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -634,9 +644,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
-    backgroundColor: colors.yellow,
+    backgroundColor: ACCENT,
   },
-  difficultyCard: { backgroundColor: colors.accentSurface },
+  difficultyCard: { backgroundColor: ACCENT_SURFACE },
   difficultyLead: { marginTop: 6 },
   difficultyBody: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   difficultyDone: { marginTop: 10 },
@@ -645,12 +655,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     borderRadius: 14,
-    backgroundColor: colors.yellow,
+    backgroundColor: ACCENT,
   },
   reviewStartBtnDone: {
     borderWidth: 1,
-    borderColor: colors.accentBorder,
-    backgroundColor: colors.yellowSoft,
+    borderColor: ACCENT_BORDER,
+    backgroundColor: ACCENT_SOFT,
   },
   pickerButton: {
     minHeight: 62,
@@ -698,7 +708,7 @@ const styles = StyleSheet.create({
   resultCloseBtn: {
     paddingVertical: 15,
     borderRadius: 14,
-    backgroundColor: colors.yellow,
+    backgroundColor: ACCENT,
     alignItems: 'center',
   },
 });
