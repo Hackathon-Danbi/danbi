@@ -3,6 +3,7 @@
 -- 실행 후 demo-seed.sql을 다시 실행하면 촬영 시작 상태로 돌아간다.
 -- CLI: mysql ... danbi < demo-reset.sql / Workbench: 아래 USE 로 스키마를 잡는다.
 
+SET NAMES utf8mb4;
 USE danbi;
 
 START TRANSACTION;
