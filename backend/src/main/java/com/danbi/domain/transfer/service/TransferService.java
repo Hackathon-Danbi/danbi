@@ -6,6 +6,7 @@ import com.danbi.domain.account.entity.AccountStatus;
 import com.danbi.domain.account.entity.ProductType;
 import com.danbi.domain.account.repository.AccountProductRepository;
 import com.danbi.domain.account.repository.AccountRepository;
+import com.danbi.domain.help.entity.FlowType;
 import com.danbi.domain.help.service.HelpService;
 import com.danbi.domain.transaction.entity.ReviewStatus;
 import com.danbi.domain.transaction.entity.Transaction;
@@ -48,6 +49,7 @@ public class TransferService {
 	private static final long REPEATED_TRANSFER_WINDOW_HOURS = 24;
 	private static final long REPEATED_TRANSFER_MIN_COUNT = 2;
 	private static final int RECENT_RECIPIENT_LIMIT = 30;
+	private static final String SAFETY_CHECK_SCREEN = "SAFETY_CHECK";
 	private static final String[] MOCK_NAMES = {
 		"김민준", "이서연", "박도윤", "최지우", "정하준", "강서아", "조은우", "윤지호"
 	};
@@ -155,15 +157,26 @@ public class TransferService {
 		savedRecipientRepository.deleteById(savedRecipientId);
 	}
 
-	/** 위험 점검. 실행 전 프론트가 안심확인 화면 노출 여부를 판단하는 데 사용. */
+	/**
+	 * 위험 점검. 실행 전 프론트가 안심확인 화면 노출 여부를 판단하는 데 사용한다.
+	 * flowSessionId 가 주어지고 위험이 감지되면 RISK_DETECTED 를 기록해, 같은 세션의 송금 실행 때
+	 * 안심확인 절차를 되짚을 수 있게 한다.
+	 */
+	@Transactional
 	public RiskCheckResponse riskCheck(Long accountId, long amount, String recipientAccountNumber,
-			boolean isNewAccountHint, boolean isInCall, boolean requestedByCaller, boolean phishingKeywordDetected) {
+			boolean isNewAccountHint, boolean isInCall, boolean requestedByCaller, boolean phishingKeywordDetected,
+			String flowSessionId) {
 		Account account = accountRepository.findById(accountId)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "출금 계좌를 찾을 수 없습니다."));
 		ensureWithdrawable(account);
 
 		RiskAssessment assessment = assess(account, amount, recipientAccountNumber,
 			isNewAccountHint, isInCall, requestedByCaller, phishingKeywordDetected);
+
+		if (assessment.risky()) {
+			helpService.markRiskDetected(account.getUserId(), flowSessionId,
+				FlowType.REAL_TRANSFER, SAFETY_CHECK_SCREEN);
+		}
 
 		return new RiskCheckResponse(
 			accountId,
@@ -200,6 +213,12 @@ public class TransferService {
 			// riskAcknowledged=true 만으로는 부족하다. 해당 flowSession 에 실제 SAFETY_CHECK 완료 기록이 있어야 실행.
 			boolean safetyDone = Boolean.TRUE.equals(req.riskAcknowledged())
 				&& helpService.isSafetyCheckCompleted(account.getUserId(), req.flowSessionId());
+			// 프론트 안심확인 팝업을 거쳤고(ack) 같은 세션에 위험 점검(RISK_DETECTED) 기록이 있으면,
+			// 서버가 SAFETY_CHECK 노출/확인 이벤트를 마무리로 기록하고 진행한다.
+			if (!safetyDone && Boolean.TRUE.equals(req.riskAcknowledged())) {
+				safetyDone = helpService.confirmSafetyCheck(account.getUserId(), req.flowSessionId(),
+					FlowType.REAL_TRANSFER, SAFETY_CHECK_SCREEN);
+			}
 			if (!safetyDone) {
 				throw new TransferBlockedException(HttpStatus.CONFLICT, "SAFETY_CHECK_REQUIRED",
 					"안심 확인이 필요합니다.", risk.reasons());

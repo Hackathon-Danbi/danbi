@@ -186,6 +186,23 @@ class TransferServiceTest {
 	}
 
 	@Test
+	void execute_riskyTransfer_afterRiskCheckAndAck_recordsSafetyCheckAndSucceeds() {
+		// 프론트 실제 흐름: 같은 flowSession 으로 위험 점검 → 안심확인 팝업 확인(ack) → 송금 실행.
+		transferService.riskCheck(accountId, 1_500_000, RECIPIENT_ACCOUNT, false, false, false, false, SESSION);
+
+		TransferResponse res = transferService.execute(request(1_500_000, "1234", true));
+
+		assertThat(res.status()).isEqualTo(TransferStatus.COMPLETED);
+		assertThat(res.risky()).isTrue();
+		assertThat(accountRepository.findById(accountId).orElseThrow().getBalance()).isEqualTo(500_000L);
+		assertThat(userEventRepository.findByFlowSessionIdOrderByCreatedAtAsc(SESSION))
+			.anySatisfy(e -> {
+				assertThat(e.getEventType()).isEqualTo(EventType.HELP_RESPONSE);
+				assertThat(e.getUserResponse()).isEqualTo(HelpUserResponse.SAFETY_CONFIRMED);
+			});
+	}
+
+	@Test
 	void execute_amountExceedsBalance_isBlocked() {
 		assertThatThrownBy(() -> transferService.execute(request(9_000_000, "1234", true)))
 			.asInstanceOf(InstanceOfAssertFactories.type(TransferBlockedException.class))
@@ -237,7 +254,7 @@ class TransferServiceTest {
 	@Test
 	void riskCheck_flagsInCallAndRushedAndPhishing() {
 		RiskCheckResponse res = transferService.riskCheck(accountId, 50_000, RECIPIENT_ACCOUNT,
-			false, true, true, true);
+			false, true, true, true, SESSION);
 
 		assertThat(res.risky()).isTrue();
 		assertThat(res.blocked()).isFalse();
@@ -251,7 +268,7 @@ class TransferServiceTest {
 		completedTransfer(10_000, LocalDateTime.now().minusHours(2));
 
 		RiskCheckResponse res = transferService.riskCheck(accountId, 10_000, RECIPIENT_ACCOUNT,
-			false, false, false, false);
+			false, false, false, false, SESSION);
 
 		assertThat(res.reasons()).contains(RiskReason.REPEATED_TRANSFER);
 		assertThat(res.recipientIsNew()).isFalse();
@@ -263,7 +280,7 @@ class TransferServiceTest {
 			.getAccountId();
 
 		assertThatThrownBy(() -> transferService.riskCheck(dormant, 50_000, RECIPIENT_ACCOUNT,
-			false, false, false, false))
+			false, false, false, false, SESSION))
 			.asInstanceOf(InstanceOfAssertFactories.type(TransferBlockedException.class))
 			.satisfies(e -> assertThat(e.getCode()).isEqualTo("ACCOUNT_NOT_WITHDRAWABLE"));
 	}

@@ -1,6 +1,5 @@
 import type { SavedRecipient } from '@/features/main/types';
 
-import { newFlowSessionId } from './config';
 import { apiJson } from './http';
 import { bankNameOf, digitsOnly } from './map';
 
@@ -32,6 +31,8 @@ export type TransferExecuteInput = {
   transferMethod: TransferMethod;
   accountPassword: string;
   riskAcknowledged: boolean;
+  /** 위험 점검부터 실행까지 한 번의 송금 시도를 잇는 세션 ID. 안심확인 되짚기에 쓰인다. */
+  flowSessionId: string;
 };
 
 export type RemoteSavedRecipient = {
@@ -59,6 +60,7 @@ export function riskCheckTransfer(params: {
   amount: number;
   recipientAccountNumber: string;
   isNewAccount: boolean;
+  flowSessionId: string;
 }) {
   const query = new URLSearchParams({
     accountId: String(params.accountId),
@@ -68,6 +70,7 @@ export function riskCheckTransfer(params: {
     isInCall: 'false',
     requestedByCaller: 'false',
     phishingKeywordDetected: 'false',
+    flowSessionId: params.flowSessionId,
   });
   return apiJson<RiskCheckResponse>(`/api/transfer/risk-check?${query.toString()}`);
 }
@@ -88,7 +91,7 @@ export function executeTransfer(input: TransferExecuteInput) {
       isInCall: false,
       requestedByCaller: false,
       phishingKeywordDetected: false,
-      flowSessionId: newFlowSessionId(),
+      flowSessionId: input.flowSessionId,
     }),
   });
 }

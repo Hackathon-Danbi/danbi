@@ -400,16 +400,21 @@ export function MissionMode({
   ): Promise<QuizAnswerResult | void> => {
     let apiResult: QuizAnswerResult | undefined;
     if (apiDailyActivity && isApiConfigured()) {
-      apiResult = await financialIndependenceApi.answerQuiz(
-        apiDailyActivity.dailyActivityId,
-        answeredIndex === 0,
-      );
-      setApiDailyActivity((current) => current ? {
-        ...current,
-        question: { ...current.question, selectedAnswer: apiResult!.selectedAnswer },
-        earnedScore: apiResult!.earnedScore,
-      } : current);
-      setApiError('');
+      try {
+        apiResult = await financialIndependenceApi.answerQuiz(
+          apiDailyActivity.dailyActivityId,
+          answeredIndex === 0,
+        );
+        setApiDailyActivity((current) => current ? {
+          ...current,
+          question: { ...current.question, selectedAnswer: apiResult!.selectedAnswer },
+          earnedScore: apiResult!.earnedScore,
+        } : current);
+        setApiError('');
+      } catch (cause) {
+        // 서버 동기화 실패는 조용히 무시한다. 퀴즈는 로컬 기록으로 이어진다.
+        setApiError(cause instanceof Error ? cause.message : '오늘의 퀴즈 응답을 서버에 저장하지 못했어요.');
+      }
     }
     const nextQuizRecord = completeQuizForDate(quizRecord, getLocalDateKey(), {
       qId: question.id,

@@ -10,6 +10,7 @@ import { recognitionEngine } from '@/lib/speech/recognition';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
+import { newFlowSessionId } from '@/lib/api/config';
 import { errorMessage, isOffline } from '@/lib/api/http';
 import { getApiIdentity } from '@/lib/api/identity';
 import { tryBackend } from '@/lib/api/live';
@@ -179,6 +180,8 @@ export function TransferFlow() {
   const transferMethodRef = useRef<TransferMethod>('MANUAL');
   const riskAcknowledgedRef = useRef(false);
   const executingRef = useRef(false);
+  // 위험 점검 → 안심확인 → 실행을 하나로 잇는 송금 시도 세션. initiateTransfer 마다 새로 발급한다.
+  const flowSessionIdRef = useRef('');
 
   useEffect(() => {
     screenRef.current = screen;
@@ -436,6 +439,7 @@ export function TransferFlow() {
               transferMethod: transferMethodRef.current,
               accountPassword: pinValue,
               riskAcknowledged: riskAcknowledgedRef.current,
+              flowSessionId: flowSessionIdRef.current || newFlowSessionId(),
             }),
           );
           if (cancelled) return;
@@ -654,6 +658,9 @@ export function TransferFlow() {
 
   const initiateTransfer = () => {
     const amt = parseInt(txInfo.amount || '0', 10);
+    const flowSessionId = newFlowSessionId();
+    flowSessionIdRef.current = flowSessionId;
+    riskAcknowledgedRef.current = false;
     void (async () => {
       try {
         const identity = await getApiIdentity();
@@ -663,6 +670,7 @@ export function TransferFlow() {
             amount: amt,
             recipientAccountNumber: txInfo.account,
             isNewAccount,
+            flowSessionId,
           }),
         );
         if (risk?.blocked) {
