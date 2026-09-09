@@ -10,26 +10,22 @@ import { recognitionEngine } from '@/lib/speech/recognition';
 import { speak as ttsSpeak, stop as ttsStop } from '@/lib/speech/tts';
 import { useAndroidBack } from '@/lib/useAndroidBack';
 import { callCustomerCenter } from '@/lib/customerSupport';
+import { newFlowSessionId } from '@/lib/api/config';
 import { errorMessage, isOffline } from '@/lib/api/http';
 import { getApiIdentity } from '@/lib/api/identity';
 import { tryBackend } from '@/lib/api/live';
 import { bankCodeOf, digitsOnly } from '@/lib/api/map';
-import { newFlowSessionId } from '@/lib/api/config';
 import {
   addSavedRecipient,
-  beginTransferSafetyCheck,
   executeTransfer,
-  finishTransferSafetyCheck,
   listSavedRecipients,
   lookupAccountHolder,
   mapSavedRecipient,
   riskCheckTransfer,
-  type RiskCheckResponse,
   type TransferMethod,
 } from '@/lib/api/transfer';
 import { StorageKeys, usePersistentState } from '@/lib/storage';
 import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
-import { useTransactions } from '@/features/main/TransactionContext';
 import {
   reviewStepForTransferScreen,
   type ReviewableTransferStep,
@@ -37,7 +33,7 @@ import {
 
 import { CONTACTS, RECENT_RECIPIENT_CANDIDATES } from '../data';
 import { CREAM, INK, LARGE_AMOUNT_THRESHOLD, YELLOW } from '../theme';
-import type { ListeningPhase, SavedRecipient, TxInfo, TxRecord } from '../types';
+import type { ListeningPhase, SavedRecipient, TxInfo } from '../types';
 import {
   findRecipientBySpokenName,
   parseSavedRecipients,
@@ -92,7 +88,6 @@ type FlowScreen =
 const STT_FAIL_MESSAGE = '음성을 잘 듣지 못했어요. 다시 말씀해주세요.';
 const STT_PERMISSION_MESSAGE = '마이크 사용 권한을 켠 뒤 다시 시도하거나, 직접 입력으로 진행해주세요.';
 const STT_UNAVAILABLE_MESSAGE = '이 기기에서는 음성 송금을 사용할 수 없어요. 직접 입력으로 진행해주세요.';
-const ACCOUNT_LOOKUP_ERROR = '입력하신 계좌를 찾을 수 없어요. 은행과 계좌번호를 다시 확인해 주세요.';
 const EMPTY_TX: TxInfo = { recipient: '', bank: '', account: '', amount: '' };
 const BOTTOM_ACTION_HELP_TARGETS = new Set([
   'pinKeypad',
@@ -150,8 +145,7 @@ export function TransferFlow() {
     parse: parseSavedRecipients,
   });
 
-  const { accounts, selectedAccount, selectAccount, adjustBalance } = useSelectedAccount();
-  const { refreshTransactions, addLocalTransaction } = useTransactions();
+  const { accounts, selectedAccount, selectAccount } = useSelectedAccount();
 
   const [screen, setScreen] = useState<FlowScreen>('transfer');
   const [phase, setPhase] = useState<ListeningPhase>('idle');
@@ -161,11 +155,9 @@ export function TransferFlow() {
   const [txInfo, setTxInfo] = useState<TxInfo>(EMPTY_TX);
   const [isNewAccount, setIsNew] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [riskInfo, setRiskInfo] = useState<RiskCheckResponse | null>(null);
   const [pinValue, setPinValue] = useState('');
   const [showPhotoSource, setShowPhotoSource] = useState(false);
   const [ocrCandidates, setOcrCandidates] = useState<AccountNumberCandidate[]>([]);
-  const [accountLookupError, setAccountLookupError] = useState('');
 
   // ── Proactive help ─────────────────────────────────────
   const [helpState, setHelpState] = useState<HelpState>(HELP_IDLE);
@@ -190,7 +182,8 @@ export function TransferFlow() {
   const transferMethodRef = useRef<TransferMethod>('MANUAL');
   const riskAcknowledgedRef = useRef(false);
   const executingRef = useRef(false);
-  const flowSessionIdRef = useRef(newFlowSessionId());
+  // 위험 점검 → 안심확인 → 실행을 하나로 잇는 송금 시도 세션. initiateTransfer 마다 새로 발급한다.
+  const flowSessionIdRef = useRef('');
   const voiceIntentHandledRef = useRef(false);
 
   // ── 홈 마이크 송금 발화 인계: 인트로를 건너뛰고 바로 파싱 결과 화면으로 ──
@@ -199,7 +192,6 @@ export function TransferFlow() {
     const spoken = typeof voiceIntent === 'string' ? voiceIntent.trim() : '';
     if (!spoken) return;
     voiceIntentHandledRef.current = true;
-    flowSessionIdRef.current = newFlowSessionId();
     riskAcknowledgedRef.current = false;
     transferMethodRef.current = 'VOICE';
     setTranscript(spoken);
@@ -470,32 +462,10 @@ export function TransferFlow() {
               transferMethod: transferMethodRef.current,
               accountPassword: pinValue,
               riskAcknowledged: riskAcknowledgedRef.current,
-              flowSessionId: flowSessionIdRef.current,
+              flowSessionId: flowSessionIdRef.current || newFlowSessionId(),
             }),
           );
           if (cancelled) return;
-
-          // 송금 성공 → 표시 잔액 즉시 차감 + 이번 달 거래내역 재동기화.
-          const recipientLabel = txInfo.recipient || '수취인';
-          const now = new Date();
-          const optimisticTx: TxRecord = {
-            id: -Date.now(),
-            accountId: selectedAccount.accountId,
-            occurredAt: now.toISOString(),
-            date: `${now.getMonth() + 1}월 ${now.getDate()}일`,
-            time: now.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }),
-            type: '출금',
-            name: `${recipientLabel} 송금`,
-            amount: -amount,
-            merchant: recipientLabel,
-            category: '출금',
-            memo: '',
-            reviewStatus: 'pending',
-          };
-          addLocalTransaction(optimisticTx);
-          adjustBalance(selectedAccount.accountId, -amount);
-          void refreshTransactions();
-
           setPinValue('');
           setScreen('transferdone');
         } catch (error) {
@@ -512,8 +482,6 @@ export function TransferFlow() {
       clearTimeout(timer);
       if (!started) executingRef.current = false;
     };
-    // adjustBalance/refreshTransactions/addLocalTransaction 은 안정적이라 트리거에서 제외한다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinValue, savedRecipients, screen, txInfo]);
 
   // ── 메인 송금 STT (엔진 레이어) ──────────────────────────
@@ -578,9 +546,6 @@ export function TransferFlow() {
   }, [router]);
 
   const openTransfer = () => {
-    flowSessionIdRef.current = newFlowSessionId();
-    riskAcknowledgedRef.current = false;
-    setRiskInfo(null);
     doResolveHelp();
     clearPhaseTimer();
     setSttError('');
@@ -629,23 +594,23 @@ export function TransferFlow() {
   const confirmNewAccountNumber = (accountNumber: string) => {
     doResolveHelp();
     void (async () => {
+      let recipientName = '';
       const bank = txInfo.bank;
       try {
         const holder = await tryBackend(() => lookupAccountHolder(bankCodeOf(bank), accountNumber));
-        setAccountLookupError('');
-        setTxInfo((current) => ({
-          ...current,
-          account: accountNumber,
-          recipient:
-            current.recipient ||
-            holder?.recipientName ||
-            `${current.bank} 계좌 ${accountNumber.slice(-4)}`,
-        }));
-        setScreen('amountinput');
-      } catch (error) {
-        setAccountLookupError(errorMessage(error, ACCOUNT_LOOKUP_ERROR));
-        doInputError('accountinput');
+        if (holder?.recipientName) recipientName = holder.recipientName;
+      } catch {
+        /* 예금주 조회 실패해도 번호만으로 진행 */
       }
+      setTxInfo((current) => ({
+        ...current,
+        account: accountNumber,
+        recipient:
+          current.recipient ||
+          recipientName ||
+          `${current.bank} 계좌 ${accountNumber.slice(-4)}`,
+      }));
+      setScreen('amountinput');
     })();
   };
 
@@ -716,17 +681,9 @@ export function TransferFlow() {
 
   const initiateTransfer = () => {
     const amt = parseInt(txInfo.amount || '0', 10);
-    const largeAmount = amt >= LARGE_AMOUNT_THRESHOLD;
-    // 최근 송금 목록 항목은 savedRecipientId <= 0 이므로 "저장한 계좌"만 골라낸다.
-    const recipientDigits = digitsOnly(txInfo.account);
-    const recipientIsSaved =
-      recipientDigits.length > 0 &&
-      savedRecipients.some(
-        (item) =>
-          item.savedRecipientId > 0 &&
-          item.recipientAccountNumber.replace(/\D/g, '') === recipientDigits &&
-          item.recipientBankCode === bankCodeOf(txInfo.bank),
-      );
+    const flowSessionId = newFlowSessionId();
+    flowSessionIdRef.current = flowSessionId;
+    riskAcknowledgedRef.current = false;
     void (async () => {
       try {
         const identity = await getApiIdentity();
@@ -736,42 +693,23 @@ export function TransferFlow() {
             amount: amt,
             recipientAccountNumber: txInfo.account,
             isNewAccount,
+            flowSessionId,
           }),
         );
-        setRiskInfo(risk ?? null);
         if (risk?.blocked) {
           Alert.alert('지금은 보낼 수 없어요', '안전을 위해 이 송금은 막혀 있어요. 고객센터에 문의해주세요.');
           return;
         }
-
-        // 저장한 계좌로 보낼 땐 큰 금액이 아닌 한 안심확인 팝업을 띄우지 않는다.
-        const safetyNeeded = Boolean(risk?.requiresSafetyCheck) || isNewAccount;
-        if (largeAmount || (safetyNeeded && !recipientIsSaved)) {
-          riskAcknowledgedRef.current = false;
-          await tryBackend(() => beginTransferSafetyCheck(identity.userId, flowSessionIdRef.current));
+        if (risk?.requiresSafetyCheck || isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
           setShowPopup(true);
           return;
-        }
-
-        // 팝업은 건너뛰더라도, 백엔드가 위험으로 본 저장 계좌 송금은 execute 단계에서
-        // SAFETY_CHECK_REQUIRED 로 막히므로 안심확인을 조용히 완료해 둔다.
-        if (risk?.requiresSafetyCheck && recipientIsSaved) {
-          await tryBackend(async () => {
-            await beginTransferSafetyCheck(identity.userId, flowSessionIdRef.current);
-            await finishTransferSafetyCheck(
-              identity.userId,
-              flowSessionIdRef.current,
-              'SAFETY_CONFIRMED',
-            );
-          });
-          riskAcknowledgedRef.current = true;
         }
       } catch (error) {
         if (!isOffline(error)) {
           Alert.alert('확인하지 못했어요', errorMessage(error));
           return;
         }
-        if (largeAmount || (isNewAccount && !recipientIsSaved)) {
+        if (isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
           setShowPopup(true);
           return;
         }
@@ -783,41 +721,6 @@ export function TransferFlow() {
 
   const isLargeAmount = parseInt(txInfo.amount || '0', 10) >= LARGE_AMOUNT_THRESHOLD;
   const helpTarget = helpState.step === 'highlight' ? helpState.target : '';
-
-  const confirmSafetyPopup = () => {
-    void (async () => {
-      try {
-        const identity = await getApiIdentity();
-        await tryBackend(() => finishTransferSafetyCheck(
-          identity.userId,
-          flowSessionIdRef.current,
-          'SAFETY_CONFIRMED',
-        ));
-        riskAcknowledgedRef.current = true;
-        setShowPopup(false);
-        setPinValue('');
-        setScreen('password');
-      } catch (error) {
-        Alert.alert('안심 확인을 저장하지 못했어요', errorMessage(error));
-      }
-    })();
-  };
-
-  const cancelSafetyPopup = () => {
-    setShowPopup(false);
-    void (async () => {
-      try {
-        const identity = await getApiIdentity();
-        await tryBackend(() => finishTransferSafetyCheck(
-          identity.userId,
-          flowSessionIdRef.current,
-          'TRANSFER_PAUSED',
-        ));
-      } catch {
-        // 취소는 이미 화면에 반영했으므로 서버 기록 실패가 사용자를 막지 않게 한다.
-      }
-    })();
-  };
 
   // ── Android 하드웨어 back: 내부 이전 단계 우선 ────────────
   useAndroidBack(() => {
@@ -892,8 +795,6 @@ export function TransferFlow() {
             onMic={openTransfer}
             onGoHome={goHome}
             onDirect={() => {
-              flowSessionIdRef.current = newFlowSessionId();
-              riskAcknowledgedRef.current = false;
               doResolveHelp();
               transferMethodRef.current = 'MANUAL';
               setScreen('recipient');
@@ -994,7 +895,6 @@ export function TransferFlow() {
             onBack={() => setScreen('recipient')}
             onSelect={(bank) => {
               doResolveHelp();
-              setAccountLookupError('');
               setTxInfo((p) => ({ ...p, bank, account: '' }));
               setScreen('accountinput');
             }}
@@ -1009,7 +909,6 @@ export function TransferFlow() {
             value={txInfo.account}
             onChange={(v) => {
               setTxInfo((p) => ({ ...p, account: v }));
-              setAccountLookupError('');
               doResolveHelp();
               doActivity();
             }}
@@ -1023,7 +922,6 @@ export function TransferFlow() {
             helpTarget={helpTarget}
             onActivity={doActivity}
             onBlockedHelp={() => doInputError('accountinput')}
-            error={accountLookupError || undefined}
           />
         )}
 
@@ -1147,9 +1045,13 @@ export function TransferFlow() {
         txInfo={txInfo}
         isNewAccount={isNewAccount}
         isLargeAmount={isLargeAmount}
-        reasons={riskInfo?.reasons}
-        onConfirm={confirmSafetyPopup}
-        onCancel={cancelSafetyPopup}
+        onConfirm={() => {
+          riskAcknowledgedRef.current = true;
+          setShowPopup(false);
+          setPinValue('');
+          setScreen('password');
+        }}
+        onCancel={() => setShowPopup(false)}
       />
 
       <AccountPhotoSourceSheet

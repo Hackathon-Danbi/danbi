@@ -47,5 +47,4 @@ export type FinancialIndependenceState = {
   completedMissionIds: ReadonlySet<MissionId>;
   dailyPracticeRecord: DailyPracticeRecord;
   quizRecord: QuizRecord;
-  reviewBonus?: number;
 };

@@ -66,8 +66,8 @@ export const SCREEN_HELP: Partial<Record<Screen, { target: string; hint: string;
   },
   accountinput: {
     target: 'accountField',
-    hint: '은행과 계좌번호를 다시 확인해 주세요.',
-    voiceText: '입력하신 계좌를 찾을 수 없어요. 은행과 계좌번호를 다시 확인해 주세요.',
+    hint: '여기에 계좌번호를 입력해주세요.',
+    voiceText: '계좌번호를 숫자로 차례대로 눌러보세요.',
   },
   ocrconfirm: {
     target: 'ocrConfirm',

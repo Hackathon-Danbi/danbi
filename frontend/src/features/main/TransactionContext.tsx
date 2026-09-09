@@ -29,11 +29,7 @@ type TransactionContextValue = {
   pendingTransactions: TxRecord[];
   unknownTransactions: TxRecord[];
   reviewTransaction: (id: number, status: StoredTransactionReview) => void;
-  ensureMonth: (year: number, month: number, force?: boolean) => Promise<void>;
-  /** 송금 등으로 새 거래가 생긴 뒤, 이번 달을 서버에서 다시 불러온다. */
-  refreshTransactions: () => Promise<void>;
-  /** 서버 반영 전에 방금 만든 거래를 목록 맨 앞에 즉시 얹는다(낙관적 갱신). */
-  addLocalTransaction: (record: TxRecord) => void;
+  ensureMonth: (year: number, month: number) => Promise<void>;
 };
 
 const TransactionContext = createContext<TransactionContextValue | null>(null);
@@ -63,9 +59,9 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const ensureMonth = useCallback(async (year: number, month: number, force = false) => {
+  const ensureMonth = useCallback(async (year: number, month: number) => {
     const key = `${year}-${month}`;
-    if (!force && loadedMonths.current.has(key)) return;
+    if (loadedMonths.current.has(key)) return;
     loadedMonths.current.add(key);
     const identity = await getApiIdentity();
     const remote = await tryBackend(() => fetchMonthlyTransactions(identity.accountId, year, month));
@@ -105,17 +101,6 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     void tryBackend(() => reviewRemoteTransaction(id, status));
   }, []);
 
-  const addLocalTransaction = useCallback((record: TxRecord) => {
-    setRecords((current) =>
-      current.some((item) => item.id === record.id) ? current : [record, ...current],
-    );
-  }, []);
-
-  const refreshTransactions = useCallback(async () => {
-    const now = new Date();
-    await ensureMonth(now.getFullYear(), now.getMonth() + 1, true);
-  }, [ensureMonth]);
-
   const value = useMemo<TransactionContextValue>(() => {
     const transactions = applyTransactionReviews(records, reviews);
     return {
@@ -124,10 +109,8 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
       unknownTransactions: transactions.filter((tx) => tx.reviewStatus === 'unknown'),
       reviewTransaction,
       ensureMonth,
-      refreshTransactions,
-      addLocalTransaction,
     };
-  }, [addLocalTransaction, ensureMonth, records, refreshTransactions, reviewTransaction, reviews]);
+  }, [ensureMonth, records, reviewTransaction, reviews]);
 
   if (!hydrated) return null;
   return <TransactionContext.Provider value={value}>{children}</TransactionContext.Provider>;

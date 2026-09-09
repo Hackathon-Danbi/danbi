@@ -8,12 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.danbi.domain.agent.AgentTestSupport;
 import com.danbi.domain.agent.config.AgentProperties;
+import com.danbi.domain.agent.entity.AgentException;
 import com.danbi.domain.agent.llm.AiGateway;
 import com.danbi.domain.agent.llm.Prompts;
-import com.danbi.domain.agent.model.AgentModels.*;
+import com.danbi.domain.agent.entity.AgentModels.*;
 import com.danbi.domain.agent.rag.KnowledgeStore;
 import com.danbi.domain.agent.service.*;
-import com.danbi.domain.agent.tools.DemoBankTools;
+import com.danbi.domain.agent.tools.DatabaseBankTools;
 import java.time.Clock;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +24,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.json.JsonMapper;
 
+@org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
+@org.springframework.context.annotation.Import(DatabaseBankTools.class)
+@org.springframework.test.context.jdbc.Sql("/agent-banking.sql")
 class AgentControllerTest {
+    @org.springframework.beans.factory.annotation.Autowired private DatabaseBankTools tools;
     private final AiGateway ai = mock(AiGateway.class);
     private MockMvc mvc;
 
@@ -33,7 +38,7 @@ class AgentControllerTest {
         var sessions = new AgentSessions(clock, AgentTestSupport.properties());
         var knowledge = mock(KnowledgeStore.class);
         var easy = new EasyLanguageAgent(ai, new Prompts());
-        var app = new Orchestrator(ai, new Prompts(), List.of(new FinanceAgent(new DemoBankTools(clock), knowledge, easy, clock),
+        var app = new Orchestrator(ai, new Prompts(), List.of(new FinanceAgent(tools, knowledge, easy, clock),
                 new SignupAgent(knowledge, easy), new PracticeCoachAgent(easy)), clock);
         mvc = MockMvcBuilders.standaloneSetup(new AgentController(sessions, app, new VoiceAgent(ai, app)))
                 .setControllerAdvice(new AgentExceptionHandler()).build();
@@ -84,7 +89,7 @@ class AgentControllerTest {
     @Test
     void demoIsDisabledByDefault() {
         var disabled = new AgentProperties(false, "", "", "", "", "", 0.35);
-        assertThrows(com.danbi.domain.agent.model.AgentException.class,
+        assertThrows(AgentException.class,
                 () -> new AgentSessions(Clock.systemUTC(), disabled).create());
     }
 }

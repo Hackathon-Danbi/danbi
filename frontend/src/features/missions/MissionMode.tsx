@@ -60,13 +60,10 @@ type ScenarioRun = {
   isDailyMission: boolean;
 };
 
-type ReviewReward = { earnedPoints: number; newScore: number; maxScore: number };
-const REVIEW_REWARD_POINTS = 10;
-
 type View =
   | { tag: 'hub' }
   | { tag: 'practice-picker' }
-  | { tag: 'review'; difficulty: TransferDifficulty; reward?: ReviewReward }
+  | { tag: 'review'; difficulty: TransferDifficulty }
   | {
       tag: 'practice';
       mission: Mission;
@@ -181,7 +178,6 @@ export function MissionMode({
   const [dailyMissionRecords, setDailyMissionRecords] = useState<DailyMissionRecords>({});
   const [experiencedScenarios, setExperiencedScenarios] = useState<Set<RiskScenarioId>>(new Set());
   const [transferDifficulties, setTransferDifficulties] = useState<TransferDifficulty[]>([]);
-  const [reviewBonus, setReviewBonus] = useState(0);
   const [apiDailyActivity, setApiDailyActivity] = useState<TodayDailyActivity | null>(null);
   const [apiPracticeMissionId, setApiPracticeMissionId] = useState<number | null>(null);
   const [apiError, setApiError] = useState('');
@@ -218,7 +214,7 @@ export function MissionMode({
     (async () => {
       const dateKey = getLocalDateKey();
       const missionKey = getDailyMissionStorageKey(dateKey);
-      const [completed, daily, quiz, storedTodayMission, records, experienced, storedDifficulties, storedReviewBonus] = await Promise.all([
+      const [completed, daily, quiz, storedTodayMission, records, experienced, storedDifficulties] = await Promise.all([
         getJSON<MissionId[]>(StorageKeys.missionsCompleted),
         getJSON<DailyPracticeRecord>(StorageKeys.dailyPractice),
         getJSON<QuizRecord>(StorageKeys.quizRecord),
@@ -226,7 +222,6 @@ export function MissionMode({
         getJSON<DailyMissionRecords>(StorageKeys.dailyMissionRecords),
         getJSON<ExperiencedScenarios>(StorageKeys.experiencedScenarios),
         getJSON<unknown>(StorageKeys.transferDifficulties),
-        getJSON<unknown>(StorageKeys.practiceReviewBonus),
       ]);
       if (!mounted.current) return;
 
@@ -236,12 +231,7 @@ export function MissionMode({
         : generateDailyMission(dateKey);
       if (resolvedTodayMission !== storedTodayMission) void setJSON(missionKey, resolvedTodayMission);
 
-      const resolvedCompleted = Array.isArray(completed) ? new Set(completed) : new Set<MissionId>();
-      const resolvedReviewBonus = typeof storedReviewBonus === 'number' && Number.isFinite(storedReviewBonus)
-        ? Math.max(0, storedReviewBonus)
-        : 0;
-      setCompletedMissionIds(resolvedCompleted);
-      setReviewBonus(resolvedReviewBonus);
+      if (Array.isArray(completed)) setCompletedMissionIds(new Set(completed));
       if (daily && typeof daily === 'object') setDailyPracticeRecord(daily);
       if (quiz && typeof quiz === 'object') setQuizRecord(quiz);
       if (records && typeof records === 'object') setDailyMissionRecords(records);
@@ -261,17 +251,6 @@ export function MissionMode({
       if (storedDifficulties === null && suppliedTransferDifficulties === undefined) {
         void setJSON(StorageKeys.transferDifficulties, resolvedDifficulties);
       }
-      setView((current) => {
-        if (current.tag !== 'review' || current.reward) return current;
-        const scoreBefore = calculateFinancialScore(resolvedCompleted, resolvedReviewBonus);
-        const earnedPoints = current.difficulty.completed
-          ? 0
-          : Math.min(REVIEW_REWARD_POINTS, MAX_SCORE - scoreBefore);
-        return {
-          ...current,
-          reward: { earnedPoints, newScore: scoreBefore + earnedPoints, maxScore: MAX_SCORE },
-        };
-      });
       setTodayMission(resolvedTodayMission);
       setHydrated(true);
     })();
@@ -305,33 +284,17 @@ export function MissionMode({
     void setJSON(StorageKeys.experiencedScenarios, [...next]);
   };
 
-  const completeDifficulty = (difficultyId: string, earnedPoints: number) => {
-    const alreadyCompleted = transferDifficulties.some(
-      (difficulty) => difficulty.id === difficultyId && difficulty.completed,
-    );
+  const completeDifficulty = (difficultyId: string) => {
     const next = transferDifficulties.map((difficulty) =>
       difficulty.id === difficultyId ? { ...difficulty, completed: true } : difficulty,
     );
     setTransferDifficulties(next);
     void setJSON(StorageKeys.transferDifficulties, next);
-    if (!alreadyCompleted && earnedPoints > 0) {
-      const nextBonus = reviewBonus + earnedPoints;
-      setReviewBonus(nextBonus);
-      void setJSON(StorageKeys.practiceReviewBonus, nextBonus);
-    }
   };
 
   const startDifficultyReview = (difficulty: TransferDifficulty) => {
     if (!isReviewableTransferStep(difficulty.step)) return;
-    const scoreBefore = calculateFinancialScore(completedMissionIds, reviewBonus);
-    const earnedPoints = difficulty.completed
-      ? 0
-      : Math.min(REVIEW_REWARD_POINTS, MAX_SCORE - scoreBefore);
-    setView({
-      tag: 'review',
-      difficulty,
-      reward: { earnedPoints, newScore: scoreBefore + earnedPoints, maxScore: MAX_SCORE },
-    });
+    setView({ tag: 'review', difficulty });
   };
 
   const handleComplete = ({
@@ -347,7 +310,7 @@ export function MissionMode({
       isDailyMission?: boolean;
       result?: DailyMissionResult;
     }) => {
-      const scoreBefore = calculateFinancialScore(completedMissionIds, reviewBonus);
+      const scoreBefore = calculateFinancialScore(completedMissionIds);
       const missionCompletion = completeMission(completedMissionIds, mission);
       let nextCompletedMissionIds = missionCompletion.completedMissionIds;
       if (
@@ -359,7 +322,7 @@ export function MissionMode({
       if (nextCompletedMissionIds !== completedMissionIds) {
         persistCompleted(nextCompletedMissionIds);
       }
-      const earnedPoints = calculateFinancialScore(nextCompletedMissionIds, reviewBonus) - scoreBefore;
+      const earnedPoints = calculateFinancialScore(nextCompletedMissionIds) - scoreBefore;
 
       if (completingDailyMission && dailyMission) {
         const nextDailyRecord = completePracticeForDate(dailyPracticeRecord, dailyMission.date, mission.id);
@@ -437,16 +400,21 @@ export function MissionMode({
   ): Promise<QuizAnswerResult | void> => {
     let apiResult: QuizAnswerResult | undefined;
     if (apiDailyActivity && isApiConfigured()) {
-      apiResult = await financialIndependenceApi.answerQuiz(
-        apiDailyActivity.dailyActivityId,
-        answeredIndex === 0,
-      );
-      setApiDailyActivity((current) => current ? {
-        ...current,
-        question: { ...current.question, selectedAnswer: apiResult!.selectedAnswer },
-        earnedScore: apiResult!.earnedScore,
-      } : current);
-      setApiError('');
+      try {
+        apiResult = await financialIndependenceApi.answerQuiz(
+          apiDailyActivity.dailyActivityId,
+          answeredIndex === 0,
+        );
+        setApiDailyActivity((current) => current ? {
+          ...current,
+          question: { ...current.question, selectedAnswer: apiResult!.selectedAnswer },
+          earnedScore: apiResult!.earnedScore,
+        } : current);
+        setApiError('');
+      } catch (cause) {
+        // 서버 동기화 실패는 조용히 무시한다. 퀴즈는 로컬 기록으로 이어진다.
+        setApiError(cause instanceof Error ? cause.message : '오늘의 퀴즈 응답을 서버에 저장하지 못했어요.');
+      }
     }
     const nextQuizRecord = completeQuizForDate(quizRecord, getLocalDateKey(), {
       qId: question.id,
@@ -512,19 +480,13 @@ export function MissionMode({
   }
 
   if (view.tag === 'review' && isReviewableTransferStep(view.difficulty.step)) {
-    const reward = view.reward ?? {
-      earnedPoints: 0,
-      newScore: calculateFinancialScore(completedMissionIds, reviewBonus),
-      maxScore: MAX_SCORE,
-    };
     return (
       <Screen background="#eef2ff" edges={['top', 'bottom']}>
         <PracticeMode
           mode="review"
           startStep={view.difficulty.step}
-          reviewScore={reward}
           onExit={() => (startReviewStep ? exitToHome() : setView({ tag: 'hub' }))}
-          onComplete={() => completeDifficulty(view.difficulty.id, reward.earnedPoints)}
+          onComplete={() => completeDifficulty(view.difficulty.id)}
         />
       </Screen>
     );
@@ -607,7 +569,7 @@ export function MissionMode({
   }
 
   if (view.tag === 'complete') {
-    const currentScore = calculateFinancialScore(completedMissionIds, reviewBonus);
+    const currentScore = calculateFinancialScore(completedMissionIds);
     const completedPracticeStyle = view.practiceInitialState?.practiceStyle
       ?? MISSION_PRACTICE_PRESETS[view.mission.id]?.practiceStyle;
     const completedSoloFromGuided = view.mission.id === 'guided-transfer' && completedPracticeStyle === 'solo';
@@ -639,7 +601,6 @@ export function MissionMode({
           completedMissionIds={completedMissionIds}
           dailyPracticeRecord={dailyPracticeRecord}
           quizRecord={quizRecord}
-          reviewBonus={reviewBonus}
           todayMission={todayMission}
           transferDifficulties={transferDifficulties}
           apiDailyActivity={apiDailyActivity}

@@ -1,6 +1,6 @@
 package com.danbi.domain.agent.controller;
 
-import com.danbi.domain.agent.model.AgentModels.*;
+import com.danbi.domain.agent.entity.AgentModels.*;
 import com.danbi.domain.agent.service.AgentSessions;
 import com.danbi.domain.agent.service.Orchestrator;
 import com.danbi.domain.agent.service.VoiceAgent;
