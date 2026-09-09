@@ -1,6 +1,6 @@
 package com.danbi.domain.agent.controller;
 
-import com.danbi.domain.agent.model.AgentException;
+import com.danbi.domain.agent.entity.AgentException;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
