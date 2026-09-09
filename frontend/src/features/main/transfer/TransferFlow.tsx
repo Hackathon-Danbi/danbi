@@ -22,10 +22,12 @@ import {
   lookupAccountHolder,
   mapSavedRecipient,
   riskCheckTransfer,
+  type RiskCheckResponse,
   type TransferMethod,
 } from '@/lib/api/transfer';
 import { StorageKeys, usePersistentState } from '@/lib/storage';
 import { useSelectedAccount } from '@/features/shared/state/selectedAccount';
+import { useTransactions } from '@/features/main/TransactionContext';
 import {
   reviewStepForTransferScreen,
   type ReviewableTransferStep,
@@ -33,7 +35,7 @@ import {
 
 import { CONTACTS, RECENT_RECIPIENT_CANDIDATES } from '../data';
 import { CREAM, INK, LARGE_AMOUNT_THRESHOLD, YELLOW } from '../theme';
-import type { ListeningPhase, SavedRecipient, TxInfo } from '../types';
+import type { ListeningPhase, SavedRecipient, TxInfo, TxRecord } from '../types';
 import {
   findRecipientBySpokenName,
   parseSavedRecipients,
@@ -145,7 +147,8 @@ export function TransferFlow() {
     parse: parseSavedRecipients,
   });
 
-  const { accounts, selectedAccount, selectAccount } = useSelectedAccount();
+  const { accounts, selectedAccount, selectAccount, adjustBalance } = useSelectedAccount();
+  const { refreshTransactions, addLocalTransaction } = useTransactions();
 
   const [screen, setScreen] = useState<FlowScreen>('transfer');
   const [phase, setPhase] = useState<ListeningPhase>('idle');
@@ -155,6 +158,7 @@ export function TransferFlow() {
   const [txInfo, setTxInfo] = useState<TxInfo>(EMPTY_TX);
   const [isNewAccount, setIsNew] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [riskInfo, setRiskInfo] = useState<RiskCheckResponse | null>(null);
   const [pinValue, setPinValue] = useState('');
   const [showPhotoSource, setShowPhotoSource] = useState(false);
   const [ocrCandidates, setOcrCandidates] = useState<AccountNumberCandidate[]>([]);
@@ -466,6 +470,28 @@ export function TransferFlow() {
             }),
           );
           if (cancelled) return;
+
+          // 송금 성공 → 표시 잔액 즉시 차감 + 이번 달 거래내역 재동기화.
+          const recipientLabel = txInfo.recipient || '수취인';
+          const now = new Date();
+          const optimisticTx: TxRecord = {
+            id: -Date.now(),
+            accountId: selectedAccount.accountId,
+            occurredAt: now.toISOString(),
+            date: `${now.getMonth() + 1}월 ${now.getDate()}일`,
+            time: now.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }),
+            type: '출금',
+            name: `${recipientLabel} 송금`,
+            amount: -amount,
+            merchant: recipientLabel,
+            category: '출금',
+            memo: '',
+            reviewStatus: 'pending',
+          };
+          addLocalTransaction(optimisticTx);
+          adjustBalance(selectedAccount.accountId, -amount);
+          void refreshTransactions();
+
           setPinValue('');
           setScreen('transferdone');
         } catch (error) {
@@ -482,6 +508,8 @@ export function TransferFlow() {
       clearTimeout(timer);
       if (!started) executingRef.current = false;
     };
+    // adjustBalance/refreshTransactions/addLocalTransaction 은 안정적이라 트리거에서 제외한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pinValue, savedRecipients, screen, txInfo]);
 
   // ── 메인 송금 STT (엔진 레이어) ──────────────────────────
@@ -548,6 +576,7 @@ export function TransferFlow() {
   const openTransfer = () => {
     doResolveHelp();
     clearPhaseTimer();
+    setRiskInfo(null);
     setSttError('');
     setPhase('idle');
     setTranscript('');
@@ -681,6 +710,17 @@ export function TransferFlow() {
 
   const initiateTransfer = () => {
     const amt = parseInt(txInfo.amount || '0', 10);
+    const largeAmount = amt >= LARGE_AMOUNT_THRESHOLD;
+    // 최근 송금 목록 항목은 savedRecipientId <= 0 이므로 "저장한 계좌"만 골라낸다.
+    const recipientDigits = digitsOnly(txInfo.account);
+    const recipientIsSaved =
+      recipientDigits.length > 0 &&
+      savedRecipients.some(
+        (item) =>
+          item.savedRecipientId > 0 &&
+          item.recipientAccountNumber.replace(/\D/g, '') === recipientDigits &&
+          item.recipientBankCode === bankCodeOf(txInfo.bank),
+      );
     const flowSessionId = newFlowSessionId();
     flowSessionIdRef.current = flowSessionId;
     riskAcknowledgedRef.current = false;
@@ -696,20 +736,28 @@ export function TransferFlow() {
             flowSessionId,
           }),
         );
+        setRiskInfo(risk ?? null);
         if (risk?.blocked) {
           Alert.alert('지금은 보낼 수 없어요', '안전을 위해 이 송금은 막혀 있어요. 고객센터에 문의해주세요.');
           return;
         }
-        if (risk?.requiresSafetyCheck || isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
+
+        // 저장한 계좌로 보낼 땐 큰 금액이 아닌 한 안심확인 팝업을 띄우지 않는다.
+        const safetyNeeded = Boolean(risk?.requiresSafetyCheck) || isNewAccount;
+        if (largeAmount || (safetyNeeded && !recipientIsSaved)) {
           setShowPopup(true);
           return;
+        }
+        // 저장한 계좌는 팝업을 건너뛰되 안심확인은 승인된 것으로 처리한다.
+        if (safetyNeeded && recipientIsSaved) {
+          riskAcknowledgedRef.current = true;
         }
       } catch (error) {
         if (!isOffline(error)) {
           Alert.alert('확인하지 못했어요', errorMessage(error));
           return;
         }
-        if (isNewAccount || amt >= LARGE_AMOUNT_THRESHOLD) {
+        if (largeAmount || (isNewAccount && !recipientIsSaved)) {
           setShowPopup(true);
           return;
         }
@@ -1045,6 +1093,7 @@ export function TransferFlow() {
         txInfo={txInfo}
         isNewAccount={isNewAccount}
         isLargeAmount={isLargeAmount}
+        reasons={riskInfo?.reasons}
         onConfirm={() => {
           riskAcknowledgedRef.current = true;
           setShowPopup(false);
