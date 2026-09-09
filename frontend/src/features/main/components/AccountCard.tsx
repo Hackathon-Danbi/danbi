@@ -30,8 +30,7 @@ export function AccountCard() {
             {formatWon(selectedAccount.balance)}
           </AppText>
           <AppText size={14} color="#AAA" numberOfLines={1}>
-            {selectedAccount.maskedAccountNumber} · 출금 가능{' '}
-            {formatWon(selectedAccount.balance)}
+            {selectedAccount.maskedAccountNumber}
           </AppText>
         </View>
       </View>
