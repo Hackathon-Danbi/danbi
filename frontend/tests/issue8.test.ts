@@ -10,6 +10,7 @@ import { generateDailyMission } from '../src/features/missions/dailyMission';
 import {
   isReviewableTransferStep,
   mergeTransferDifficultyCompletion,
+  reviewStepForTransferScreen,
   sanitizeTransferDifficulties,
   TRANSFER_DIFFICULTY_COPY,
 } from '../src/features/missions/transferDifficulty';
@@ -66,6 +67,17 @@ test('맞춤 복습은 요청한 송금 단계부터 시작한다', () => {
   assert.equal(account.screen, 'practiceReviewIntro');
   assert.equal(account.practiceRecipientChoice, 'new');
   assert.equal(account.practiceRecipient, '');
+});
+
+test('송금 화면의 선제 도움은 연습 가능한 단계로 이어진다', () => {
+  assert.equal(reviewStepForTransferScreen('listening'), 'voice');
+  assert.equal(reviewStepForTransferScreen('recipient'), 'recipient');
+  assert.equal(reviewStepForTransferScreen('bankselect'), 'recipient');
+  assert.equal(reviewStepForTransferScreen('accountinput'), 'account');
+  assert.equal(reviewStepForTransferScreen('ocrfailure'), 'account');
+  assert.equal(reviewStepForTransferScreen('amountinput'), 'amount');
+  assert.equal(reviewStepForTransferScreen('pretransfer'), 'amount');
+  assert.equal(reviewStepForTransferScreen('password'), null);
 });
 
 test('신규 수취인 일일 미션은 음성 송금과 조합하지 않는다', () => {

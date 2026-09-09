@@ -40,12 +40,13 @@ import type {
   RiskScenarioId,
 } from './types';
 import {
+  difficultyFromReviewStep,
   isReviewableTransferStep,
   mergeTransferDifficultyCompletion,
   MOCK_TRANSFER_DIFFICULTIES,
   sanitizeTransferDifficulties,
 } from './transferDifficulty';
-import type { TransferDifficulty } from './transferDifficulty';
+import type { ReviewableTransferStep, TransferDifficulty } from './transferDifficulty';
 import {
   financialIndependenceApi,
   isApiConfigured,
@@ -155,13 +156,20 @@ function createMissionRecord(mission: DailyMission, result: DailyMissionResult):
 export function MissionMode({
   onExit,
   transferDifficulties: suppliedTransferDifficulties,
+  startReviewStep,
 }: {
   onExit?: () => void;
   /** 백엔드 연결 후 외부 difficulty 응답을 그대로 주입할 수 있는 경계. */
   transferDifficulties?: TransferDifficulty[];
+  /** 실제 송금에서 막힌 단계로 맞춤 복습을 바로 연다. */
+  startReviewStep?: ReviewableTransferStep;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<View>({ tag: 'hub' });
+  const [view, setView] = useState<View>(() =>
+    startReviewStep
+      ? { tag: 'review', difficulty: difficultyFromReviewStep(startReviewStep) }
+      : { tag: 'hub' },
+  );
   const [hydrated, setHydrated] = useState(false);
   const [todayMission, setTodayMission] = useState<DailyMission | null>(null);
   const [completedMissionIds, setCompletedMissionIds] = useState<Set<MissionId>>(new Set());
@@ -438,6 +446,10 @@ export function MissionMode({
 
   useAndroidBack(() => {
     if (view.tag === 'practice') return false;
+    if (view.tag === 'review' && startReviewStep) {
+      exitToHome();
+      return true;
+    }
     if (view.tag !== 'hub') {
       setView({ tag: 'hub' });
       return true;
@@ -468,7 +480,7 @@ export function MissionMode({
         <PracticeMode
           mode="review"
           startStep={view.difficulty.step}
-          onExit={() => setView({ tag: 'hub' })}
+          onExit={() => (startReviewStep ? exitToHome() : setView({ tag: 'hub' }))}
           onComplete={() => completeDifficulty(view.difficulty.id)}
         />
       </Screen>

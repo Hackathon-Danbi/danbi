@@ -5,13 +5,26 @@ import { AppText } from '@/components/ui/AppText';
 import { fmt } from '../../data';
 import { INK, YELLOW } from '../../theme';
 import type { TxInfo } from '../../types';
+import { TRANSFER_DIFFICULTY_COPY } from '@/features/missions/transferDifficulty';
+import type { ReviewableTransferStep } from '@/features/missions/transferDifficulty';
 
 /** danbi_jj main/screens/transfer.tsx <TransferDoneScreen> 이식. */
-export function TransferDoneScreen({ txInfo, onHome }: { txInfo: TxInfo; onHome: () => void }) {
+export function TransferDoneScreen({
+  txInfo,
+  onHome,
+  stuckStep,
+  onPracticeStuckStep,
+}: {
+  txInfo: TxInfo;
+  onHome: () => void;
+  stuckStep?: ReviewableTransferStep | null;
+  onPracticeStuckStep?: () => void;
+}) {
   const rows = [
     { label: '받는 분', value: txInfo.recipient },
     { label: '보낸 금액', value: `${fmt(txInfo.amount)}원` },
   ];
+  const stuckCopy = stuckStep ? TRANSFER_DIFFICULTY_COPY[stuckStep] : null;
 
   return (
     <View style={styles.root}>
@@ -56,6 +69,13 @@ export function TransferDoneScreen({ txInfo, onHome }: { txInfo: TxInfo; onHome:
       </View>
 
       <View style={styles.footer}>
+        {stuckCopy && onPracticeStuckStep ? (
+          <Pressable accessibilityRole="button" onPress={onPracticeStuckStep} style={styles.practiceBtn}>
+            <AppText size={16} weight={800} color={INK} align="center">
+              {stuckCopy.title} 다시 연습하기
+            </AppText>
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" onPress={onHome} style={styles.homeBtn}>
           <AppText size={17} weight={900} color={INK}>
             홈으로 가기
@@ -108,6 +128,16 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
     paddingBottom: 28,
+    gap: 10,
+  },
+  practiceBtn: {
+    width: '100%',
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
   },
   homeBtn: {
     width: '100%',
