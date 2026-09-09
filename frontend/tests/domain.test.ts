@@ -134,21 +134,26 @@ test('home mic routes send phrases to the transfer flow, not balance', () => {
   }
 });
 
-test('home mic routes history phrases to the transaction list', () => {
+test('home mic routes history-list phrases to the transaction list', () => {
   for (const phrase of [
     '거래내역 보여줘',
     '최근 거래내역 알려줘',
     '입출금 내역 보여줘',
-    '이번달에 얼마 썼어?',
-    '지난달에 돈 얼마나 나갔어?',
+    '거래 목록 열어줘',
   ]) {
     assert.equal(isHistoryVoiceQuery(phrase), true, phrase);
     assert.equal(isBalanceVoiceQuery(phrase), false, phrase);
     assert.equal(isTransferVoiceQuery(phrase), false, phrase);
   }
 
-  // 잔액/송금/인사는 거래내역으로 새지 않는다.
-  for (const phrase of ['잔액 알려줘', '영희에게 3만원 보내줘', '안녕하세요']) {
+  // 집계 질문/잔액/송금/인사는 거래내역 화면으로 새지 않고 서버가 답한다.
+  for (const phrase of [
+    '이번달에 얼마 썼어?',
+    '지난달에 돈 얼마나 나갔어?',
+    '잔액 알려줘',
+    '영희에게 3만원 보내줘',
+    '안녕하세요',
+  ]) {
     assert.equal(isHistoryVoiceQuery(phrase), false, phrase);
   }
 });

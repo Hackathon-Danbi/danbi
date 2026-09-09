@@ -39,9 +39,9 @@ export function isReviewTxVoiceQuery(query: string): boolean {
 }
 
 /**
- * 홈 질문이 거래내역 조회 요청인지 판별한다.
- * 실제 데이터는 거래내역 화면(/(app)/history)이 백엔드에서 가져온다.
- * 송금 발화가 우선이므로 그쪽이면 false.
+ * 홈 질문이 "거래내역 목록을 보여달라"는 요청인지 판별한다 → 거래내역 화면으로 이동.
+ * "이번달 얼마 썼어" 같은 집계 질문은 여기서 걸러 내지 않고 서버(/api/voice/query)가
+ * 말로 답하도록 넘긴다. 송금 발화가 우선이므로 그쪽이면 false.
  */
 export function isHistoryVoiceQuery(query: string): boolean {
   const n = query.replace(/[\s?!.]/g, '');
@@ -52,9 +52,7 @@ export function isHistoryVoiceQuery(query: string): boolean {
     n.includes('사용내역') ||
     n.includes('입출금내역') ||
     /(?:거래|입금|출금|이체)(?:내역|목록|기록)/.test(n) ||
-    /(?:얼마|얼만큼|몇)(?:나|를|나를)?(?:썼|쓴|사용|지출)/.test(n) ||
-    /(?:지난달|저번달|이번달|한달|요즘|최근|얼마전)(?:에|동안)?.*(?:썼|쓴|지출|사용|나갔)/.test(n) ||
-    /(?:거래|내역).*(?:보여|알려|조회|확인|볼래|볼까)/.test(n)
+    /(?:거래|내역|목록).*(?:보여|볼래|볼까|열어)/.test(n)
   );
 }
 
