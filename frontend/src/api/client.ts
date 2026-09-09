@@ -125,10 +125,12 @@ export async function apiRequest<T>(
     });
   } catch (cause) {
     recordFailure();
-    if (controller.signal.aborted && !externalSignal?.aborted) {
+    if (externalSignal?.aborted) throw cause instanceof Error ? cause : new ApiUnavailableError();
+    // 타임아웃(우리 controller) · 네트워크 오류(연결 거부/DNS 등) 모두 "서버에 못 닿음"으로 통일한다.
+    if (controller.signal.aborted) {
       throw new ApiUnavailableError(`API 응답이 ${DEFAULT_TIMEOUT_MS}ms 안에 오지 않았습니다.`);
     }
-    throw cause instanceof Error ? cause : new ApiUnavailableError();
+    throw new ApiUnavailableError('API 서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.');
   } finally {
     clearTimeout(timer);
   }
