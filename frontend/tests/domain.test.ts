@@ -54,22 +54,19 @@ import {
 
 test('entry and onboarding destination routes remain distinct', () => {
   assert.equal(resolveEntryRoute(null, false), '/welcome');
-  assert.equal(resolveEntryRoute('danbi', false), '/join');
-  assert.equal(resolveEntryRoute('standard', true), '/(app)/home');
   assert.equal(ONBOARDING_DESTINATION_ROUTES.accounts, '/(app)/accounts');
 });
 
-test('app lock keeps the main app behind the login screen', () => {
+test('demo entry always starts at welcome', () => {
   const locked = { pinRegistered: true, unlocked: false };
   const unlocked = { pinRegistered: true, unlocked: true };
   const noPin = { pinRegistered: false, unlocked: false };
 
-  assert.equal(resolveEntryRoute('danbi', true, locked), '/login');
-  assert.equal(resolveEntryRoute('danbi', true, unlocked), '/(app)/home');
-  // 비밀번호를 저장하지 않은 기존 사용자는 잠금 화면에 갇히지 않는다.
-  assert.equal(resolveEntryRoute('danbi', true, noPin), '/(app)/home');
-  // 가입/모드 선택이 끝나지 않았으면 잠금보다 앞선 단계를 먼저 처리한다.
-  assert.equal(resolveEntryRoute('danbi', false, locked), '/join');
+  assert.equal(resolveEntryRoute('danbi', false), '/welcome');
+  assert.equal(resolveEntryRoute('standard', true), '/welcome');
+  assert.equal(resolveEntryRoute('danbi', true, locked), '/welcome');
+  assert.equal(resolveEntryRoute('danbi', true, unlocked), '/welcome');
+  assert.equal(resolveEntryRoute('danbi', true, noPin), '/welcome');
   assert.equal(resolveEntryRoute(null, true, locked), '/welcome');
 });
 

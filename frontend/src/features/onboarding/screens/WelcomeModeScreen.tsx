@@ -10,12 +10,13 @@ export type DisplayMode = 'danbi' | 'standard';
 
 type Props = {
   onSelect: (mode: DisplayMode) => void;
+  onSkipHome: () => void;
 };
 
 const GUIDE = '단비모드는 큰 글씨, 음성 안내, 한 화면 한 행동으로 은행 업무를 함께합니다.';
 
 /** danbi_jj app/features/onboarding/screens/WelcomeModeScreen.tsx 의 RN 이식. */
-export function WelcomeModeScreen({ onSelect }: Props) {
+export function WelcomeModeScreen({ onSelect, onSkipHome }: Props) {
   const [isReading, setIsReading] = useState(false);
 
   useEffect(() => () => stop(), []);
@@ -104,6 +105,17 @@ export function WelcomeModeScreen({ onSelect }: Props) {
               에서 변경할 수 있어요
             </AppText>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="홈으로 바로가기"
+            onPress={onSkipHome}
+            style={({ pressed }) => [styles.skipBtn, pressed && styles.pressed]}
+          >
+            <AppText size={20} weight={800} color={colors.welcomeActionsHint} align="center">
+              홈으로 바로가기
+            </AppText>
+          </Pressable>
         </View>
       </ScrollView>
     </Screen>
@@ -175,5 +187,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
+  },
+  skipBtn: {
+    width: '100%',
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
 });
