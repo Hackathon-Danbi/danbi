@@ -22,6 +22,8 @@ import type { ListeningPhase } from '@/features/main/types';
 import {
   createBalanceVoiceAnswer,
   isBalanceVoiceQuery,
+  isHistoryVoiceQuery,
+  isReviewTxVoiceQuery,
   isTransferVoiceQuery,
 } from '@/features/main/voiceQuery';
 
@@ -84,8 +86,18 @@ export default function HomeRoute() {
       router.push({ pathname: '/(app)/transfer', params: { transcript: spoken } });
       return;
     }
+    if (isReviewTxVoiceQuery(recognition.transcript)) {
+      goHome();
+      router.push({ pathname: '/(app)/history', params: { view: 'review' } });
+      return;
+    }
+    if (isHistoryVoiceQuery(recognition.transcript)) {
+      goHome();
+      router.push('/(app)/history');
+      return;
+    }
     if (!isApiConfigured()) {
-      setQueryError('지금은 통장 잔액 조회와 송금만 도와드릴 수 있어요. "잔액 알려줘"나 "○○에게 3만원 보내줘"처럼 말씀해주세요.');
+      setQueryError('지금은 잔액 조회, 거래내역 보기, 송금을 도와드릴 수 있어요. "잔액 알려줘", "거래내역 보여줘", "○○에게 3만원 보내줘"처럼 말씀해주세요.');
       return;
     }
     try {

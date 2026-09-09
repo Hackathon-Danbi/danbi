@@ -50,6 +50,8 @@ import { accounts } from '../src/features/shared/data/accounts.mock';
 import {
   createBalanceVoiceAnswer,
   isBalanceVoiceQuery,
+  isHistoryVoiceQuery,
+  isReviewTxVoiceQuery,
   isTransferVoiceQuery,
 } from '../src/features/main/voiceQuery';
 
@@ -130,6 +132,33 @@ test('home mic routes send phrases to the transfer flow, not balance', () => {
   for (const phrase of ['잔액 알려줘', '내 통장에 얼마 있어?', '최근 거래내역 알려줘', '안녕하세요']) {
     assert.equal(isTransferVoiceQuery(phrase), false, phrase);
   }
+});
+
+test('home mic routes history phrases to the transaction list', () => {
+  for (const phrase of [
+    '거래내역 보여줘',
+    '최근 거래내역 알려줘',
+    '입출금 내역 보여줘',
+    '이번달에 얼마 썼어?',
+    '지난달에 돈 얼마나 나갔어?',
+  ]) {
+    assert.equal(isHistoryVoiceQuery(phrase), true, phrase);
+    assert.equal(isBalanceVoiceQuery(phrase), false, phrase);
+    assert.equal(isTransferVoiceQuery(phrase), false, phrase);
+  }
+
+  // 잔액/송금/인사는 거래내역으로 새지 않는다.
+  for (const phrase of ['잔액 알려줘', '영희에게 3만원 보내줘', '안녕하세요']) {
+    assert.equal(isHistoryVoiceQuery(phrase), false, phrase);
+  }
+});
+
+test('home mic routes unknown-transaction phrases to the review screen', () => {
+  for (const phrase of ['모르는 거래 확인해줘', '이상한 결제 있어?', '미확인 거래 보여줘']) {
+    assert.equal(isReviewTxVoiceQuery(phrase), true, phrase);
+  }
+  assert.equal(isReviewTxVoiceQuery('거래내역 보여줘'), false);
+  assert.equal(isReviewTxVoiceQuery('잔액 알려줘'), false);
 });
 
 test('saved recipients support aliases and reject duplicate account saves', () => {
