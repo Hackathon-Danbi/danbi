@@ -1,6 +1,9 @@
 -- 단비 시연영상용 데이터 제거 스크립트.
 -- 로컬 MySQL의 danbi DB에서만 실행한다.
 -- 실행 후 demo-seed.sql을 다시 실행하면 촬영 시작 상태로 돌아간다.
+-- CLI: mysql ... danbi < demo-reset.sql / Workbench: 아래 USE 로 스키마를 잡는다.
+
+USE danbi;
 
 START TRANSACTION;
 
